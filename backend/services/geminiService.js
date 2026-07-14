@@ -57,3 +57,57 @@ ${text}
 
   return JSON.parse(responseText);
 };
+
+exports.suggestProjectIdeas = async (interests, department) => {
+  const ai = getClient();
+  const prompt = `You are an academic advisor. Based on a student's interests: "${interests}" and their department: "${department}", suggest 3 innovative research project ideas. Return a JSON array of objects, where each object has a 'title' and 'description'. Do not return markdown, just pure JSON.`;
+  
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: prompt,
+    config: {
+      responseMimeType: 'application/json'
+    }
+  });
+
+  let responseText = response.text.trim();
+  if (responseText.startsWith('```')) {
+    responseText = responseText.replace(/^```(json)?/, '').replace(/```$/, '').trim();
+  }
+  return JSON.parse(responseText);
+};
+
+exports.generateProposalFeedback = async (proposalText) => {
+  const ai = getClient();
+  const prompt = `Review the following academic project proposal. Evaluate its feasibility, clarity, and academic merit. Provide structured feedback.
+
+Proposal:
+${proposalText}
+`;
+
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: prompt
+  });
+
+  return response.text;
+};
+
+exports.recommendNextTask = async (currentStatus, pastTasks) => {
+  const ai = getClient();
+  const prompt = `You are an academic project manager AI. Based on the project's current status: "${currentStatus}" and the following past completed tasks: "${pastTasks.join(', ')}", recommend the logical next task the student should focus on to keep the project on track. Provide a brief task title and a short explanation. Return as a JSON object with 'taskTitle' and 'explanation'. Do not return markdown, just pure JSON.`;
+
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: prompt,
+    config: {
+      responseMimeType: 'application/json'
+    }
+  });
+
+  let responseText = response.text.trim();
+  if (responseText.startsWith('```')) {
+    responseText = responseText.replace(/^```(json)?/, '').replace(/```$/, '').trim();
+  }
+  return JSON.parse(responseText);
+};
