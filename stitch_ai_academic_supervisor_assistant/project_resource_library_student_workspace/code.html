@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Project Resource Library - AcademiaAI</title>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-variant": "#d8e3fb",
+                      "secondary": "#5c5f61",
+                      "on-tertiary-fixed": "#001e2f",
+                      "on-tertiary": "#ffffff",
+                      "tertiary-container": "#006693",
+                      "surface-tint": "#4d44e3",
+                      "on-primary-fixed": "#0f0069",
+                      "inverse-primary": "#c3c0ff",
+                      "surface-container-high": "#dee8ff",
+                      "surface": "#f9f9ff",
+                      "on-tertiary-container": "#b8e0ff",
+                      "error": "#ba1a1a",
+                      "tertiary-fixed": "#c9e6ff",
+                      "on-tertiary-fixed-variant": "#004c6e",
+                      "surface-dim": "#cfdaf2",
+                      "surface-container-low": "#f0f3ff",
+                      "outline": "#777587",
+                      "error-container": "#ffdad6",
+                      "primary-fixed": "#e2dfff",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "inverse-on-surface": "#ecf1ff",
+                      "primary": "#3525cd",
+                      "on-secondary-fixed": "#191c1e",
+                      "on-error": "#ffffff",
+                      "secondary-container": "#e0e3e5",
+                      "on-secondary-container": "#626567",
+                      "on-background": "#111c2d",
+                      "primary-container": "#4f46e5",
+                      "outline-variant": "#c7c4d8",
+                      "on-primary-container": "#dad7ff",
+                      "on-secondary": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-fixed-dim": "#c4c7c9",
+                      "on-surface-variant": "#464555",
+                      "tertiary": "#004d70",
+                      "on-primary": "#ffffff",
+                      "surface-container": "#e7eeff",
+                      "surface-bright": "#f9f9ff",
+                      "on-surface": "#111c2d",
+                      "background": "#f9f9ff",
+                      "inverse-surface": "#263143",
+                      "on-secondary-fixed-variant": "#444749",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "on-error-container": "#93000a",
+                      "secondary-fixed": "#e0e3e5",
+                      "tertiary-fixed-dim": "#89ceff",
+                      "surface-container-highest": "#d8e3fb"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "2xl": "1.5rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "margin_desktop": "40px",
+                      "margin_mobile": "16px",
+                      "sidebar_width": "280px",
+                      "base": "8px",
+                      "container_max": "1440px",
+                      "gutter": "24px"
+              },
+              "fontFamily": {
+                      "display": ["Inter"],
+                      "title-lg": ["Inter"],
+                      "headline-lg-mobile": ["Inter"],
+                      "body-md": ["Inter"],
+                      "label-md": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "body-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "display": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                      "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                      "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                      "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                      "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                      "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                      "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                      "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                      "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+              },
+              "boxShadow": {
+                  "card": "0px 4px 6px -1px rgba(0, 0, 0, 0.05), 0px 2px 4px -2px rgba(0, 0, 0, 0.05)",
+                  "card-hover": "0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -4px rgba(0, 0, 0, 0.1)"
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Custom Scrollbar for sleekness */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c7c4d8; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #777587;
+        }
+        
+        .card-actions-overlay {
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+        .resource-card:hover .card-actions-overlay {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md antialiased overflow-hidden flex h-screen">
+<!-- SideNavBar (from JSON) -->
+<nav class="hidden md:flex flex-col fixed left-0 top-0 h-full w-sidebar_width py-8 px-4 z-40 bg-surface border-r border-outline-variant/30">
+<!-- Header -->
+<div class="mb-10 px-4">
+<h2 class="font-title-lg text-title-lg font-semibold text-on-surface">Supervision Portal</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Academic Oversight</p>
+</div>
+<!-- CTA -->
+<div class="px-4 mb-8">
+<button class="w-full bg-primary text-on-primary py-3 px-4 rounded-lg font-label-md text-label-md flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined icon-fill text-[18px]">add</span>
+                New Report
+            </button>
+</div>
+<!-- Navigation Links -->
+<ul class="flex flex-col gap-2 flex-1">
+<!-- Dashboard -->
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary hover:bg-surface-container-low transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+</li>
+<!-- Supervision -->
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary hover:bg-surface-container-low transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="supervised_user_circle">supervised_user_circle</span>
+<span class="font-label-md text-label-md">Supervision</span>
+</a>
+</li>
+<!-- Students -->
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary hover:bg-surface-container-low transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-label-md text-label-md">Students</span>
+</a>
+</li>
+<!-- Research -->
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary hover:bg-surface-container-low transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="science">science</span>
+<span class="font-label-md text-label-md">Research</span>
+</a>
+</li>
+<!-- Resources (ACTIVE) -->
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 text-primary border-l-4 border-primary font-bold transition-all relative" href="#">
+<span class="material-symbols-outlined icon-fill" data-icon="library_books">library_books</span>
+<span class="font-label-md text-label-md">Resources</span>
+</a>
+</li>
+<!-- Settings -->
+<li class="mt-auto">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary hover:bg-surface-container-low transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Wrapper -->
+<div class="flex-1 flex flex-col min-w-0 md:ml-sidebar_width h-full bg-surface">
+<!-- TopAppBar (from JSON) -->
+<header class="flex justify-between items-center w-full px-margin_desktop h-16 sticky top-0 z-50 bg-surface shadow-sm">
+<div class="flex items-center gap-4">
+<!-- Mobile Menu Button -->
+<button class="md:hidden text-on-surface p-2 rounded-full hover:bg-surface-container-low">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<span class="font-headline-md text-headline-md font-bold text-primary">AcademiaAI</span>
+</div>
+<!-- Search Bar (on_left configuration requested by JSON, but typically in middle/right for desktop. Adhering to visual balance) -->
+<div class="hidden md:flex flex-1 max-w-md mx-8 relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-full py-2 pl-10 pr-4 text-body-md text-on-surface focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all" placeholder="Search resources, datasets..." type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined" data-icon="auto_awesome">auto_awesome</span>
+</button>
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Scrollable Canvas -->
+<main class="flex-1 overflow-y-auto w-full">
+<div class="max-w-container_max mx-auto p-margin_mobile md:p-margin_desktop w-full">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+<div>
+<h1 class="font-headline-lg text-headline-lg md:text-display font-display text-on-surface">Resource Library</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant mt-2 max-w-2xl">Manage and discover shared assets, documentation, and tools across all active research projects.</p>
+</div>
+<div class="flex gap-4">
+<button class="px-6 py-3 bg-surface-container-lowest border border-outline-variant rounded-lg font-label-md text-label-md text-on-surface hover:bg-surface-container-low transition-colors flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                            Filter
+                        </button>
+<button class="px-6 py-3 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary/90 transition-colors flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">upload</span>
+                            Upload Resource
+                        </button>
+</div>
+</div>
+<!-- Main Grid Layout -->
+<div class="flex flex-col lg:flex-row gap-8 items-start">
+<!-- Left Sidebar Filters -->
+<aside class="w-full lg:w-64 flex-shrink-0 flex flex-col gap-8 hidden lg:flex">
+<!-- Categories -->
+<div>
+<h3 class="font-label-md text-label-md text-secondary uppercase tracking-wider mb-4">Categories</h3>
+<ul class="flex flex-col gap-1">
+<li>
+<button class="w-full text-left px-3 py-2 rounded-md bg-primary-container text-on-primary-container font-body-md text-body-md flex items-center justify-between">
+                                        All Resources
+                                        <span class="font-label-md text-label-md bg-surface-container-lowest text-primary px-2 py-0.5 rounded-full">142</span>
+</button>
+</li>
+<li>
+<button class="w-full text-left px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-container-low font-body-md text-body-md flex items-center justify-between transition-colors">
+                                        Software
+                                        <span class="font-label-md text-label-md text-secondary">38</span>
+</button>
+</li>
+<li>
+<button class="w-full text-left px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-container-low font-body-md text-body-md flex items-center justify-between transition-colors">
+                                        Datasets
+                                        <span class="font-label-md text-label-md text-secondary">56</span>
+</button>
+</li>
+<li>
+<button class="w-full text-left px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-container-low font-body-md text-body-md flex items-center justify-between transition-colors">
+                                        Documentation
+                                        <span class="font-label-md text-label-md text-secondary">24</span>
+</button>
+</li>
+<li>
+<button class="w-full text-left px-3 py-2 rounded-md text-on-surface-variant hover:bg-surface-container-low font-body-md text-body-md flex items-center justify-between transition-colors">
+                                        Design Assets
+                                        <span class="font-label-md text-label-md text-secondary">24</span>
+</button>
+</li>
+</ul>
+</div>
+<!-- Team Members -->
+<div>
+<h3 class="font-label-md text-label-md text-secondary uppercase tracking-wider mb-4">Shared By</h3>
+<div class="flex flex-col gap-3">
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary transition-colors">Dr. Sarah Jenkins</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary transition-colors">Michael Chen</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface group-hover:text-primary transition-colors">Elena Rodriguez</span>
+</label>
+</div>
+<button class="text-primary font-label-md text-label-md mt-4 hover:underline">Show all members</button>
+</div>
+</aside>
+<!-- Content Grid Area -->
+<div class="flex-1 w-full flex flex-col gap-10">
+<!-- Pinned Resources (Bento style) -->
+<section>
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary text-[20px]">push_pin</span>
+<h2 class="font-title-lg text-title-lg text-on-surface">Pinned &amp; Recommended</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+<!-- Pinned Card 1 (AI Recommended) -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-card p-6 border border-outline-variant/20 relative overflow-hidden group hover:shadow-card-hover transition-shadow border-l-2 border-l-primary cursor-pointer resource-card">
+<div class="absolute top-4 right-4 text-primary bg-primary/10 p-1.5 rounded-full">
+<span class="material-symbols-outlined text-[16px]">auto_awesome</span>
+</div>
+<div class="flex items-center gap-3 mb-4">
+<div class="w-10 h-10 rounded-lg bg-tertiary-container flex items-center justify-center text-on-tertiary">
+<span class="material-symbols-outlined">data_object</span>
+</div>
+<div>
+<span class="font-label-md text-label-md text-secondary">Dataset • CSV</span>
+</div>
+</div>
+<h3 class="font-title-lg text-title-lg text-on-surface mb-2 line-clamp-1">Q3 Global Climate Metrics</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-6 line-clamp-2">Aggregated sensor data from 400 global nodes. Cleaned and pre-processed for ML pipeline integration.</p>
+<div class="flex items-center justify-between border-t border-outline-variant/30 pt-4 mt-auto">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-variant overflow-hidden border border-outline-variant/30">
+<img alt="Profile avatar" class="w-full h-full object-cover" data-alt="A small circular profile picture of a professional woman with glasses, smiling softly against a neutral grey background, representing an academic user avatar." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-tTbTA0MLRwIYQq1TG7Mf0YcOSQsXT15qL0C_7rDQXW3duFaPy2cBn-qke0hDZ4L0UwXvyEQVDtuZuN6iwjbE_tWf4DbF-iFyqdYmhF2l2YW4ki_wdBYCsLQt0-iJK-VANk6A9F2dAlLB2JVKHKyw3FHEgkldQrYl91ueFhE-Ksc_aIE3-W87ebBbyt9TN4kZrJsdKN2mYtTXZk8O-2fGGERb24t2oCNoNiYfNJQr7cRTWmfHVIJRebpisPgd1VsBNYETmCBnH0c"/>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant">Dr. Jenkins</span>
+</div>
+<span class="font-body-sm text-body-sm text-secondary">Oct 12</span>
+</div>
+<!-- Quick Actions Overlay -->
+<div class="card-actions-overlay absolute inset-0 bg-surface-container-lowest/95 backdrop-blur-sm flex items-center justify-center gap-4">
+<button class="p-2 rounded-full bg-surface-variant text-on-surface hover:bg-primary hover:text-on-primary transition-colors" title="Download">
+<span class="material-symbols-outlined">download</span>
+</button>
+<button class="p-2 rounded-full bg-surface-variant text-on-surface hover:bg-primary hover:text-on-primary transition-colors" title="Preview">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+<button class="p-2 rounded-full bg-surface-variant text-on-surface hover:bg-primary hover:text-on-primary transition-colors" title="Share Link">
+<span class="material-symbols-outlined">link</span>
+</button>
+</div>
+</div>
+<!-- Pinned Card 2 -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-card p-6 border border-outline-variant/20 relative overflow-hidden group hover:shadow-card-hover transition-shadow cursor-pointer resource-card">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-10 h-10 rounded-lg bg-surface-variant flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div>
+<span class="font-label-md text-label-md text-secondary">Documentation • PDF</span>
+</div>
+</div>
+<h3 class="font-title-lg text-title-lg text-on-surface mb-2 line-clamp-1">Lab Safety Protocol v2.4</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-6 line-clamp-2">Updated compliance guidelines for the new biochemistry wing. Mandatory reading for all assistants.</p>
+<div class="flex items-center justify-between border-t border-outline-variant/30 pt-4 mt-auto">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-on-primary font-label-md text-[10px]">
+                                                SA
+                                            </div>
+<span class="font-label-md text-label-md text-on-surface-variant">System Admin</span>
+</div>
+<span class="font-body-sm text-body-sm text-secondary">Sep 28</span>
+</div>
+<!-- Quick Actions Overlay -->
+<div class="card-actions-overlay absolute inset-0 bg-surface-container-lowest/95 backdrop-blur-sm flex items-center justify-center gap-4">
+<button class="p-2 rounded-full bg-surface-variant text-on-surface hover:bg-primary hover:text-on-primary transition-colors" title="Download">
+<span class="material-symbols-outlined">download</span>
+</button>
+<button class="p-2 rounded-full bg-surface-variant text-on-surface hover:bg-primary hover:text-on-primary transition-colors" title="Preview">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- All Resources Grid -->
+<section>
+<h2 class="font-title-lg text-title-lg text-on-surface mb-6">Recent Uploads</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+<!-- Resource Card 1 (Code) -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 p-5 flex flex-col group hover:shadow-card transition-shadow cursor-pointer resource-card relative overflow-hidden">
+<div class="flex items-start justify-between mb-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-inverse-surface flex items-center justify-center text-inverse-on-surface">
+<span class="material-symbols-outlined text-[18px]">terminal</span>
+</div>
+<span class="font-label-md text-label-md text-secondary uppercase tracking-wide">Software</span>
+</div>
+</div>
+<h4 class="font-headline-md text-headline-md text-on-surface mb-1">core-analysis-pipeline</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-4 line-clamp-2">Python scripts for running the primary data analysis on the cluster. Includes Dockerfile.</p>
+<div class="mt-auto pt-4 border-t border-outline-variant/20 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-5 h-5 rounded-full overflow-hidden bg-surface-variant">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="A tiny circular profile avatar of a young male student looking at the camera, neutral background, used in an academic software UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1iEU6Y-g1RltY8WFiKlInXTp7ZjGqmNb1jFktbjIpu26cT_aiI0F6c7HQKG_djoxtbYZ8xz6rl04CgjCpvr3HQFA7Meg33o80UK6XXOOeQ0Vuqxhlny4_omDO35n91VE0XQaNYK2pwgk12nPi2V9jmqG4jVLXrk2bjVyar0Htikq1T7B5Op7_DDcpxxG0obF1nSxj79rUzW0lbwvZnMlB0fx_aBBFszjpb5I8f4v-480HJxXsKur-jVMgu1kZNPohbkA-Dbw3RGE"/>
+</div>
+<span class="font-label-md text-label-md text-on-surface">M. Chen</span>
+</div>
+<span class="font-body-sm text-body-sm text-secondary">2 days ago</span>
+</div>
+<div class="card-actions-overlay absolute inset-0 bg-surface-container-lowest/90 backdrop-blur-[2px] flex items-center justify-center gap-3">
+<button class="bg-surface border border-outline-variant text-on-surface px-4 py-2 rounded-lg font-label-md text-label-md hover:bg-surface-container-low transition-colors">View Repo</button>
+<button class="bg-primary text-on-primary p-2 rounded-lg hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined">share</span>
+</button>
+</div>
+</div>
+<!-- Resource Card 2 (Design) -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 p-5 flex flex-col group hover:shadow-card transition-shadow cursor-pointer resource-card relative overflow-hidden">
+<div class="flex items-start justify-between mb-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-error-container flex items-center justify-center text-on-error-container">
+<span class="material-symbols-outlined text-[18px]">brush</span>
+</div>
+<span class="font-label-md text-label-md text-secondary uppercase tracking-wide">Design Assets</span>
+</div>
+</div>
+<h4 class="font-headline-md text-headline-md text-on-surface mb-1">Project Poster Template</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-4 line-clamp-2">Standardized Figma template for the upcoming end-of-year symposium. Includes university branding components.</p>
+<div class="mt-auto pt-4 border-t border-outline-variant/20 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-5 h-5 rounded-full overflow-hidden bg-surface-variant">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="A tiny circular profile avatar of a female student with dark curly hair smiling, neutral background, used in an academic software UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCttjqttMLVoPQHxBBy1_v-oAn1aj8M40y-hcJWVOUYjI98y9C5QqFg2Jli3_y9r6hDBbKmPNqHMh-rcAeNQ1-NPVVg-bSIKRPSXJEmZkA8AVacjAIFsBBM_cn6-2lYayJXVCVsK1BgONUwvnI-rzWv2PayIPyee58aUh5wHaEbRVLC35cPMO1nyg8YBxgQQ15AzkkEvgc-ZzsQzuVHwlS9lHYALZsLWqFbGvgm_3V0kbjOOUN5QBaUdfPBCimDTb2Z4Noob4fbQeU"/>
+</div>
+<span class="font-label-md text-label-md text-on-surface">E. Rodriguez</span>
+</div>
+<span class="font-body-sm text-body-sm text-secondary">5 days ago</span>
+</div>
+<div class="card-actions-overlay absolute inset-0 bg-surface-container-lowest/90 backdrop-blur-[2px] flex items-center justify-center gap-3">
+<button class="bg-surface border border-outline-variant text-on-surface px-4 py-2 rounded-lg font-label-md text-label-md hover:bg-surface-container-low transition-colors">Open Figma</button>
+<button class="bg-primary text-on-primary p-2 rounded-lg hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+</div>
+<!-- Resource Card 3 (Data) -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 p-5 flex flex-col group hover:shadow-card transition-shadow cursor-pointer resource-card relative overflow-hidden">
+<div class="flex items-start justify-between mb-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-tertiary-container flex items-center justify-center text-on-tertiary">
+<span class="material-symbols-outlined text-[18px]">table_chart</span>
+</div>
+<span class="font-label-md text-label-md text-secondary uppercase tracking-wide">Dataset</span>
+</div>
+</div>
+<h4 class="font-headline-md text-headline-md text-on-surface mb-1">Participant_Survey_Raw.csv</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-4 line-clamp-2">Anonymized responses from the initial control group. Needs cleaning before ingestion.</p>
+<div class="mt-auto pt-4 border-t border-outline-variant/20 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-5 h-5 rounded-full overflow-hidden bg-surface-variant">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="A small circular profile picture of a professional woman with glasses, smiling softly against a neutral grey background, representing an academic user avatar." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0JHQ0WjofaCaqNnNvTUVMNRIz5ApEZA8NTMU8d6DHiJhXif0_EN7Tx2-HXkO2mmuHPJ2azcMOC3mgVrPMzAg4eVRCnUlOfAZUWQlBCw0tiKoXh9B6DJsWjqkvvb1rw034Fa__JmUxPEBy9hBYHDVJ77LSs2PcMid1AoBmE3HIb8obJFsTZGtha47uSU9kUBALyFH1Z4_jr4KL9hKgfe62-tnaPOi3WhWTflQXomWRC10Q9dsCl4e6HAhlf6wHKvxURxag9J3JjAE"/>
+</div>
+<span class="font-label-md text-label-md text-on-surface">Dr. Jenkins</span>
+</div>
+<span class="font-body-sm text-body-sm text-secondary">1 week ago</span>
+</div>
+<div class="card-actions-overlay absolute inset-0 bg-surface-container-lowest/90 backdrop-blur-[2px] flex items-center justify-center gap-3">
+<button class="bg-surface border border-outline-variant text-on-surface px-4 py-2 rounded-lg font-label-md text-label-md hover:bg-surface-container-low transition-colors">Preview</button>
+<button class="bg-primary text-on-primary p-2 rounded-lg hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+</div>
+<!-- Resource Card 4 (Doc) -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 p-5 flex flex-col group hover:shadow-card transition-shadow cursor-pointer resource-card relative overflow-hidden">
+<div class="flex items-start justify-between mb-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-variant flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined text-[18px]">description</span>
+</div>
+<span class="font-label-md text-label-md text-secondary uppercase tracking-wide">Documentation</span>
+</div>
+</div>
+<h4 class="font-headline-md text-headline-md text-on-surface mb-1">Literature_Review_Draft.docx</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-4 line-clamp-2">First draft of the background section for the upcoming grant proposal. Please review and comment.</p>
+<div class="mt-auto pt-4 border-t border-outline-variant/20 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-5 h-5 rounded-full overflow-hidden bg-surface-variant">
+<img alt="User Avatar" class="w-full h-full object-cover" data-alt="A tiny circular profile avatar of a young male student looking at the camera, neutral background, used in an academic software UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPcHFsX1DsWvr7cx1BMI-zwKaHPEFT74mxbZLGtwG2HCHTHxbvLMUD-J2yRd18W6_Q-SZ6E0gKnX3CeZn_LAsG0S9t2xX9zop7AA7Fmw4cI4kihCXb6Bu6a33G8ZanT_dr9xHS0WpNZrpQhxoWp3Z7OgRrM_aMp9tcpvzSIsUV8K7Ogb4uNnpCzSzs_KKAGKUgd8wCEI44NPyAa9VSv7GS-S9wzAGbK5ovPiWB6UP7JRufVCbzHODZJbRASi0Mqe2SavgF8kqfZFo"/>
+</div>
+<span class="font-label-md text-label-md text-on-surface">M. Chen</span>
+</div>
+<span class="font-body-sm text-body-sm text-secondary">2 weeks ago</span>
+</div>
+<div class="card-actions-overlay absolute inset-0 bg-surface-container-lowest/90 backdrop-blur-[2px] flex items-center justify-center gap-3">
+<button class="bg-surface border border-outline-variant text-on-surface px-4 py-2 rounded-lg font-label-md text-label-md hover:bg-surface-container-low transition-colors">Read</button>
+<button class="bg-primary text-on-primary p-2 rounded-lg hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+<div class="h-20 w-full"></div> <!-- Bottom spacing -->
+</div>
+</main>
+</div>
+</body></html>

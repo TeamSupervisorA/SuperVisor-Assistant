@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ScholarTrack AI - Admin Dashboard</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-primary-container": "#dad7ff",
+                "surface-container-low": "#f0f3ff",
+                "surface-container-high": "#dee8ff",
+                "on-primary": "#ffffff",
+                "on-surface-variant": "#464555",
+                "error": "#ba1a1a",
+                "primary": "#3525cd",
+                "tertiary-fixed": "#c9e6ff",
+                "surface-variant": "#d8e3fb",
+                "primary-fixed-dim": "#c3c0ff",
+                "on-tertiary-container": "#b8e0ff",
+                "surface-container-lowest": "#ffffff",
+                "tertiary": "#004d70",
+                "on-secondary": "#ffffff",
+                "on-background": "#111c2d",
+                "primary-fixed": "#e2dfff",
+                "on-tertiary-fixed-variant": "#004c6e",
+                "inverse-surface": "#263143",
+                "on-tertiary": "#ffffff",
+                "surface-container": "#e7eeff",
+                "secondary-fixed": "#e0e3e5",
+                "surface-tint": "#4d44e3",
+                "background": "#f9f9ff",
+                "on-secondary-fixed": "#191c1e",
+                "on-primary-fixed": "#0f0069",
+                "secondary-container": "#e0e3e5",
+                "on-tertiary-fixed": "#001e2f",
+                "on-secondary-container": "#626567",
+                "outline": "#777587",
+                "on-surface": "#111c2d",
+                "surface-dim": "#cfdaf2",
+                "outline-variant": "#c7c4d8",
+                "inverse-primary": "#c3c0ff",
+                "secondary-fixed-dim": "#c4c7c9",
+                "surface-container-highest": "#d8e3fb",
+                "on-error-container": "#93000a",
+                "tertiary-fixed-dim": "#89ceff",
+                "on-primary-fixed-variant": "#3323cc",
+                "primary-container": "#4f46e5",
+                "error-container": "#ffdad6",
+                "on-secondary-fixed-variant": "#444749",
+                "secondary": "#5c5f61",
+                "tertiary-container": "#006693",
+                "surface": "#f9f9ff",
+                "on-error": "#ffffff",
+                "inverse-on-surface": "#ecf1ff",
+                "surface-bright": "#f9f9ff"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "base": "8px",
+                "sidebar_width": "280px",
+                "margin_mobile": "16px",
+                "margin_desktop": "40px",
+                "gutter": "24px",
+                "container_max": "1440px"
+        },
+        "fontFamily": {
+                "body-sm": [
+                        "Inter"
+                ],
+                "title-lg": [
+                        "Inter"
+                ],
+                "body-lg": [
+                        "Inter"
+                ],
+                "headline-lg-mobile": [
+                        "Inter"
+                ],
+                "label-md": [
+                        "Inter"
+                ],
+                "body-md": [
+                        "Inter"
+                ],
+                "headline-lg": [
+                        "Inter"
+                ],
+                "display": [
+                        "Inter"
+                ],
+                "headline-md": [
+                        "Inter"
+                ]
+        },
+        "fontSize": {
+                "body-sm": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "title-lg": [
+                        "20px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "body-lg": [
+                        "18px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "headline-lg-mobile": [
+                        "24px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "700"
+                        }
+                ],
+                "label-md": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "letterSpacing": "0.05em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "headline-lg": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "display": [
+                        "48px",
+                        {
+                                "lineHeight": "56px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "headline-md": [
+                        "24px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "600"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background dark:bg-[#0b1326] text-on-background dark:text-[#e2e2e9] font-body-md text-body-md min-h-screen flex flex-col md:hidden">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky bg-surface dark:bg-[#0b1326] border-b border-outline-variant dark:border-[#31394d] flex justify-between items-center h-16 px-margin_mobile z-40">
+<button class="text-primary dark:text-[#a5b4fc] hover:bg-surface-container-low dark:hover:bg-[#131b2e] transition-colors active:scale-95 transition-transform p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-headline-md-mobile text-headline-md-mobile font-bold text-primary dark:text-[#a5b4fc]">ScholarTrack AI</h1>
+<button class="text-primary dark:text-[#a5b4fc] hover:bg-surface-container-low dark:hover:bg-[#131b2e] transition-colors active:scale-95 transition-transform p-2 rounded-full flex items-center justify-center relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error dark:bg-[#ffb4ab] rounded-full"></span>
+</button>
+</header>
+<!-- Main Canvas -->
+<main class="flex-1 px-margin_mobile py-6 pb-28 flex flex-col gap-6">
+<!-- Header Section -->
+<div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface dark:text-[#e2e2e9] mb-1">Overview</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant dark:text-[#c4c6d0]">Institutional Health &amp; Activity</p>
+</div>
+<!-- KPI Cards Grid -->
+<div class="grid grid-cols-2 gap-4">
+<!-- KPI 1 -->
+<div class="bg-surface-container-lowest dark:bg-[#060e20] rounded-xl shadow-academic p-4 flex flex-col justify-between min-h-[100px] border dark:border-[#31394d]">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-primary dark:text-[#a5b4fc] text-[20px]" style="font-variation-settings: 'wght' 300;">group</span>
+<span class="font-label-md text-label-md text-tertiary dark:text-[#93d5ff] bg-tertiary-container/10 dark:bg-[#004d70]/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">trending_up</span> 4%
+                    </span>
+</div>
+<div class="mt-4">
+<h3 class="font-body-sm text-body-sm text-on-surface-variant dark:text-[#c4c6d0] mb-1">Active Students</h3>
+<p class="font-headline-md-mobile text-headline-md-mobile text-on-surface dark:text-[#e2e2e9]">1,248</p>
+</div>
+</div>
+<!-- KPI 2 -->
+<div class="bg-surface-container-lowest dark:bg-[#060e20] rounded-xl shadow-academic p-4 flex flex-col justify-between min-h-[100px] border border-error/20 dark:border-[#ffb4ab]/30">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-error dark:text-[#ffb4ab] text-[20px]" style="font-variation-settings: 'wght' 300;">warning</span>
+<span class="font-label-md text-label-md text-error dark:text-[#ffb4ab] bg-error-container/30 dark:bg-[#93000a]/30 px-2 py-0.5 rounded-full">Action Req</span>
+</div>
+<div class="mt-4">
+<h3 class="font-body-sm text-body-sm text-on-surface-variant dark:text-[#c4c6d0] mb-1">Flagged Cases</h3>
+<p class="font-headline-md-mobile text-headline-md-mobile text-error dark:text-[#ffb4ab]">12</p>
+</div>
+</div>
+<!-- KPI 3 (Full Width) -->
+<div class="col-span-2 bg-surface-container-lowest dark:bg-[#060e20] rounded-xl shadow-academic p-4 border dark:border-[#31394d]">
+<div class="flex justify-between items-center mb-3">
+<h3 class="font-body-sm text-body-sm text-on-surface-variant dark:text-[#c4c6d0] flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary dark:text-[#c4c7c9] text-[18px]">timeline</span>
+                        Cohort Progress
+                    </h3>
+<span class="font-headline-md-mobile text-headline-md-mobile text-on-surface dark:text-[#e2e2e9]">68%</span>
+</div>
+<div class="w-full bg-surface-container dark:bg-[#131b2e] h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary dark:bg-[#6366f1] h-full rounded-full" style="width: 68%;"></div>
+</div>
+</div>
+</div>
+<!-- Priority Alerts (AI Section) -->
+<section class="mt-2">
+<div class="flex justify-between items-center mb-4">
+<h2 class="font-title-lg text-title-lg text-on-surface dark:text-[#e2e2e9]">Priority Alerts</h2>
+<button class="font-label-md text-label-md text-primary dark:text-[#a5b4fc]">View All</button>
+</div>
+<div class="flex flex-col gap-3">
+<!-- AI Insight Card 1 -->
+<div class="bg-surface-container-lowest dark:bg-[#060e20] rounded-xl shadow-academic p-4 relative overflow-hidden border-l-[3px] border-primary dark:border-[#6366f1] border-y border-r dark:border-y-[#31394d] dark:border-r-[#31394d]">
+<div class="absolute top-4 right-4">
+<span class="material-symbols-outlined text-primary dark:text-[#a5b4fc] text-[20px]" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<div class="flex flex-col gap-2 pr-8">
+<div class="flex items-center gap-2">
+<span class="font-label-md text-label-md text-error dark:text-[#ffb4ab] bg-error-container/20 dark:bg-[#93000a]/30 px-2 py-0.5 rounded-full">High Plagiarism Risk</span>
+</div>
+<h4 class="font-body-md text-body-md font-semibold text-on-surface dark:text-[#e2e2e9]">Thesis Draft Submission - M. Chen</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant dark:text-[#c4c6d0]">AI has detected a 42% structural similarity with an external published paper. Immediate review recommended.</p>
+<button class="mt-2 text-left font-label-md text-label-md text-primary dark:text-[#a5b4fc] w-fit hover:underline">Review Analysis</button>
+</div>
+</div>
+<!-- AI Insight Card 2 -->
+<div class="bg-surface-container-lowest dark:bg-[#060e20] rounded-xl shadow-academic p-4 relative overflow-hidden border-l-[3px] border-primary dark:border-[#6366f1] border-y border-r dark:border-y-[#31394d] dark:border-r-[#31394d]">
+<div class="absolute top-4 right-4">
+<span class="material-symbols-outlined text-primary dark:text-[#a5b4fc] text-[20px]" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<div class="flex flex-col gap-2 pr-8">
+<div class="flex items-center gap-2">
+<span class="font-label-md text-label-md text-tertiary dark:text-[#93d5ff] bg-tertiary-container/20 dark:bg-[#004d70]/30 px-2 py-0.5 rounded-full">Velocity Warning</span>
+</div>
+<h4 class="font-body-md text-body-md font-semibold text-on-surface dark:text-[#e2e2e9]">Research Ethics Module - Cohort B</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant dark:text-[#c4c6d0]">Completion rate has stalled for 3 consecutive weeks. Predictive model suggests intervention needed.</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 px-4 pb-safe bg-surface dark:bg-[#0b1326] border-t border-outline-variant dark:border-[#31394d] shadow-sm font-label-md text-label-md">
+<!-- Active Tab: Dashboard -->
+<button class="flex flex-col items-center justify-center bg-primary-container dark:bg-[#6366f1] text-on-primary-container dark:text-[#ffffff] rounded-full px-4 py-1 active:scale-90 transition-all duration-150">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span>Dashboard</span>
+</button>
+<!-- Inactive Tab: Supervision -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-[#c4c6d0] px-4 py-1 hover:bg-surface-container-high dark:hover:bg-[#131b2e] active:scale-90 transition-all duration-150 rounded-lg">
+<span class="material-symbols-outlined mb-1">supervised_user_circle</span>
+<span>Supervision</span>
+</button>
+<!-- Inactive Tab: Tasks -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-[#c4c6d0] px-4 py-1 hover:bg-surface-container-high dark:hover:bg-[#131b2e] active:scale-90 transition-all duration-150 rounded-lg">
+<span class="material-symbols-outlined mb-1">assignment</span>
+<span>Tasks</span>
+</button>
+<!-- Inactive Tab: Profile -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-[#c4c6d0] px-4 py-1 hover:bg-surface-container-high dark:hover:bg-[#131b2e] active:scale-90 transition-all duration-150 rounded-lg">
+<span class="material-symbols-outlined mb-1">account_circle</span>
+<span>Profile</span>
+</button>
+</nav>
+</body></html>

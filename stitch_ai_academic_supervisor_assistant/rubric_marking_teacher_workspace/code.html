@@ -1,0 +1,305 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Teacher Rubric Marking - Academic Supervision</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-container": "#dad7ff",
+                        "on-surface-variant": "#464555",
+                        "on-primary": "#ffffff",
+                        "on-surface": "#111c2d",
+                        "outline": "#777587",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-bright": "#f9f9ff",
+                        "primary-container": "#4f46e5",
+                        "tertiary-fixed": "#c9e6ff",
+                        "error": "#ba1a1a",
+                        "on-error": "#ffffff",
+                        "secondary-container": "#e0e3e5",
+                        "on-secondary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "primary-fixed": "#e2dfff",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "inverse-on-surface": "#ecf1ff",
+                        "surface": "#f9f9ff",
+                        "inverse-surface": "#263143",
+                        "secondary-fixed": "#e0e3e5",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-fixed-variant": "#444749",
+                        "surface-tint": "#4d44e3",
+                        "tertiary-container": "#006693",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "surface-variant": "#d8e3fb",
+                        "surface-container-highest": "#d8e3fb",
+                        "surface-container-low": "#f0f3ff",
+                        "surface-container-high": "#dee8ff",
+                        "on-secondary-fixed": "#191c1e",
+                        "surface-container": "#e7eeff",
+                        "on-background": "#111c2d",
+                        "inverse-primary": "#c3c0ff",
+                        "on-tertiary-container": "#b8e0ff",
+                        "on-tertiary-fixed": "#001e2f",
+                        "on-primary-fixed": "#0f0069",
+                        "background": "#f9f9ff",
+                        "tertiary": "#004d70",
+                        "secondary": "#5c5f61",
+                        "primary": "#3525cd",
+                        "on-tertiary-fixed-variant": "#004c6e",
+                        "surface-dim": "#cfdaf2",
+                        "outline-variant": "#c7c4d8",
+                        "tertiary-fixed-dim": "#89ceff",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#c4c7c9",
+                        "on-secondary-container": "#626567"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin_mobile": "16px",
+                        "container_max": "1440px",
+                        "sidebar_width": "280px",
+                        "base": "8px",
+                        "margin_desktop": "40px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "display": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #F8FAFC; }
+        .academic-shadow { box-shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.05), 0px 2px 4px -2px rgba(0, 0, 0, 0.05); }
+    </style>
+</head>
+<body class="text-on-surface font-body-md min-h-screen">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col h-full py-base bg-surface dark:bg-on-surface shadow-sm fixed left-0 top-0 h-full w-[280px] z-40">
+<div class="px-4 py-6">
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">Academic Pilot</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">PhD Supervision Portal</p>
+</div>
+<div class="px-4 mb-6">
+<button class="w-full bg-primary text-on-primary py-2 px-4 rounded-lg font-label-md text-label-md shadow-sm hover:bg-primary-container transition-colors duration-200 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">add</span>
+                New Supervision
+            </button>
+</div>
+<ul class="flex flex-col gap-1 flex-1">
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-outline-variant hover:text-primary hover:bg-surface-container-low transition-colors duration-200 ease-in-out font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                    Dashboard
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 bg-primary/10 border-l-4 border-primary text-primary font-semibold transition-colors duration-200 ease-in-out font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">supervised_user_circle</span>
+                    Supervision
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-outline-variant hover:text-primary hover:bg-surface-container-low transition-colors duration-200 ease-in-out font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">group</span>
+                    Students
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-outline-variant hover:text-primary hover:bg-surface-container-low transition-colors duration-200 ease-in-out font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">analytics</span>
+                    Research
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-outline-variant hover:text-primary hover:bg-surface-container-low transition-colors duration-200 ease-in-out font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+                    Resources
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-outline-variant hover:text-primary hover:bg-surface-container-low transition-colors duration-200 ease-in-out font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">settings</span>
+                    Settings
+                </a>
+</li>
+</ul>
+<ul class="mt-auto flex flex-col gap-1 border-t border-surface-variant pt-4">
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-outline-variant hover:text-primary hover:bg-surface-container-low transition-colors duration-200 ease-in-out font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">help</span>
+                    Help Center
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-outline-variant hover:text-primary hover:bg-surface-container-low transition-colors duration-200 ease-in-out font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">logout</span>
+                    Logout
+                </a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Area -->
+<div class="md:ml-[280px] flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="sticky top-0 z-30 w-full bg-white/80 dark:bg-on-surface/80 backdrop-blur-md shadow-sm flex justify-between items-center h-16 px-margin_desktop max-w-[1440px] mx-auto">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant hidden md:block">search</span>
+<input class="hidden md:block bg-transparent border-none focus:ring-0 text-on-surface placeholder:text-on-surface-variant font-body-md text-body-md w-64" placeholder="Search students, projects..." type="text">
+</div>
+<div class="flex items-center gap-6 text-on-surface-variant">
+<button class="hover:text-primary transition-colors scale-95 active:scale-100 transition-transform">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="hover:text-primary transition-colors scale-95 active:scale-100 transition-transform">
+<span class="material-symbols-outlined">history_edu</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-surface-variant overflow-hidden border border-outline-variant cursor-pointer">
+<img alt="Professor Profile" class="w-full h-full object-cover" data-alt="A professional headshot of an academic professor with short hair and glasses, set against a soft, light-grey background. The lighting is bright and even, reflecting a corporate yet approachable aesthetic suitable for a scholarly platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6LGpkGklORLDpsk40vAbwwwnxInvGuZ4ZeQ0-xblGGNFTtngvJgfOnSkzZmBNEapLPY6HNhP4ozG0ZcHP7jxPCvUxdA6FuvMgsNALlToiP9fiLkFC1lZEMQTnTSJgTiLv5kr1nx1sT0rfcd8RPMxQFXe9kpdhJ2yFSKEaZDbQ8coXGXFnCJx93NaWoOyE6PDvprT9Yae7TKAly6BHYVxxH5lr5Wq7F3NfB0mV1MpBpD0B9v52o5x4n24qvhB2LXEK2AklFqy9cbY">
+</div>
+</div>
+</header>
+<!-- Canvas -->
+<main class="flex-1 p-gutter md:p-margin_desktop max-w-[1440px] w-full mx-auto">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+<div>
+<div class="flex items-center gap-2 mb-2">
+<span class="px-2 py-1 bg-surface-container-highest text-on-surface-variant rounded font-label-md text-label-md">SDP Final Report</span>
+<span class="px-2 py-1 bg-tertiary-container/10 text-tertiary rounded font-label-md text-label-md">In Progress</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Team Alpha - Project Nova</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Submitted: Oct 12, 2023 • Lead: Sarah Jenkins</p>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-2 border border-outline text-on-surface-variant rounded-lg font-label-md text-label-md hover:bg-surface-container-low transition-colors">
+                        Save Draft
+                    </button>
+<button class="px-6 py-2 bg-primary text-on-primary rounded-lg font-label-md text-label-md shadow-sm hover:bg-primary-container transition-colors">
+                        Submit Evaluation
+                    </button>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+<!-- Rubric Cards Area -->
+<div class="lg:col-span-2 flex flex-col gap-6">
+<!-- Criterion 1 -->
+<div class="bg-surface-container-lowest rounded-[24px] p-6 academic-shadow">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="font-title-lg text-title-lg text-on-surface mb-1">1. Problem Understanding</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Clarity of the problem statement and context.</p>
+</div>
+<div class="flex items-center gap-2">
+<input class="w-16 text-center border border-outline rounded-md p-1 font-body-lg text-body-lg text-primary font-semibold focus:ring-primary focus:border-primary" max="10" min="0" type="number" value="8">
+<span class="text-on-surface-variant font-body-sm text-body-sm">/ 10</span>
+</div>
+</div>
+<textarea class="w-full border border-outline-variant rounded-lg p-3 font-body-md text-body-md placeholder:text-outline focus:ring-primary focus:border-primary" placeholder="Enter specific feedback for problem understanding..." rows="3"></textarea>
+</div>
+<!-- Criterion 2 -->
+<div class="bg-surface-container-lowest rounded-[24px] p-6 academic-shadow">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="font-title-lg text-title-lg text-on-surface mb-1">2. Methodology</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Appropriateness and rigorousness of the chosen approach.</p>
+</div>
+<div class="flex items-center gap-2">
+<input class="w-16 text-center border border-outline rounded-md p-1 font-body-lg text-body-lg text-primary font-semibold focus:ring-primary focus:border-primary" max="20" min="0" placeholder="-" type="number">
+<span class="text-on-surface-variant font-body-sm text-body-sm">/ 20</span>
+</div>
+</div>
+<textarea class="w-full border border-outline-variant rounded-lg p-3 font-body-md text-body-md placeholder:text-outline focus:ring-primary focus:border-primary" placeholder="Enter specific feedback for methodology..." rows="3"></textarea>
+</div>
+<!-- Criterion 3 -->
+<div class="bg-surface-container-lowest rounded-[24px] p-6 academic-shadow border-l-2 border-primary">
+<div class="flex justify-between items-start mb-4">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<h3 class="font-title-lg text-title-lg text-on-surface">3. Implementation</h3>
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Quality, robustness, and efficiency of the technical solution. <span class="italic text-primary/70">AI suggests strong code structure detected.</span></p>
+</div>
+<div class="flex items-center gap-2">
+<input class="w-16 text-center border border-outline rounded-md p-1 font-body-lg text-body-lg text-primary font-semibold focus:ring-primary focus:border-primary" max="30" min="0" type="number" value="25">
+<span class="text-on-surface-variant font-body-sm text-body-sm">/ 30</span>
+</div>
+</div>
+<textarea class="w-full border border-outline-variant rounded-lg p-3 font-body-md text-body-md placeholder:text-outline focus:ring-primary focus:border-primary" placeholder="Enter specific feedback for implementation..." rows="3">Solid architecture, but error handling in module B needs refinement.</textarea>
+</div>
+</div>
+<!-- Sticky Summary Column -->
+<div class="lg:col-span-1">
+<div class="bg-surface-container-lowest rounded-[24px] p-6 academic-shadow sticky top-24">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-6 border-b border-surface-variant pb-4">Evaluation Summary</h3>
+<div class="space-y-4 mb-8">
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">1. Problem Und.</span>
+<span class="font-body-md text-body-md text-on-surface font-semibold">8 / 10</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">2. Methodology</span>
+<span class="font-body-md text-body-md text-outline italic">Pending</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">3. Implementation</span>
+<span class="font-body-md text-body-md text-on-surface font-semibold">25 / 30</span>
+</div>
+<!-- Placeholders for other criteria -->
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">4. Documentation</span>
+<span class="font-body-md text-body-md text-outline italic">Pending</span>
+</div>
+</div>
+<div class="bg-surface-container pt-4 px-4 pb-6 rounded-xl text-center">
+<p class="font-label-md text-label-md text-on-surface-variant mb-1 uppercase tracking-wider">Total Score</p>
+<div class="font-display text-display text-primary font-bold">
+                                33<span class="text-2xl text-on-surface-variant font-normal">/100</span>
+</div>
+<div class="w-full bg-secondary-container h-1 rounded-full mt-4 overflow-hidden">
+<div class="bg-primary h-full w-[33%]"></div>
+</div>
+</div>
+<div class="mt-6">
+<label class="font-label-md text-label-md text-on-surface mb-2 block">General Coordinator Comments</label>
+<textarea class="w-full border border-outline-variant rounded-lg p-3 font-body-sm text-body-sm placeholder:text-outline bg-surface focus:ring-primary focus:border-primary" placeholder="Overall impressions and concluding remarks..." rows="4"></textarea>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

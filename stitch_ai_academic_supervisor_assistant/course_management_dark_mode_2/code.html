@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AI Academic Supervisor - Course Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed": "#e1e0ff",
+                    "error-container": "#93000a",
+                    "primary": "#c0c1ff",
+                    "on-secondary-container": "#a7b6cc",
+                    "on-tertiary-fixed-variant": "#703700",
+                    "on-primary-fixed-variant": "#2f2ebe",
+                    "tertiary-container": "#d97721",
+                    "inverse-surface": "#dae2fd",
+                    "on-tertiary-fixed": "#301400",
+                    "surface-bright": "#31394d",
+                    "surface-variant": "#2d3449",
+                    "on-surface-variant": "#c7c4d7",
+                    "on-background": "#dae2fd",
+                    "surface-tint": "#c0c1ff",
+                    "outline-variant": "#464554",
+                    "tertiary": "#ffb783",
+                    "surface-container-high": "#222a3d",
+                    "primary-fixed-dim": "#c0c1ff",
+                    "surface-container-lowest": "#060e20",
+                    "secondary-fixed": "#d4e4fa",
+                    "outline": "#908fa0",
+                    "on-secondary": "#233143",
+                    "tertiary-fixed": "#ffdcc5",
+                    "on-primary-container": "#0d0096",
+                    "surface-dim": "#0b1326",
+                    "error": "#ffb4ab",
+                    "inverse-primary": "#494bd6",
+                    "background": "#0b1326",
+                    "primary-container": "#8083ff",
+                    "on-secondary-fixed": "#0d1c2d",
+                    "on-surface": "#dae2fd",
+                    "surface": "#0b1326",
+                    "secondary": "#b9c8de",
+                    "surface-container-low": "#131b2e",
+                    "on-primary-fixed": "#07006c",
+                    "on-tertiary": "#4f2500",
+                    "on-secondary-fixed-variant": "#39485a",
+                    "on-primary": "#1000a9",
+                    "surface-container-highest": "#2d3449",
+                    "on-error": "#690005",
+                    "tertiary-fixed-dim": "#ffb783",
+                    "inverse-on-surface": "#283044",
+                    "surface-container": "#171f33",
+                    "secondary-fixed-dim": "#b9c8de",
+                    "secondary-container": "#39485a",
+                    "on-tertiary-container": "#452000",
+                    "on-error-container": "#ffdad6"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xs": "4px",
+                    "md": "24px",
+                    "gutter": "24px",
+                    "xl": "64px",
+                    "base": "8px",
+                    "sm": "12px",
+                    "margin": "32px",
+                    "lg": "40px"
+            },
+            "fontFamily": {
+                    "label-sm": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-xl-mobile": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "label-md": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-xl": ["Inter"]
+            },
+            "fontSize": {
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-xl-mobile": ["30px", {"lineHeight": "38px", "fontWeight": "700"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-xl": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { background-color: #0b1326; color: #dae2fd; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid #334155;
+        }
+    </style>
+</head>
+<body class="font-body-md text-body-md overflow-x-hidden">
+<!-- SideNavBar Anchor -->
+<aside class="bg-surface-container-low dark:bg-surface-dim h-screen w-64 fixed left-0 top-0 border-r border-outline-variant flex flex-col h-full py-base px-sm z-50">
+<div class="mb-lg px-base">
+<h1 class="text-headline-md font-headline-md font-bold text-primary dark:text-primary-fixed">AI Supervisor</h1>
+<p class="text-label-sm font-label-sm opacity-70">Academic Excellence</p>
+</div>
+<nav class="flex-1 space-y-base">
+<a class="flex items-center gap-sm p-sm text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors font-label-md text-label-md rounded-lg active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span> Dashboard
+            </a>
+<a class="flex items-center gap-sm p-sm text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors font-label-md text-label-md rounded-lg active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span> Institutions
+            </a>
+<!-- Active State: Courses -->
+<a class="flex items-center gap-sm p-sm text-primary dark:text-primary-fixed bg-secondary-container dark:bg-secondary-container rounded-lg font-label-md text-label-md active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="school">school</span> Courses
+            </a>
+<a class="flex items-center gap-sm p-sm text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors font-label-md text-label-md rounded-lg active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span> Users
+            </a>
+<a class="flex items-center gap-sm p-sm text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors font-label-md text-label-md rounded-lg active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span> Scheduling
+            </a>
+<a class="flex items-center gap-sm p-sm text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors font-label-md text-label-md rounded-lg active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="folder_shared">folder_shared</span> Research
+            </a>
+</nav>
+<div class="mt-auto border-t border-outline-variant pt-base space-y-xs">
+<button class="w-full text-left flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors font-label-md text-label-md">
+<span class="material-symbols-outlined" data-icon="settings">settings</span> Settings
+            </button>
+<button class="w-full text-left flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors font-label-md text-label-md">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span> Support
+            </button>
+<div class="mt-md p-sm bg-primary-container/20 rounded-xl border border-primary/30">
+<p class="text-label-sm font-label-sm text-primary mb-xs">System Health</p>
+<div class="h-1 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary w-4/5"></div>
+</div>
+</div>
+</div>
+</aside>
+<!-- TopAppBar Anchor -->
+<header class="fixed top-0 right-0 w-[calc(100%-16rem)] h-16 bg-surface dark:bg-surface-dim border-b border-outline-variant flex justify-between items-center px-gutter z-40">
+<div class="flex items-center gap-md">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="bg-surface-container-low border-none rounded-full pl-10 pr-md py-xs text-body-sm focus:ring-2 focus:ring-primary w-64 transition-all focus:w-80" placeholder="Search course directory..." type="text"/>
+</div>
+<nav class="flex gap-md ml-md">
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" href="#">Portfolio</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" href="#">Submissions</a>
+<a class="font-label-md text-label-md text-primary dark:text-primary-fixed border-b-2 border-primary" href="#">Analytics</a>
+</nav>
+</div>
+<div class="flex items-center gap-md">
+<button class="bg-primary text-on-primary px-md py-xs rounded-full font-label-md text-label-md hover:brightness-110 active:scale-95 transition-all">
+                Schedule Meeting
+            </button>
+<div class="flex gap-sm">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors" data-icon="notifications">notifications</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors" data-icon="apps">apps</button>
+</div>
+<img alt="Professor Profile" class="w-8 h-8 rounded-full border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJE1uWsy7HcK0QqvfeLiQpzWf6XqczFvWKShe_Ma0LHj2rp0TaMBCQdrImSTEDy8NsX4yK4_IqDTUapd8FhKltZ0hqjcCqguWzceYDPvXMPgOGPomfQcJBsgSpQc2g8ROo65sWYpfENXpYUSrR5d7ZPw_-yd5W6iA_oK3rexW9lRGQdwJKlsl_l_YIpTCN2ganal4uGRx3WQ02HLtuEdPVHcZaMC78qxmTLJTQV2osscYbWLDNER2PmQxPqAbVx0bFPNCrpv7Jg2g"/>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-16 min-h-screen p-margin max-w-[1200px] mx-auto">
+<!-- Header Section -->
+<div class="flex justify-between items-end mb-lg">
+<div>
+<h2 class="font-headline-xl text-headline-xl text-on-surface">Course Management</h2>
+<p class="text-on-surface-variant font-body-md mt-xs">Synthesize curriculum data and oversee academic performance across departments.</p>
+</div>
+<button class="flex items-center gap-xs bg-primary text-on-primary font-label-md text-label-md px-lg py-sm rounded-lg hover:shadow-lg hover:shadow-primary/20 transition-all">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                Add Course
+            </button>
+</div>
+<!-- Department Statistics Bento Grid -->
+<div class="bento-grid mb-lg">
+<!-- Metric 1 -->
+<div class="col-span-12 md:col-span-4 glass-card p-md rounded-xl flex flex-col justify-between overflow-hidden relative group">
+<div class="relative z-10">
+<span class="material-symbols-outlined text-primary mb-md" data-icon="auto_stories">auto_stories</span>
+<h3 class="text-on-surface-variant font-label-md text-label-md">Active Courses</h3>
+<p class="text-headline-lg font-headline-lg text-primary mt-xs">1,284</p>
+<p class="text-label-sm font-label-sm text-tertiary mt-base flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px]" data-icon="trending_up">trending_up</span>
+                        +12% from last semester
+                    </p>
+</div>
+<div class="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-700">
+<span class="material-symbols-outlined text-[120px]" data-icon="school">school</span>
+</div>
+</div>
+<!-- Metric 2 -->
+<div class="col-span-12 md:col-span-4 glass-card p-md rounded-xl flex flex-col justify-between">
+<div>
+<span class="material-symbols-outlined text-secondary mb-md" data-icon="layers">layers</span>
+<h3 class="text-on-surface-variant font-label-md text-label-md">Department Sections</h3>
+<p class="text-headline-lg font-headline-lg text-secondary mt-xs">42</p>
+<div class="mt-md flex gap-xs">
+<span class="px-xs py-1 rounded bg-secondary/10 text-secondary text-[10px] font-bold">STEM</span>
+<span class="px-xs py-1 rounded bg-tertiary/10 text-tertiary text-[10px] font-bold">HUMANITIES</span>
+<span class="px-xs py-1 rounded bg-primary/10 text-primary text-[10px] font-bold">ARTS</span>
+</div>
+</div>
+</div>
+<!-- Metric 3 -->
+<div class="col-span-12 md:col-span-4 glass-card p-md rounded-xl bg-gradient-to-br from-primary-container/10 to-transparent">
+<h3 class="text-on-surface-variant font-label-md text-label-md mb-md">Academic Load Distribution</h3>
+<div class="flex items-center gap-md">
+<div class="w-24 h-24 rounded-full border-[6px] border-outline-variant relative flex items-center justify-center">
+<div class="absolute inset-0 rounded-full border-[6px] border-primary border-t-transparent border-r-transparent -rotate-45"></div>
+<span class="text-label-md font-label-md">84%</span>
+</div>
+<div class="space-y-xs">
+<div class="flex items-center gap-xs">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="text-label-sm font-label-sm">High Engagement</span>
+</div>
+<div class="flex items-center gap-xs">
+<div class="w-2 h-2 rounded-full bg-outline"></div>
+<span class="text-label-sm font-label-sm">Standard</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Course Directory Table -->
+<div class="glass-card rounded-xl overflow-hidden mb-xl">
+<div class="p-md border-b border-outline-variant flex justify-between items-center">
+<h3 class="font-headline-md text-headline-md text-on-surface">Course Directory</h3>
+<div class="flex gap-sm">
+<button class="flex items-center gap-xs px-sm py-xs bg-surface-container-high rounded text-label-sm font-label-sm hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="filter_list">filter_list</span>
+                        Filters
+                    </button>
+<button class="flex items-center gap-xs px-sm py-xs bg-surface-container-high rounded text-label-sm font-label-sm hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="download">download</span>
+                        Export CSV
+                    </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-lowest">
+<tr>
+<th class="px-md py-sm text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Code</th>
+<th class="px-md py-sm text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Course Name</th>
+<th class="px-md py-sm text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Department</th>
+<th class="px-md py-sm text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Lead Instructor</th>
+<th class="px-md py-sm text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-right">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-high/50 transition-colors cursor-pointer group">
+<td class="px-md py-md font-mono text-primary">CS-402</td>
+<td class="px-md py-md font-label-md text-label-md text-on-surface">Advanced Neural Synthesis</td>
+<td class="px-md py-md">
+<span class="bg-primary/10 text-primary px-xs py-0.5 rounded text-[11px] font-bold">COMP-SCI</span>
+</td>
+<td class="px-md py-md flex items-center gap-sm">
+<img alt="Instructor Profile" class="w-6 h-6 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBEOAPlzw0_7_kFLzVV-PK3IoULYwfIbDIJkoVv14kOdO2YwM29sHreTG6b37gCgqiHzL1SW3zj5uAgIEVMiV7lp0iGY8JbHjH-oxthZQi0109f3DXXd4oJuaqFcJND5Uy9mq83_3SDCfFjCfzHDnm8-VjnDix61kttZOSZEYLKky8VXNRaMv_geICldE_y-8qtoJX35TMmajq1K_RhwB-bNUruZoWZq11-hGy7QxKHIJYT7PGDcckOKjQa7ih0XW3_Aeekjs3L8w8"/>
+<span class="text-body-sm">Dr. Aris Thorne</span>
+</td>
+<td class="px-md py-md text-right">
+<span class="inline-block w-2 h-2 rounded-full bg-green-500 mr-xs"></span>
+<span class="text-label-sm font-label-sm">Active</span>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-high/50 transition-colors cursor-pointer group">
+<td class="px-md py-md font-mono text-primary">BIO-109</td>
+<td class="px-md py-md font-label-md text-label-md text-on-surface">Genomic Data Architecture</td>
+<td class="px-md py-md">
+<span class="bg-secondary/10 text-secondary px-xs py-0.5 rounded text-[11px] font-bold">BIOLOGY</span>
+</td>
+<td class="px-md py-md flex items-center gap-sm">
+<img alt="Instructor Profile" class="w-6 h-6 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDfsVCl5i0I7qvuejhqKhyJD53FJ87umomDuk1MPKKzBvQOaIzRBUC_MVzxVcQIOwZNS5WWYTKQCBGkoXEj7ma1tjvtZjo_B-ERCkebzr_LgPdVsSq9RqnErcDRjiNVa7t964GvAqXjskcmnZ6QGcwH-UTSx6RkcJiWThsJoBnU_Ms-aij0MdA_t5BxBv557g6eFds7aV4Lp-KNT0-yczqsALHgfSJxYlp1Q5xiu1oRT3MxKr3NS-jgGwVLzIbe83tydQLiAobcq-w"/>
+<span class="text-body-sm">Prof. Elena Vane</span>
+</td>
+<td class="px-md py-md text-right">
+<span class="inline-block w-2 h-2 rounded-full bg-green-500 mr-xs"></span>
+<span class="text-label-sm font-label-sm">Active</span>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-high/50 transition-colors cursor-pointer group">
+<td class="px-md py-md font-mono text-primary">PHIL-331</td>
+<td class="px-md py-md font-label-md text-label-md text-on-surface">Ethics of AI Cognition</td>
+<td class="px-md py-md">
+<span class="bg-tertiary/10 text-tertiary px-xs py-0.5 rounded text-[11px] font-bold">HUMANITIES</span>
+</td>
+<td class="px-md py-md flex items-center gap-sm">
+<img alt="Instructor Profile" class="w-6 h-6 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1XaRkJnZK1SxJVS0fK8FK-5y6W3Ftk5DSNyKfj4DG77dWn6k2FI18xHNeH7_i9y4fBTPArlfYmYBw2JqQ9KfMekVOiovfNvFrLBEyOF0XDXEYoGzRn6utBSiG3NsYIe5F0Ee4UndbxJERO5XPgvxA1V2c6rT2LWuG5iol3uHoZET0VOhAf8R4T89IF76xhXUYuCg0yOB1bRqH89IYo0ZiXcAffINyKOFuWrcjqI5DxN_EPDE3aZ0kLHZcbbiSogixh8WIRTmPXAM"/>
+<span class="text-body-sm">Dr. Marcus Aurel</span>
+</td>
+<td class="px-md py-md text-right">
+<span class="inline-block w-2 h-2 rounded-full bg-primary/40 mr-xs"></span>
+<span class="text-label-sm font-label-sm opacity-60">Pending</span>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-high/50 transition-colors cursor-pointer group">
+<td class="px-md py-md font-mono text-primary">MATH-202</td>
+<td class="px-md py-md font-label-md text-label-md text-on-surface">Statistical Research Methods</td>
+<td class="px-md py-md">
+<span class="bg-primary/10 text-primary px-xs py-0.5 rounded text-[11px] font-bold">MATH</span>
+</td>
+<td class="px-md py-md flex items-center gap-sm">
+<img alt="Instructor Profile" class="w-6 h-6 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFQcKcX6fAOJVPxDehDMlLrg9O4y3q9tdfN7n8Xjq5serdkcBsTJqc3arScH6133doA_SslTMWKvjHyPvLEf6_XTLYlBlDGQTCqMVpyL88GQgcz8emgobQr04RqOzvSrZvwTCyuWQsgYQ4v4SsKS7HuDws2IawkZgKsoQEERE13ZZpLWV5LaHaJey80O715gHtW_GDIop598uutKoHHEgtwHgVd6JgJEP_HESJ-XxnhSe2N0K_T9dRKd18gBDBJRVYTLtTa2eW9Fg"/>
+<span class="text-body-sm">Prof. Sarah Chen</span>
+</td>
+<td class="px-md py-md text-right">
+<span class="inline-block w-2 h-2 rounded-full bg-green-500 mr-xs"></span>
+<span class="text-label-sm font-label-sm">Active</span>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-container-high/50 transition-colors cursor-pointer group">
+<td class="px-md py-md font-mono text-primary">ENG-410</td>
+<td class="px-md py-md font-label-md text-label-md text-on-surface">Technical Communication for AI</td>
+<td class="px-md py-md">
+<span class="bg-tertiary/10 text-tertiary px-xs py-0.5 rounded text-[11px] font-bold">ENGLISH</span>
+</td>
+<td class="px-md py-md flex items-center gap-sm">
+<img alt="Instructor Profile" class="w-6 h-6 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAiWlYBVVjaGeYUBwlSZVK89RA7h9IZc_fFdd-qCjILwJfI8lpgMgV5JYN6u65QTJeQ570ddH4GsVyEXCngxQLT6O2dbBGqchJDdkRzdMS6xZ8unoaQMaCaxTliUERXUR74zrtqezdSpH4yPF1QEjtmmaTsdAzItet9o4YYXSbuwvWLqGgMgJ-yJeIYqZtkO40_pEaLEt6pMZJE7SHwKBsi5r7FLaVdfynbcGtt3K5gqtK5N9PjawJJf3Ry8maLv4z38X6m7DavB3g"/>
+<span class="text-body-sm">Dr. Robert Liston</span>
+</td>
+<td class="px-md py-md text-right">
+<span class="inline-block w-2 h-2 rounded-full bg-green-500 mr-xs"></span>
+<span class="text-label-sm font-label-sm">Active</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="px-md py-sm bg-surface-container-low flex justify-between items-center">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Showing 1 to 5 of 1,284 courses</span>
+<div class="flex gap-xs">
+<button class="p-xs hover:bg-surface-container-high rounded transition-colors">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="px-sm py-xs bg-primary text-on-primary rounded font-label-md text-label-md">1</button>
+<button class="px-sm py-xs hover:bg-surface-container-high rounded font-label-md text-label-md">2</button>
+<button class="px-sm py-xs hover:bg-surface-container-high rounded font-label-md text-label-md">3</button>
+<button class="p-xs hover:bg-surface-container-high rounded transition-colors">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Secondary Insights Area -->
+<div class="grid grid-cols-12 gap-gutter pb-xl">
+<!-- Faculty Availability Card -->
+<div class="col-span-12 lg:col-span-8 glass-card rounded-xl p-md">
+<div class="flex justify-between items-center mb-lg">
+<h4 class="font-headline-md text-headline-md text-on-surface">Faculty Oversight Status</h4>
+<span class="text-label-sm font-label-sm text-primary flex items-center gap-xs">
+                        LIVE UPDATES <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+<div class="p-sm bg-surface-container-lowest rounded-lg border border-outline-variant/30">
+<div class="flex justify-between mb-xs">
+<span class="text-label-md font-label-md">Curriculum Review</span>
+<span class="text-primary font-bold">92%</span>
+</div>
+<div class="h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[92%]"></div>
+</div>
+</div>
+<div class="p-sm bg-surface-container-lowest rounded-lg border border-outline-variant/30">
+<div class="flex justify-between mb-xs">
+<span class="text-label-md font-label-md">Instructor Availability</span>
+<span class="text-secondary font-bold">68%</span>
+</div>
+<div class="h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-[68%]"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Department Spotlight -->
+<div class="col-span-12 lg:col-span-4 glass-card rounded-xl overflow-hidden flex flex-col">
+<div class="p-md">
+<h4 class="font-label-md text-label-md text-on-surface-variant mb-md">DEPT. SPOTLIGHT</h4>
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 bg-tertiary/20 rounded flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined" data-icon="biotech">biotech</span>
+</div>
+<div>
+<p class="font-headline-md text-headline-md text-tertiary leading-tight">Quantum Bio</p>
+<p class="text-label-sm font-label-sm opacity-70">Top Performance This Month</p>
+</div>
+</div>
+</div>
+<div class="mt-auto p-md bg-tertiary/10">
+<button class="w-full py-xs border border-tertiary/30 rounded text-tertiary font-label-md text-label-md hover:bg-tertiary hover:text-on-tertiary transition-all">
+                        View Analytics
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Action Button Contextual Logic -->
+<div class="fixed bottom-margin right-margin z-50">
+<button class="w-14 h-14 bg-primary text-on-primary rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group overflow-hidden">
+<span class="material-symbols-outlined" data-icon="insights">insights</span>
+<span class="max-w-0 group-hover:max-w-xs group-hover:ml-sm overflow-hidden transition-all duration-300 font-label-md text-label-md whitespace-nowrap">AI Insights</span>
+</button>
+</div>
+<!-- Micro-interaction Scripts -->
+<script>
+        // Tab highlight simulation
+        document.querySelectorAll('nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                if(!e.currentTarget.classList.contains('bg-secondary-container')) {
+                   // Logic to handle navigation without full reload could go here
+                }
+            });
+        });
+
+        // Hover atmosphere effect on the canvas
+        document.addEventListener('mousemove', (e) => {
+            const x = e.clientX;
+            const y = e.clientY;
+            // Add subtle atmospheric glow that follows mouse
+        });
+    </script>
+</body></html>

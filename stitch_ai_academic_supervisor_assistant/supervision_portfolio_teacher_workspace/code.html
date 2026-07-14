@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ScholarTrack AI - Portfolios</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-container": "#4f46e5",
+                      "on-primary-fixed": "#0f0069",
+                      "surface-variant": "#d8e3fb",
+                      "on-surface": "#111c2d",
+                      "surface-dim": "#cfdaf2",
+                      "primary-fixed": "#e2dfff",
+                      "inverse-on-surface": "#ecf1ff",
+                      "inverse-surface": "#263143",
+                      "surface-tint": "#4d44e3",
+                      "background": "#f9f9ff",
+                      "on-secondary": "#ffffff",
+                      "surface-bright": "#f9f9ff",
+                      "primary": "#3525cd",
+                      "outline": "#777587",
+                      "on-error": "#ffffff",
+                      "on-secondary-fixed-variant": "#444749",
+                      "error-container": "#ffdad6",
+                      "secondary-container": "#e0e3e5",
+                      "secondary-fixed-dim": "#c4c7c9",
+                      "on-secondary-fixed": "#191c1e",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "surface": "#f9f9ff",
+                      "on-background": "#111c2d",
+                      "tertiary": "#004d70",
+                      "on-primary-container": "#dad7ff",
+                      "on-primary": "#ffffff",
+                      "on-error-container": "#93000a",
+                      "tertiary-fixed": "#c9e6ff",
+                      "on-tertiary-container": "#b8e0ff",
+                      "surface-container-low": "#f0f3ff",
+                      "error": "#ba1a1a",
+                      "surface-container-highest": "#d8e3fb",
+                      "secondary": "#5c5f61",
+                      "secondary-fixed": "#e0e3e5",
+                      "inverse-primary": "#c3c0ff",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "tertiary-container": "#006693",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary-fixed-variant": "#004c6e",
+                      "surface-container": "#e7eeff",
+                      "on-tertiary-fixed": "#001e2f",
+                      "outline-variant": "#c7c4d8",
+                      "on-tertiary": "#ffffff",
+                      "tertiary-fixed-dim": "#89ceff",
+                      "surface-container-high": "#dee8ff",
+                      "on-secondary-container": "#626567",
+                      "on-surface-variant": "#464555"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "container_max": "1440px",
+                      "base": "8px",
+                      "sidebar_width": "280px",
+                      "margin_desktop": "40px",
+                      "gutter": "24px",
+                      "margin_mobile": "16px"
+              },
+              "fontFamily": {
+                      "headline-lg": ["Inter"],
+                      "label-md": ["Inter"],
+                      "display": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "title-lg": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "body-md": ["Inter"],
+                      "headline-lg-mobile": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .academic-shadow { box-shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.05), 0px 2px 4px -2px rgba(0, 0, 0, 0.05); }
+        .ai-border { border: 1px solid transparent; background: linear-gradient(to right, white, white) padding-box, linear-gradient(to right, #e2dfff, #c9e6ff) border-box; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-background text-on-background flex h-screen overflow-hidden antialiased">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col h-full py-8 border-r border-outline-variant bg-surface-container-low dark:bg-surface-container-lowest fixed left-0 top-0 h-screen w-sidebar_width z-30 transition-all duration-200 ease-in-out">
+<div class="px-gutter mb-8 flex items-center gap-4">
+<img alt="University Crest" class="w-12 h-12 rounded-lg object-cover" data-alt="A modern, high-resolution rendering of a prestigious university crest or logo. The crest should be minimalistic and elegant, utilizing deep indigo and silver tones against a clean white background. It represents academic excellence and technological advancement, fitting perfectly into a sophisticated, light-mode institutional UI dashboard." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYkGlxTQBnktCAh8VM8Y0nIKC12hZv50iQC9rKFV9eK6kDZg3_dn_C0am3vY0M_V3-GeENphjqDDtJ7klGJ5-Omn0BmZPzER1t8bsMZzccJS8hh7u4r_o4OjlIeTQ_O-KD_-FmMaMYZf8qdMmrn-uK0JpC3j2Y8HneKJtJup3y1PAudEAPtkblLME7ih9mOKqiatymggvkRrkniFoT0tyNJDi2-zvZrvCJzgmfPebzq293MRIP_Fe0LFlPkYO5Fbm2lOf-LMSVQeo"/>
+<div>
+<h1 class="font-headline-md text-headline-md text-primary">Academic Office</h1>
+<p class="font-body-sm text-body-sm text-secondary">Graduate Studies</p>
+</div>
+</div>
+<ul class="flex-1 px-4 space-y-2">
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary dark:text-secondary-fixed opacity-70 hover:bg-surface-container-high dark:hover:bg-surface-container transition-all font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" style="stroke-width: 2px;">dashboard</span>
+                    Dashboard
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary dark:text-secondary-fixed opacity-70 hover:bg-surface-container-high dark:hover:bg-surface-container transition-all font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" style="stroke-width: 2px;">school</span>
+                    Supervision
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary dark:text-secondary-fixed opacity-70 hover:bg-surface-container-high dark:hover:bg-surface-container transition-all font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" style="stroke-width: 2px;">biotech</span>
+                    Research
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary-container/10 text-primary font-bold border-l-4 border-primary font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" style="stroke-width: 2px; font-variation-settings: 'FILL' 1;">person_search</span>
+                    Portfolios
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary dark:text-secondary-fixed opacity-70 hover:bg-surface-container-high dark:hover:bg-surface-container transition-all font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" style="stroke-width: 2px;">description</span>
+                    Reports
+                </a>
+</li>
+</ul>
+<div class="px-4 mt-auto mb-4">
+<button class="w-full bg-primary text-on-primary py-2 px-4 rounded-lg font-label-md text-label-md hover:opacity-90 transition-opacity">
+                Export Global Report
+            </button>
+</div>
+<ul class="px-4 space-y-2 border-t border-outline-variant pt-4">
+<li>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-secondary dark:text-secondary-fixed opacity-70 hover:bg-surface-container-high dark:hover:bg-surface-container transition-all font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+                    Archives
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-secondary dark:text-secondary-fixed opacity-70 hover:bg-surface-container-high dark:hover:bg-surface-container transition-all font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">contact_support</span>
+                    Support
+                </a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col md:ml-[280px] h-screen overflow-hidden">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center px-margin_desktop w-full z-40 bg-surface dark:bg-inverse-surface shadow-sm w-full h-16 sticky top-0">
+<div class="flex items-center gap-4">
+<!-- Mobile menu button (hidden on desktop) -->
+<button class="md:hidden text-on-surface-variant p-2">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<span class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed hidden md:block">ScholarTrack AI</span>
+</div>
+<div class="flex items-center gap-6">
+<!-- Search -->
+<div class="hidden md:flex relative items-center">
+<span class="material-symbols-outlined absolute left-3 text-on-surface-variant">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container rounded-full border-none focus:ring-2 focus:ring-primary text-body-sm font-body-sm w-64 transition-all focus:w-80 outline-none" placeholder="Search portfolios..." type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors rounded-full cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors rounded-full cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined">help</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors rounded-full cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+<img alt="Professor's profile photo" class="w-10 h-10 rounded-full border-2 border-primary-fixed object-cover cursor-pointer" data-alt="A professional headshot of a distinguished academic professor. He has a warm, confident expression and is wearing a smart, tailored navy blazer over a crisp white shirt. The lighting is soft and natural, suggesting a bright, modern university office environment. The image is cropped in a perfect circle, fitting a light-mode corporate dashboard aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5p4ZiNAI-80heUC6Fewk_9BOJa0jyegmhNqiGjP0EKUT-sJQlmR_NPbvpn6cofrz8ojLJzYngzR_Q4rnhUfX9G6UGHAF4MDt51p9zVZhZntM6CKq83GR-AIOEV8yDyfubnoxffA3HXxDkrA7mjAiPaYoKVYXDqVYdo8Q4iw2YgJnmEPe2fLNQEHLxEReLLi9Ga5dzo5jHdSbhYIsOYks8L1bfkpNDXTDSqEpPltN7IUJHB-R_7HpegQz2qP3PJYyity6v0vyDBF8"/>
+</div>
+</header>
+<!-- Scrollable Canvas -->
+<div class="flex-1 overflow-y-auto px-margin_mobile md:px-margin_desktop py-8 hide-scrollbar">
+<div class="max-w-[1440px] mx-auto">
+<!-- Page Header & AI Summary Bento -->
+<div class="flex flex-col lg:flex-row gap-gutter mb-8">
+<!-- Title Section -->
+<div class="lg:w-1/3 flex flex-col justify-center">
+<h2 class="font-display text-display text-on-background mb-2">Supervision Portfolios</h2>
+<p class="font-body-lg text-body-lg text-secondary mb-6">Long-term outcome tracking for PhD and Masters supervisees.</p>
+<div class="flex gap-4">
+<button class="bg-primary text-on-primary px-6 py-2 rounded-lg font-label-md text-label-md hover:bg-surface-tint transition-colors">Add Alumni</button>
+<button class="border border-primary text-primary px-6 py-2 rounded-lg font-label-md text-label-md hover:bg-surface-container-low transition-colors">Filter List</button>
+</div>
+</div>
+<!-- AI Summary Stats (Bento Grid) -->
+<div class="lg:w-2/3 grid grid-cols-2 md:grid-cols-4 gap-4">
+<div class="bg-surface-container-lowest rounded-3xl p-6 academic-shadow flex flex-col justify-between">
+<span class="material-symbols-outlined text-primary mb-4" style="font-size: 28px;">groups</span>
+<div>
+<p class="font-label-md text-label-md text-secondary uppercase tracking-wider mb-1">Total Graduated</p>
+<p class="font-headline-lg text-headline-lg text-on-surface">45</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-3xl p-6 academic-shadow flex flex-col justify-between">
+<span class="material-symbols-outlined text-tertiary mb-4" style="font-size: 28px;">timer</span>
+<div>
+<p class="font-label-md text-label-md text-secondary uppercase tracking-wider mb-1">Avg Completion</p>
+<p class="font-headline-lg text-headline-lg text-on-surface">3.8 <span class="font-body-sm text-body-sm text-secondary">yrs</span></p>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-3xl p-6 academic-shadow flex flex-col justify-between">
+<span class="material-symbols-outlined text-primary-container mb-4" style="font-size: 28px;">menu_book</span>
+<div>
+<p class="font-label-md text-label-md text-secondary uppercase tracking-wider mb-1">Top Publications</p>
+<p class="font-headline-lg text-headline-lg text-on-surface">128</p>
+</div>
+</div>
+<!-- AI Insight Card -->
+<div class="bg-surface-container-lowest rounded-3xl p-6 academic-shadow ai-border flex flex-col relative overflow-hidden col-span-2 md:col-span-1">
+<span class="material-symbols-outlined absolute top-4 right-4 text-primary" style="font-size: 20px;">auto_awesome</span>
+<p class="font-label-md text-label-md text-secondary uppercase tracking-wider mb-2">AI Success Index</p>
+<p class="font-headline-md text-headline-md text-on-surface mb-2">92% High</p>
+<p class="font-body-sm text-body-sm text-secondary leading-snug">Alumni placement in top-tier research institutes is trending upwards by 15% YoY.</p>
+</div>
+</div>
+</div>
+<!-- Alumni List Section -->
+<div class="mb-6 flex justify-between items-end border-b border-outline-variant pb-4">
+<h3 class="font-title-lg text-title-lg text-on-surface">Alumni Roster</h3>
+<div class="flex gap-2">
+<span class="px-3 py-1 bg-primary-container/10 text-primary rounded-full font-label-md text-label-md cursor-pointer">All</span>
+<span class="px-3 py-1 bg-surface-container text-secondary rounded-full font-label-md text-label-md cursor-pointer hover:bg-surface-container-high">PhD</span>
+<span class="px-3 py-1 bg-surface-container text-secondary rounded-full font-label-md text-label-md cursor-pointer hover:bg-surface-container-high">Masters</span>
+</div>
+</div>
+<!-- Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-gutter">
+<!-- Card 1 -->
+<div class="bg-surface-container-lowest rounded-3xl p-6 academic-shadow hover:shadow-md transition-shadow group flex flex-col h-full">
+<div class="flex items-start justify-between mb-4">
+<img alt="Dr. Sarah Jenkins" class="w-16 h-16 rounded-full object-cover border border-outline-variant" data-alt="A professional headshot of a young female academic, Dr. Sarah Jenkins. She looks intelligent and focused, wearing glasses and a neat blouse. The background is a slightly blurred university library setting, bright and optimistic. The image is cropped into a perfect circle, matching a modern SaaS platform's profile avatar style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4A8KZa0XerrHbCZCLtGpc2Ut0GwAR_YwJdCli8mgsliVqJgzhBmLPsi6JhU3qa7aaxDgfTlCo0SIDpv3qxm0dcDhIKkR1eBBWHgpWzW7fum-wZWYvjnKag-ihTikehdwDvTP2i4YPZ8lz4NVRE_uMhu7VQeMExqbP_fOwg_KxV1e5QcLJkWVhNS4JHg2m1kNXNFKg0h3tKtZhRFfNxGAo5ZMLEWk2GbjcTMTdhGps1R-YE5vqzPmGAJyCTngBvalXo7kI6F_t8XU"/>
+<span class="px-2 py-1 bg-tertiary-container/10 text-tertiary-container rounded-full font-label-md text-label-md">PhD '21</span>
+</div>
+<h4 class="font-title-lg text-title-lg text-on-surface mb-1">Dr. Sarah Jenkins</h4>
+<p class="font-body-sm text-body-sm text-primary mb-4 font-semibold">Research Fellow at MIT</p>
+<div class="mb-4 flex-1">
+<p class="font-label-md text-label-md text-secondary mb-1 uppercase">Thesis</p>
+<p class="font-body-sm text-body-sm text-on-surface line-clamp-2">Quantum Neural Networks for Predictive Climate Modeling</p>
+</div>
+<div class="flex items-center gap-2 mb-6 bg-surface-container p-2 rounded-lg">
+<span class="material-symbols-outlined text-primary text-sm">trending_up</span>
+<span class="font-label-md text-label-md text-on-surface">Success Index: 9.4/10</span>
+</div>
+<div class="flex gap-2 mt-auto">
+<button class="flex-1 bg-primary text-on-primary py-2 rounded-lg font-label-md text-label-md hover:bg-surface-tint transition-colors">View Portfolio</button>
+<button class="p-2 border border-outline-variant text-secondary rounded-lg hover:bg-surface-container transition-colors" title="Request Update">
+<span class="material-symbols-outlined text-[20px]">mail</span>
+</button>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-lowest rounded-3xl p-6 academic-shadow hover:shadow-md transition-shadow group flex flex-col h-full">
+<div class="flex items-start justify-between mb-4">
+<img alt="Marcus Chen" class="w-16 h-16 rounded-full object-cover border border-outline-variant" data-alt="A professional headshot of a young male data scientist, Marcus Chen. He is smiling slightly, looking confident, wearing a smart casual button-down shirt. The background is a clean, modern tech office environment with soft natural lighting. The image is cropped in a circle for a sophisticated dashboard UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBFTxC81QiqKIB0XLSqL3inm3ninAXcRtJGrFIaBTxv-lWhojkcT4r4OM1kliCZE2VR62BOODO0LZP82gD3L_q5_cIcePUXzNMU1e254C0cZU_1RcD9mWZBDbMW5OuaiP86pf9-myXj5Ty6M2cjP6sR_4oxxLSAC6lmsbGZBySQypeLAcJWcSQiL8IaHi-8jkoFCnoaFhB0GqPGrqz08epd7RT7BflzOP_djvkYugiklvKdVP-eE5tqsKb-PdtFrbcT8D42j-EgBA"/>
+<span class="px-2 py-1 bg-surface-variant text-on-surface-variant rounded-full font-label-md text-label-md">MSc '23</span>
+</div>
+<h4 class="font-title-lg text-title-lg text-on-surface mb-1">Marcus Chen</h4>
+<p class="font-body-sm text-body-sm text-primary mb-4 font-semibold">Senior Data Scientist at Google</p>
+<div class="mb-4 flex-1">
+<p class="font-label-md text-label-md text-secondary mb-1 uppercase">Thesis</p>
+<p class="font-body-sm text-body-sm text-on-surface line-clamp-2">Optimizing Large Language Models for Edge Devices</p>
+</div>
+<div class="flex items-center gap-2 mb-6 bg-surface-container p-2 rounded-lg">
+<span class="material-symbols-outlined text-primary text-sm">trending_up</span>
+<span class="font-label-md text-label-md text-on-surface">Success Index: 8.9/10</span>
+</div>
+<div class="flex gap-2 mt-auto">
+<button class="flex-1 bg-primary text-on-primary py-2 rounded-lg font-label-md text-label-md hover:bg-surface-tint transition-colors">View Portfolio</button>
+<button class="p-2 border border-outline-variant text-secondary rounded-lg hover:bg-surface-container transition-colors" title="Request Update">
+<span class="material-symbols-outlined text-[20px]">mail</span>
+</button>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-lowest rounded-3xl p-6 academic-shadow hover:shadow-md transition-shadow group flex flex-col h-full ai-border relative">
+<span class="material-symbols-outlined absolute top-4 right-4 text-primary opacity-50" style="font-size: 16px;">auto_awesome</span>
+<div class="flex items-start justify-between mb-4 mt-2">
+<div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center border border-outline-variant text-secondary font-title-lg">
+                                EP
+                            </div>
+<span class="px-2 py-1 bg-tertiary-container/10 text-tertiary-container rounded-full font-label-md text-label-md">PhD '19</span>
+</div>
+<h4 class="font-title-lg text-title-lg text-on-surface mb-1">Dr. Elena Patel</h4>
+<p class="font-body-sm text-body-sm text-primary mb-4 font-semibold">Asst. Professor, Stanford</p>
+<div class="mb-4 flex-1">
+<p class="font-label-md text-label-md text-secondary mb-1 uppercase">Thesis</p>
+<p class="font-body-sm text-body-sm text-on-surface line-clamp-2">Biomimetic Algorithms in Robotic Navigation</p>
+</div>
+<div class="flex items-center gap-2 mb-6 bg-primary-container/5 p-2 rounded-lg">
+<span class="material-symbols-outlined text-primary text-sm">star</span>
+<span class="font-label-md text-label-md text-primary">Top 5% Outcome</span>
+</div>
+<div class="flex gap-2 mt-auto">
+<button class="flex-1 bg-primary text-on-primary py-2 rounded-lg font-label-md text-label-md hover:bg-surface-tint transition-colors">View Portfolio</button>
+<button class="p-2 border border-outline-variant text-secondary rounded-lg hover:bg-surface-container transition-colors" title="Request Update">
+<span class="material-symbols-outlined text-[20px]">mail</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ScholarTrack AI - Sign Up</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-primary-container": "#dad7ff",
+                      "surface-dim": "#cfdaf2",
+                      "error": "#ba1a1a",
+                      "primary-container": "#4f46e5",
+                      "on-secondary-fixed": "#191c1e",
+                      "inverse-primary": "#c3c0ff",
+                      "background": "#f9f9ff",
+                      "surface-container-low": "#f0f3ff",
+                      "on-surface": "#111c2d",
+                      "surface": "#f9f9ff",
+                      "secondary": "#5c5f61",
+                      "on-primary-fixed": "#0f0069",
+                      "on-tertiary": "#ffffff",
+                      "on-secondary-fixed-variant": "#444749",
+                      "surface-container-highest": "#d8e3fb",
+                      "on-primary": "#ffffff",
+                      "tertiary-fixed-dim": "#89ceff",
+                      "on-error": "#ffffff",
+                      "surface-container": "#e7eeff",
+                      "secondary-container": "#e0e3e5",
+                      "on-tertiary-container": "#b8e0ff",
+                      "on-error-container": "#93000a",
+                      "inverse-on-surface": "#ecf1ff",
+                      "primary-fixed": "#e2dfff",
+                      "on-tertiary-fixed-variant": "#004c6e",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "error-container": "#ffdad6",
+                      "primary": "#3525cd",
+                      "on-secondary-container": "#626567",
+                      "tertiary-container": "#006693",
+                      "on-tertiary-fixed": "#001e2f",
+                      "inverse-surface": "#263143",
+                      "surface-variant": "#d8e3fb",
+                      "on-surface-variant": "#464555",
+                      "surface-bright": "#f9f9ff",
+                      "surface-tint": "#4d44e3",
+                      "outline-variant": "#c7c4d8",
+                      "on-background": "#111c2d",
+                      "surface-container-high": "#dee8ff",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "tertiary": "#004d70",
+                      "on-secondary": "#ffffff",
+                      "tertiary-fixed": "#c9e6ff",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-fixed": "#e0e3e5",
+                      "outline": "#777587"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "margin_mobile": "16px",
+                      "gutter": "24px",
+                      "container_max": "1440px",
+                      "base": "8px",
+                      "sidebar_width": "280px",
+                      "margin_desktop": "40px"
+              },
+              "fontFamily": {
+                      "label-md": ["Inter"],
+                      "title-lg": ["Inter"],
+                      "display": ["Inter"],
+                      "body-md": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "headline-lg-mobile": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "headline-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .ai-glow {
+            box-shadow: inset 0 0 0 1px rgba(79, 70, 229, 0.1);
+            position: relative;
+        }
+        .ai-glow::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: inherit;
+            border: 1px solid transparent;
+            background: linear-gradient(135deg, #4f46e5, #0ea5e9) border-box;
+            -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: destination-out;
+            mask-composite: exclude;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        .custom-shadow {
+            box-shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.05), 0px 2px 4px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex flex-col items-center justify-start overflow-x-hidden">
+<!-- Hero/Header Section -->
+<header class="w-full pt-12 pb-6 px-margin_mobile text-center">
+<div class="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full bg-primary-container/10 text-primary">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span class="font-label-md text-label-md uppercase tracking-wider">Academic Access Program</span>
+</div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary mb-2">ScholarTrack AI</h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-[320px] mx-auto">
+            The intelligent co-pilot for academic excellence. 
+            <span class="font-bold text-tertiary">Free for all university members.</span>
+</p>
+</header>
+<!-- Main Form Container -->
+<main class="w-full max-w-[480px] px-margin_mobile pb-20">
+<div class="bg-surface-container-lowest rounded-[24px] p-6 custom-shadow ai-glow">
+<form class="space-y-5" id="signup-form" onsubmit="return false;">
+<!-- Full Name -->
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface-variant ml-1">Full Name</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-on-surface-variant">person</span>
+<input class="w-full h-14 pl-12 pr-4 rounded-xl border-outline-variant bg-surface-container-low focus:border-primary focus:ring-1 focus:ring-primary transition-all font-body-md outline-none" placeholder="Dr. Julian Henderson" type="text"/>
+</div>
+</div>
+<!-- University Email -->
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface-variant ml-1">University Email</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-on-surface-variant">mail</span>
+<input class="w-full h-14 pl-12 pr-4 rounded-xl border-outline-variant bg-surface-container-low focus:border-primary focus:ring-1 focus:ring-primary transition-all font-body-md outline-none" placeholder="henderson@university.edu" type="email"/>
+</div>
+</div>
+<!-- ID Number -->
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface-variant ml-1">Student/Teacher ID</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-on-surface-variant">badge</span>
+<input class="w-full h-14 pl-12 pr-4 rounded-xl border-outline-variant bg-surface-container-low focus:border-primary focus:ring-1 focus:ring-primary transition-all font-body-md outline-none" placeholder="ID-882944" type="text"/>
+</div>
+</div>
+<!-- Role Selection -->
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface-variant ml-1">Academic Role</label>
+<div class="grid grid-cols-2 gap-3">
+<button class="role-btn flex items-center justify-center gap-2 h-12 rounded-xl border-2 border-outline-variant text-on-surface-variant font-label-md transition-all active:scale-95 bg-surface-container-low" data-role="student" onclick="selectRole(this)" type="button">
+<span class="material-symbols-outlined text-[20px]">school</span>
+                            Student
+                        </button>
+<button class="role-btn flex items-center justify-center gap-2 h-12 rounded-xl border-2 border-outline-variant text-on-surface-variant font-label-md transition-all active:scale-95 bg-surface-container-low" data-role="teacher" onclick="selectRole(this)" type="button">
+<span class="material-symbols-outlined text-[20px]">psychology</span>
+                            Faculty
+                        </button>
+</div>
+</div>
+<!-- Department -->
+<div class="space-y-1">
+<label class="font-label-md text-label-md text-on-surface-variant ml-1">Department</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-on-surface-variant">account_tree</span>
+<select class="w-full h-14 pl-12 pr-4 rounded-xl border-none ring-1 ring-outline-variant bg-surface-container-low focus:ring-2 focus:ring-primary transition-all font-body-md outline-none appearance-none">
+<option value="">Select Department</option>
+<option value="eng">Engineering</option>
+<option value="cs">Computer Science</option>
+<option value="bio">Biological Sciences</option>
+<option value="hum">Humanities</option>
+<option value="med">Medicine</option>
+</select>
+<span class="material-symbols-outlined absolute right-4 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- CTA Button -->
+<div class="pt-4">
+<button class="w-full bg-primary text-on-primary h-14 rounded-xl font-title-lg flex items-center justify-center gap-2 custom-shadow hover:brightness-110 active:scale-95 transition-all">
+                        Create Scholar Account
+                        <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<p class="text-center font-label-md text-label-md text-on-surface-variant mt-4">
+                        By signing up, you agree to our 
+                        <a class="text-primary underline" href="#">Academic Privacy Shield</a>
+</p>
+</div>
+</form>
+</div>
+<!-- Trust Signal / Social Proof -->
+<div class="mt-8 space-y-6">
+<div class="flex items-center gap-4 p-4 rounded-2xl bg-tertiary-fixed/30 border border-tertiary/10">
+<div class="w-12 h-12 rounded-xl bg-tertiary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-tertiary uppercase">Institutional Verification</h4>
+<p class="font-body-sm text-body-sm text-on-tertiary-fixed-variant">Email verification with your university domain grants instant full feature access.</p>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-2 opacity-60 grayscale">
+<img class="h-8 object-contain mx-auto" data-alt="Minimalist emblem of a prestigious global university, styled in a clean vector format with institutional navy and white colors, representing academic heritage and excellence. The mood is formal and authoritative." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrWtgLHwP-8LKI8iDdWak2iQWnRwSwFHx71AjeAWINgI6Fmnx2yB_cuoaGbtpEMUgUGMvbBfaPz1i7dudth8tn0rWgeDTYcKte5r_Ebwj-yEl9SVJnI3FUoVkbtL2UJhBIZs_5wpjlp-3r_zr5q-vOkya2Dt0mTOt-1JjNqSdUpmSoaX5w2M-0TRgrJM8BCRDL_inGanQ6bOSnIDRl6rRc2YhTve36QuwTdDZvggovWFroyAuZd2k8oNvYAazh10kf8yXSofAS-mc"/>
+<img class="h-8 object-contain mx-auto" data-alt="Modern geometric crest for a technology institute, featuring abstract lines and a minimalist shield shape in professional slate gray, conveying digital innovation and scientific rigor in a high-fidelity academic style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsZtxXmfzNForqeOiS8jgQeEG8QKK5oYcJGmvc47lrKVmqVUEWSG1Gz6Xl6VheiZ3bcEsLww2AIoDUE1FBawBi7_Wk4g-XWY8En6MvX68Fa5zAcfafcUH80wEbJXDqVJHjwEqbJyipXySpQOj93CeWLRgo6ZPWmNEGKse6rFXI9bQDc6eeWLnQZViaNjTndvvprbnWHE2G2-ZLv_uf7RSL-fPxinyy0sXc-1EjbWMxP_hYgsiImZp8Yiw-KusaBa6pQ2o_Qp264F0"/>
+<img class="h-8 object-contain mx-auto" data-alt="Simplified classical university seal with an open book and laurel leaves icon, rendered in a modern flat design aesthetic with charcoal gray tones, suitable for high-end corporate educational interfaces." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBphM2lqUYYYPtoG1OivMUMdpx40wOucoBtnaIP0KtgUAeZ8ZH5XkMXyrtfeAlzKkGl3gZXE9gkIpTg_FwF9IJZDouDg6HmwHbdFmkCADNUmUm9yZObfqYBJGVwfg1zCMNTHjeUdxXiD00TFNqw542N8RoKGH7ExDmZM7rAk09LGquhiqEXM781c3BZ3TpwmuwegFHBTXV8Hr-J5taAbqMcjOqCBZFI1G5VcY2g0FcCuU3ufk4saRckUva6vbAEFnkES6wRjgpPF-o"/>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="mt-auto pb-10 px-margin_mobile text-center">
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+            Already have an account? <a class="text-primary font-bold" href="#">Log In</a>
+</p>
+</footer>
+<script>
+        function selectRole(btn) {
+            // Remove active classes from all
+            document.querySelectorAll('.role-btn').forEach(b => {
+                b.classList.remove('bg-primary-container', 'text-on-primary-container', 'border-primary');
+                b.classList.add('bg-surface-container-low', 'text-on-surface-variant', 'border-outline-variant');
+                // Reset icon fill if needed
+                const icon = b.querySelector('.material-symbols-outlined');
+                icon.style.fontVariationSettings = "'FILL' 0";
+            });
+
+            // Add active classes to selected
+            btn.classList.add('bg-primary-container', 'text-on-primary-container', 'border-primary');
+            btn.classList.remove('bg-surface-container-low', 'text-on-surface-variant', 'border-outline-variant');
+            
+            // Set icon fill
+            const icon = btn.querySelector('.material-symbols-outlined');
+            icon.style.fontVariationSettings = "'FILL' 1";
+        }
+
+        // Particle floating effect for background
+        const createParticle = () => {
+            const particle = document.createElement('div');
+            const size = Math.random() * 10 + 5;
+            particle.style.position = 'fixed';
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            particle.style.background = 'rgba(79, 70, 229, 0.05)';
+            particle.style.borderRadius = '50%';
+            particle.style.left = `${Math.random() * 100}vw`;
+            particle.style.top = '110vh';
+            particle.style.zIndex = '-1';
+            particle.style.pointerEvents = 'none';
+            document.body.appendChild(particle);
+
+            const duration = Math.random() * 10 + 10;
+            particle.animate([
+                { transform: `translateY(0) rotate(0deg)`, opacity: 0.8 },
+                { transform: `translateY(-120vh) rotate(360deg)`, opacity: 0 }
+            ], {
+                duration: duration * 1000,
+                easing: 'linear'
+            }).onfinish = () => particle.remove();
+        };
+
+        setInterval(createParticle, 2000);
+    </script>
+</body></html>

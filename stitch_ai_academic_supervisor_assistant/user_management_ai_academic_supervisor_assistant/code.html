@@ -1,0 +1,391 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Academic Supervisor Assistant - User Management</title>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#f9f9ff",
+                        "on-error-container": "#93000a",
+                        "surface-container-high": "#dee8ff",
+                        "on-background": "#111c2d",
+                        "on-error": "#ffffff",
+                        "surface-bright": "#f9f9ff",
+                        "on-primary-container": "#dad7ff",
+                        "on-secondary-fixed-variant": "#444749",
+                        "on-tertiary-fixed-variant": "#004c6e",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary": "#5c5f61",
+                        "outline": "#777587",
+                        "on-secondary": "#ffffff",
+                        "inverse-surface": "#263143",
+                        "inverse-on-surface": "#ecf1ff",
+                        "background": "#f9f9ff",
+                        "tertiary": "#004d70",
+                        "surface-variant": "#d8e3fb",
+                        "outline-variant": "#c7c4d8",
+                        "on-primary": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "surface-dim": "#cfdaf2",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "surface-container-low": "#f0f3ff",
+                        "on-primary-fixed": "#0f0069",
+                        "error-container": "#ffdad6",
+                        "surface-tint": "#4d44e3",
+                        "on-secondary-fixed": "#191c1e",
+                        "tertiary-container": "#006693",
+                        "secondary-container": "#e0e3e5",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "on-tertiary-fixed": "#001e2f",
+                        "inverse-primary": "#c3c0ff",
+                        "primary-container": "#4f46e5",
+                        "on-surface": "#111c2d",
+                        "on-surface-variant": "#464555",
+                        "secondary-fixed": "#e0e3e5",
+                        "surface-container-highest": "#d8e3fb",
+                        "secondary-fixed-dim": "#c4c7c9",
+                        "on-tertiary-container": "#b8e0ff",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed": "#c9e6ff",
+                        "primary": "#3525cd",
+                        "surface-container": "#e7eeff",
+                        "on-secondary-container": "#626567",
+                        "primary-fixed": "#e2dfff",
+                        "tertiary-fixed-dim": "#89ceff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container_max": "1440px",
+                        "margin_mobile": "16px",
+                        "sidebar_width": "280px",
+                        "gutter": "24px",
+                        "base": "8px",
+                        "margin_desktop": "40px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "display": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "display": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .table-shadow {
+            box-shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.05), 0px 2px 4px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md min-h-screen flex antialiased">
+<!-- SideNavBar -->
+<nav class="hidden md:flex fixed left-0 top-0 h-full w-[280px] bg-surface flex-col border-r border-outline-variant z-20">
+<!-- Header -->
+<div class="p-gutter flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center font-bold">
+                AA
+            </div>
+<div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary">Academic AI</h1>
+<p class="font-label-md text-label-md text-secondary mt-0.5">Supervision Suite</p>
+</div>
+</div>
+<!-- CTA -->
+<div class="px-gutter mb-6">
+<button class="w-full bg-primary text-on-primary font-label-md text-label-md py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-[#2b1ea8] active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                New Intervention
+            </button>
+</div>
+<!-- Tabs -->
+<ul class="flex-1 flex flex-col gap-1 px-3">
+<li>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low hover:bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low hover:bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">supervisor_account</span>
+<span class="font-body-md text-body-md">Supervision</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low hover:bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">school</span>
+<span class="font-body-md text-body-md">Students</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low hover:bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">menu_book</span>
+<span class="font-body-md text-body-md">Research</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low hover:bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">library_books</span>
+<span class="font-body-md text-body-md">Resources</span>
+</a>
+</li>
+<li>
+<!-- Active Nav Item based on semantic mapping for User Management -->
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 border-l-4 border-primary text-primary font-bold active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 400, 'FILL' 1;">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</li>
+</ul>
+<!-- Footer -->
+<div class="mt-auto p-3 border-t border-outline-variant">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low hover:bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">help</span>
+<span class="font-body-md text-body-md">Help Center</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low hover:bg-surface-container-high transition-colors duration-200 mt-1" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'wght' 300;">logout</span>
+<span class="font-body-md text-body-md">Logout</span>
+</a>
+</div>
+</nav>
+<!-- TopNavBar & Main Canvas Wrapper -->
+<div class="flex-1 md:ml-[280px] flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="hidden md:flex fixed top-0 bg-surface-bright/80 backdrop-blur-md justify-between items-center h-16 px-margin_desktop w-[calc(100%-280px)] z-10">
+<div class="font-headline-md text-headline-md font-black text-on-surface">
+                Academic Supervisor Assistant
+            </div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container-high">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container-high relative">
+<span class="material-symbols-outlined">chat_spark</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full"></span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container-high">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 mt-16 p-margin_mobile md:p-margin_desktop max-w-container_max mx-auto w-full">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">User Management</h2>
+<p class="font-body-md text-body-md text-secondary mt-1">Manage system access, roles, and departmental assignments.</p>
+</div>
+<button class="bg-primary text-on-primary font-label-md text-label-md px-5 py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-[#2b1ea8] active:scale-95 transition-all shadow-sm shrink-0">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    Add User
+                </button>
+</div>
+<!-- Controls: Search & Filters -->
+<div class="bg-surface-container-lowest p-4 rounded-xl table-shadow border border-outline-variant/30 mb-6 flex flex-col md:flex-row gap-4">
+<!-- Search -->
+<div class="relative flex-1">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-secondary text-[20px]">search</span>
+</div>
+<input class="block w-full pl-10 pr-3 py-2 border border-outline-variant rounded-lg leading-5 bg-surface-bright placeholder-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary font-body-md text-body-md sm:text-sm transition-shadow" placeholder="Search by name, ID, or email..." type="text">
+</div>
+<!-- Filters -->
+<div class="flex gap-4">
+<select class="block w-full md:w-40 pl-3 pr-10 py-2 text-base border-outline-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm rounded-lg bg-surface-bright font-body-md text-body-md text-on-surface">
+<option>All Roles</option>
+<option>Admin</option>
+<option>Teacher</option>
+<option>Student</option>
+</select>
+<select class="block w-full md:w-40 pl-3 pr-10 py-2 text-base border-outline-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm rounded-lg bg-surface-bright font-body-md text-body-md text-on-surface">
+<option>All Departments</option>
+<option>Computer Science (CS)</option>
+<option>Electrical Eng (EEE)</option>
+<option>Business Admin (BBA)</option>
+</select>
+</div>
+</div>
+<!-- Data Table Card -->
+<div class="bg-surface-container-lowest rounded-2xl table-shadow border border-outline-variant/30 overflow-hidden relative">
+<!-- Inner Stroke for subtle depth -->
+<div class="absolute inset-0 border border-white/50 rounded-2xl pointer-events-none"></div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant/50">
+<th class="px-6 py-4 font-label-md text-label-md text-secondary uppercase tracking-wider">Name</th>
+<th class="px-6 py-4 font-label-md text-label-md text-secondary uppercase tracking-wider">University ID</th>
+<th class="px-6 py-4 font-label-md text-label-md text-secondary uppercase tracking-wider">Role</th>
+<th class="px-6 py-4 font-label-md text-label-md text-secondary uppercase tracking-wider">Department</th>
+<th class="px-6 py-4 font-label-md text-label-md text-secondary uppercase tracking-wider">Email</th>
+<th class="px-6 py-4 font-label-md text-label-md text-secondary uppercase tracking-wider">Status</th>
+<th class="px-6 py-4 font-label-md text-label-md text-secondary uppercase tracking-wider text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/30">
+<!-- Row 1 -->
+<tr class="hover:bg-[#F1F5F9] transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center">
+<div class="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm mr-3">
+                                            DR
+                                        </div>
+<span class="font-title-lg text-[16px] text-on-surface">Dr. Robert Chen</span>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap font-body-sm text-body-sm text-secondary">2024-001</td>
+<td class="px-6 py-4 whitespace-nowrap font-body-sm text-body-sm text-on-surface">Admin</td>
+<td class="px-6 py-4 whitespace-nowrap font-body-sm text-body-sm text-secondary">Computer Science</td>
+<td class="px-6 py-4 whitespace-nowrap font-body-sm text-body-sm text-secondary">r.chen@university.edu</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full font-label-md text-label-md bg-[#dcfce7] text-[#166534]">Active</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+<button class="text-secondary hover:text-primary transition-colors mx-1" title="Edit">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'wght' 300;">edit</span>
+</button>
+<button class="text-secondary hover:text-error transition-colors mx-1" title="Suspend">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'wght' 300;">block</span>
+</button>
+<button class="text-secondary hover:text-error transition-colors mx-1" title="Delete">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'wght' 300;">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-[#F1F5F9] transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center">
+<div class="h-8 w-8 rounded-full bg-tertiary/10 text-tertiary flex items-center justify-center font-bold text-sm mr-3">
+                                            SA
+                                        </div>
+<span class="font-title-lg text-[16px] text-on-surface">Sarah Al-Fayed</span>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap font-body-sm text-body-sm text-secondary">2024-042</td>
+<td class="px-6 py-4 whitespace-nowrap font-body-sm text-body-sm text-on-surface">Teacher</td>
+<td class="px-6 py-4 whitespace-nowrap font-body-sm text-body-sm text-secondary">EEE</td>
+<td class="px-6 py-4 whitespace-nowrap font-body-sm text-body-sm text-secondary">s.alfayed@university.edu</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full font-label-md text-label-md bg-[#dcfce7] text-[#166534]">Active</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+<button class="text-secondary hover:text-primary transition-colors mx-1" title="Edit">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'wght' 300;">edit</span>
+</button>
+<button class="text-secondary hover:text-error transition-colors mx-1" title="Suspend">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'wght' 300;">block</span>
+</button>
+<button class="text-secondary hover:text-error transition-colors mx-1" title="Delete">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'wght' 300;">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-[#F1F5F9] transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center">
+<div class="h-8 w-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-sm mr-3">
+                                            JM
+                                        </div>
+<span class="font-title-lg text-[16px] text-on-surface">James Mitchell</span>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap font-body-sm text-body-sm text-secondary">2024-118</td>
+<td class="px-6 py-4 whitespace-nowrap font-body-sm text-body-sm text-on-surface">Student</td>
+<td class="px-6 py-4 whitespace-nowrap font-body-sm text-body-sm text-secondary">Business Admin</td>
+<td class="px-6 py-4 whitespace-nowrap font-body-sm text-body-sm text-secondary">j.mitchell@student.edu</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full font-label-md text-label-md bg-[#fef08a] text-[#854d0e]">Pending</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+<button class="text-secondary hover:text-primary transition-colors mx-1" title="Edit">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'wght' 300;">edit</span>
+</button>
+<button class="text-secondary hover:text-error transition-colors mx-1" title="Suspend">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'wght' 300;">block</span>
+</button>
+<button class="text-secondary hover:text-error transition-colors mx-1" title="Delete">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'wght' 300;">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-[#F1F5F9] transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center">
+<div class="h-8 w-8 rounded-full bg-error-container text-on-error-container flex items-center justify-center font-bold text-sm mr-3">
+                                            EL
+                                        </div>
+<span class="font-title-lg text-[16px] text-on-surface">Elena Rostova</span>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap font-body-sm text-body-sm text-secondary">2023-892</td>
+<td class="px-6 py-4 whitespace-nowrap font-body-sm text-body-sm text-on-surface">Student</td>
+<td class="px-6 py-4 whitespace-nowrap font-body-sm text-body-sm text-secondary">Computer Science</td>
+<td class="px-6 py-4 whitespace-nowrap font-body-sm text-body-sm text-secondary">e.rostova@student.edu</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full font-label-md text-label-md bg-[#fee2e2] text-[#991b1b]">Suspended</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+<button class="text-secondary hover:text-primary transition-colors mx-1" title="Edit">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'wght' 300;">edit</span>
+</button>
+<button class="text-secondary hover:text-error transition-colors mx-1" title="Suspend">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'wght' 300;">block</span>
+</button>
+<button class="text-secondary hover:text-error transition-colors mx-1" title="Delete">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'wght' 300;">delete</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination Footer -->
+<div class="bg-surface-bright px-6 py-4 border-t border-outline-variant/30 flex items-center justify-between">
+<div class="font-body-sm text-body-sm text-secondary">
+                        Showing <span class="font-medium text-on-surface">1</span> to <span class="font-medium text-on-surface">4</span> of <span class="font-medium text-on-surface">128</span> results
+                    </div>
+<div class="flex gap-2">
+<button class="px-3 py-1 border border-outline-variant rounded-md text-secondary hover:bg-surface-container-low disabled:opacity-50 font-body-sm text-body-sm transition-colors" disabled="">Previous</button>
+<button class="px-3 py-1 border border-outline-variant rounded-md text-secondary hover:bg-surface-container-low font-body-sm text-body-sm transition-colors">Next</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,270 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Teacher Submission Review - AcademiaAI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-container": "#626567",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "on-secondary-fixed-variant": "#444749",
+                        "background": "#f9f9ff",
+                        "tertiary-container": "#006693",
+                        "surface-bright": "#f9f9ff",
+                        "primary-container": "#4f46e5",
+                        "surface-container-highest": "#d8e3fb",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "tertiary": "#004d70",
+                        "surface-dim": "#cfdaf2",
+                        "on-tertiary-fixed-variant": "#004c6e",
+                        "on-primary-fixed": "#0f0069",
+                        "surface-container": "#e7eeff",
+                        "on-tertiary-container": "#b8e0ff",
+                        "surface": "#f9f9ff",
+                        "on-surface": "#111c2d",
+                        "surface-tint": "#4d44e3",
+                        "secondary-fixed-dim": "#c4c7c9",
+                        "secondary-fixed": "#e0e3e5",
+                        "tertiary-fixed-dim": "#89ceff",
+                        "on-surface-variant": "#464555",
+                        "surface-container-low": "#f0f3ff",
+                        "primary-fixed": "#e2dfff",
+                        "on-primary": "#ffffff",
+                        "secondary-container": "#e0e3e5",
+                        "on-primary-container": "#dad7ff",
+                        "outline-variant": "#c7c4d8",
+                        "error-container": "#ffdad6",
+                        "error": "#ba1a1a",
+                        "surface-variant": "#d8e3fb",
+                        "on-secondary-fixed": "#191c1e",
+                        "on-tertiary": "#ffffff",
+                        "inverse-surface": "#263143",
+                        "inverse-on-surface": "#ecf1ff",
+                        "on-secondary": "#ffffff",
+                        "secondary": "#5c5f61",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "primary": "#3525cd",
+                        "on-tertiary-fixed": "#001e2f",
+                        "on-background": "#111c2d",
+                        "surface-container-high": "#dee8ff",
+                        "tertiary-fixed": "#c9e6ff",
+                        "outline": "#777587",
+                        "inverse-primary": "#c3c0ff",
+                        "on-error": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin_desktop": "40px",
+                        "container_max": "1440px",
+                        "sidebar_width": "280px",
+                        "gutter": "24px",
+                        "base": "8px",
+                        "margin_mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "title-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "display": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-lg-mobile": ["Inter"]
+                    },
+                    "fontSize": {
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "display": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .card-shadow { box-shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.05), 0px 2px 4px -2px rgba(0, 0, 0, 0.05); }
+        .ai-card-depth { box-shadow: inset 1px 0 0 0 rgba(79, 70, 229, 0.2); }
+    </style>
+</head>
+<body class="bg-[#F8FAFC] text-on-surface font-body-md min-h-screen flex flex-col md:flex-row">
+<!-- SideNavBar -->
+<nav class="hidden lg:flex flex-col fixed left-0 top-0 h-full w-sidebar_width py-8 px-4 z-40 bg-surface shadow-sm">
+<div class="mb-8 px-4 flex items-center gap-4">
+<img alt="University Logo" class="w-10 h-10 rounded-full object-cover" data-alt="A clean, modern geometric logo design suitable for a prestigious university, featuring sharp, intersecting lines in deep indigo and white, conveying a sense of academic rigor and technological advancement. The background is pure white." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA52g56OAHJ1yE0TToFEmZOhSHsOOdQ54TZsTCoOIktPkDvmrA8D_dSVv3SdTsSUBbYS0OrCXL_-KonGWLW4XriqQm0bQ0TPkJQDcYCm9r5wQsf3TdA-E52tiJo2s0NHLrRyOwujjA4yZ5lBTzW7DEtgIhRP6k_IQbnTUl8Tbe53oQ6Z8aeTfGMKuoXiq9WWHIMyItdpIJwyQqBcUcSD-h8am1PoWAXp4mpBBGqiITenCO9HnEToIyR4gdSLOIcJ5gNKBOu7Czv2fY">
+<div>
+<h1 class="font-title-lg text-title-lg font-semibold text-on-surface">Supervision Portal</h1>
+<p class="font-label-md text-label-md text-secondary">Academic Oversight</p>
+</div>
+</div>
+<div class="flex-1 space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary hover:bg-surface-container-low transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 text-primary border-l-4 border-primary font-bold transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">supervised_user_circle</span>
+<span class="font-label-md text-label-md">Supervision</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary hover:bg-surface-container-low transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">group</span>
+<span class="font-label-md text-label-md">Students</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary hover:bg-surface-container-low transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">science</span>
+<span class="font-label-md text-label-md">Research</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary hover:bg-surface-container-low transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">library_books</span>
+<span class="font-label-md text-label-md">Resources</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary hover:bg-surface-container-low transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</div>
+<div class="mt-auto px-4">
+<button class="w-full bg-primary text-on-primary font-label-md text-label-md py-3 rounded-lg hover:bg-surface-tint transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">add</span>
+                New Report
+            </button>
+</div>
+</nav>
+<!-- TopAppBar (Mobile) -->
+<header class="md:hidden flex justify-between items-center w-full px-margin_mobile h-16 sticky top-0 z-50 bg-surface shadow-sm">
+<div class="font-headline-md text-headline-md font-bold text-primary">AcademiaAI</div>
+<div class="flex items-center gap-4 text-primary">
+<span class="material-symbols-outlined">notifications</span>
+<span class="material-symbols-outlined">auto_awesome</span>
+<span class="material-symbols-outlined">account_circle</span>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 lg:ml-sidebar_width flex flex-col xl:flex-row p-gutter gap-gutter max-w-container_max mx-auto w-full">
+<!-- Document Preview Canvas -->
+<section class="flex-1 bg-surface rounded-xl card-shadow flex flex-col border border-surface-variant overflow-hidden min-h-[600px] xl:min-h-0">
+<div class="p-4 border-b border-surface-variant flex justify-between items-center bg-surface-container-lowest">
+<h2 class="font-title-lg text-title-lg text-on-surface">Thesis Draft Preview</h2>
+<div class="flex gap-2">
+<button class="p-2 rounded-lg text-secondary hover:bg-surface-container-low transition-colors"><span class="material-symbols-outlined">zoom_in</span></button>
+<button class="p-2 rounded-lg text-secondary hover:bg-surface-container-low transition-colors"><span class="material-symbols-outlined">zoom_out</span></button>
+<button class="p-2 rounded-lg text-secondary hover:bg-surface-container-low transition-colors"><span class="material-symbols-outlined">open_in_new</span></button>
+</div>
+</div>
+<div class="flex-1 bg-[#F1F5F9] p-8 overflow-y-auto">
+<!-- Mock Document Page -->
+<div class="bg-white w-full max-w-3xl mx-auto min-h-[800px] p-12 shadow-sm rounded-sm">
+<h1 class="text-2xl font-bold mb-6 text-center">Optimizing Deep Learning Architectures for Resource-Constrained Environments</h1>
+<p class="text-sm text-center mb-12 text-secondary">Team Delta</p>
+<h3 class="font-bold mb-4">1. Introduction</h3>
+<p class="mb-6 leading-relaxed text-on-surface-variant text-sm">
+                        The proliferation of deep learning applications has led to an increasing demand for deployment on edge devices. However, the substantial computational and memory requirements of state-of-the-art models pose significant challenges...
+                    </p>
+<div class="bg-surface-container-low p-4 rounded border-l-2 border-primary mb-6 relative group">
+<span class="material-symbols-outlined absolute -left-3 -top-3 text-primary bg-white rounded-full text-sm p-1 shadow-sm">auto_awesome</span>
+<p class="text-xs text-primary font-medium mb-1">AI Recommendation</p>
+<p class="text-sm">Consider strengthening the connection between edge device constraints and specific architectural bottlenecks in paragraph 1.</p>
+</div>
+<h3 class="font-bold mb-4">2. Methodology</h3>
+<p class="mb-6 leading-relaxed text-on-surface-variant text-sm">
+                        We propose a novel quantization-aware training framework coupled with iterative magnitude pruning. Our approach targets the reduction of precision in both weights and activations while maintaining model efficacy...
+                    </p>
+</div>
+</div>
+</section>
+<!-- Review Panel -->
+<aside class="w-full xl:w-[400px] flex flex-col gap-6">
+<!-- Metadata Card -->
+<div class="bg-surface p-6 rounded-xl card-shadow border border-surface-variant">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="font-title-lg text-title-lg text-on-surface mb-1">Team Delta</h3>
+<p class="font-body-sm text-body-sm text-secondary">Thesis Draft • Version 2</p>
+</div>
+<span class="bg-tertiary-container/10 text-tertiary-container px-3 py-1 rounded-full font-label-md text-label-md">In Review</span>
+</div>
+<div class="flex gap-4 mb-6">
+<div class="flex-1">
+<p class="font-label-md text-label-md text-secondary mb-1">Submitted</p>
+<p class="font-body-sm text-body-sm">Oct 24, 2023</p>
+</div>
+<div class="flex-1">
+<p class="font-label-md text-label-md text-secondary mb-1">Word Count</p>
+<p class="font-body-sm text-body-sm">8,450</p>
+</div>
+</div>
+<button class="w-full bg-surface-container-low text-primary font-label-md text-label-md py-2.5 rounded-lg border border-primary/20 hover:bg-surface-container-high transition-colors flex items-center justify-center gap-2 ai-card-depth">
+<span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+                    Run AI Recommendation
+                </button>
+</div>
+<!-- Rubric Marking -->
+<div class="bg-surface p-6 rounded-xl card-shadow border border-surface-variant flex-1 flex flex-col">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-6">Evaluation Rubric</h3>
+<div class="space-y-6 flex-1 overflow-y-auto pr-2">
+<!-- Criteria 1 -->
+<div>
+<div class="flex justify-between items-center mb-2">
+<label class="font-label-md text-label-md text-on-surface">Methodology</label>
+<input class="w-16 px-2 py-1 border border-outline-variant rounded text-right font-body-sm text-body-sm focus:ring-primary focus:border-primary" placeholder="0-10" type="number" value="8">
+</div>
+<textarea class="w-full border border-outline-variant rounded-lg p-3 font-body-sm text-body-sm text-on-surface focus:ring-primary focus:border-primary" placeholder="Add comments..." rows="2"></textarea>
+</div>
+<!-- Criteria 2 -->
+<div>
+<div class="flex justify-between items-center mb-2">
+<label class="font-label-md text-label-md text-on-surface">Implementation</label>
+<input class="w-16 px-2 py-1 border border-outline-variant rounded text-right font-body-sm text-body-sm focus:ring-primary focus:border-primary" placeholder="0-10" type="number" value="7">
+</div>
+<textarea class="w-full border border-outline-variant rounded-lg p-3 font-body-sm text-body-sm text-on-surface focus:ring-primary focus:border-primary" placeholder="Add comments..." rows="2">Solid approach, but requires clearer documentation on the pruning schedule.</textarea>
+</div>
+<!-- Criteria 3 -->
+<div>
+<div class="flex justify-between items-center mb-2">
+<label class="font-label-md text-label-md text-on-surface">Originality</label>
+<input class="w-16 px-2 py-1 border border-outline-variant rounded text-right font-body-sm text-body-sm focus:ring-primary focus:border-primary" placeholder="0-10" type="number" value="9">
+</div>
+<textarea class="w-full border border-outline-variant rounded-lg p-3 font-body-sm text-body-sm text-on-surface focus:ring-primary focus:border-primary" placeholder="Add comments..." rows="2"></textarea>
+</div>
+</div>
+<div class="mt-6 pt-6 border-t border-surface-variant">
+<div class="flex justify-between items-center mb-6">
+<span class="font-title-lg text-title-lg">Total Score</span>
+<span class="font-headline-md text-headline-md text-primary">24<span class="text-secondary text-sm">/30</span></span>
+</div>
+<div class="flex flex-col gap-3">
+<button class="w-full bg-primary text-on-primary font-label-md text-label-md py-3 rounded-lg hover:bg-surface-tint transition-colors">
+                            Approve Submission
+                        </button>
+<div class="flex gap-3">
+<button class="flex-1 bg-surface-container-low text-on-surface border border-outline-variant font-label-md text-label-md py-3 rounded-lg hover:bg-surface-container-high transition-colors">
+                                Request Revision
+                            </button>
+<button class="flex-1 bg-error-container text-on-error-container font-label-md text-label-md py-3 rounded-lg hover:bg-error-container/80 transition-colors">
+                                Reject
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</aside>
+</main>
+</body></html>

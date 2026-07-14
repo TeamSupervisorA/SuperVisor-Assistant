@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ScholarTrack AI - Admin Dashboard</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary-fixed-dim": "#c3c0ff",
+                        "secondary-fixed-dim": "#c4c7c9",
+                        "on-primary": "#ffffff",
+                        "primary-fixed": "#e2dfff",
+                        "surface-container-highest": "#d8e3fb",
+                        "surface": "#f9f9ff",
+                        "on-secondary-fixed-variant": "#444749",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "inverse-primary": "#c3c0ff",
+                        "inverse-on-surface": "#ecf1ff",
+                        "surface-tint": "#4d44e3",
+                        "surface-bright": "#f9f9ff",
+                        "outline": "#777587",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed-dim": "#89ceff",
+                        "surface-container-low": "#f0f3ff",
+                        "on-secondary-fixed": "#191c1e",
+                        "surface-variant": "#d8e3fb",
+                        "on-secondary": "#ffffff",
+                        "on-primary-container": "#dad7ff",
+                        "tertiary-fixed": "#c9e6ff",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "on-surface-variant": "#464555",
+                        "surface-container": "#e7eeff",
+                        "on-background": "#111c2d",
+                        "secondary-fixed": "#e0e3e5",
+                        "background": "#f9f9ff",
+                        "on-surface": "#111c2d",
+                        "on-tertiary-container": "#b8e0ff",
+                        "secondary-container": "#e0e3e5",
+                        "inverse-surface": "#263143",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "on-tertiary": "#ffffff",
+                        "primary": "#3525cd",
+                        "tertiary-container": "#006693",
+                        "on-tertiary-fixed-variant": "#004c6e",
+                        "secondary": "#5c5f61",
+                        "on-primary-fixed": "#0f0069",
+                        "outline-variant": "#c7c4d8",
+                        "on-tertiary-fixed": "#001e2f",
+                        "on-secondary-container": "#626567",
+                        "surface-dim": "#cfdaf2",
+                        "surface-container-high": "#dee8ff",
+                        "primary-container": "#4f46e5",
+                        "tertiary": "#004d70"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "container_max": "1440px",
+                        "gutter": "24px",
+                        "margin_desktop": "40px",
+                        "margin_mobile": "16px",
+                        "base": "8px",
+                        "sidebar_width": "280px"
+                    },
+                    fontFamily: {
+                        "headline-lg-mobile": ["Inter", "sans-serif"],
+                        "label-md": ["Inter", "sans-serif"],
+                        "body-sm": ["Inter", "sans-serif"],
+                        "display": ["Inter", "sans-serif"],
+                        "headline-lg": ["Inter", "sans-serif"],
+                        "body-md": ["Inter", "sans-serif"],
+                        "body-lg": ["Inter", "sans-serif"],
+                        "title-lg": ["Inter", "sans-serif"],
+                        "headline-md": ["Inter", "sans-serif"],
+                        "headline-md-mobile": ["Inter", "sans-serif"]
+                    },
+                    fontSize: {
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-md-mobile": ["20px", { "lineHeight": "28px", "fontWeight": "700" }]
+                    },
+                    boxShadow: {
+                        'academic': '0px 4px 6px -1px rgba(0, 0, 0, 0.05), 0px 2px 4px -2px rgba(0, 0, 0, 0.05)',
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md text-body-md min-h-screen flex flex-col md:hidden">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky bg-surface dark:bg-surface-dim border-b border-outline-variant dark:border-outline flex justify-between items-center h-16 px-margin_mobile z-40">
+<button class="text-primary dark:text-primary-fixed-dim hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors active:scale-95 transition-transform p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-headline-md-mobile text-headline-md-mobile font-bold text-primary dark:text-primary-fixed-dim">ScholarTrack AI</h1>
+<button class="text-primary dark:text-primary-fixed-dim hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors active:scale-95 transition-transform p-2 rounded-full flex items-center justify-center relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+</header>
+<!-- Main Canvas -->
+<main class="flex-1 px-margin_mobile py-6 pb-28 flex flex-col gap-6">
+<!-- Header Section -->
+<div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-1">Overview</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Institutional Health &amp; Activity</p>
+</div>
+<!-- KPI Cards Grid -->
+<div class="grid grid-cols-2 gap-4">
+<!-- KPI 1 -->
+<div class="bg-surface-container-lowest rounded-xl shadow-academic p-4 flex flex-col justify-between min-h-[100px]">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-primary text-[20px]" style="font-variation-settings: 'wght' 300;">group</span>
+<span class="font-label-md text-label-md text-tertiary bg-tertiary-container/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">trending_up</span> 4%
+                    </span>
+</div>
+<div class="mt-4">
+<h3 class="font-body-sm text-body-sm text-on-surface-variant mb-1">Active Students</h3>
+<p class="font-headline-md-mobile text-headline-md-mobile text-on-surface">1,248</p>
+</div>
+</div>
+<!-- KPI 2 -->
+<div class="bg-surface-container-lowest rounded-xl shadow-academic p-4 flex flex-col justify-between min-h-[100px] border border-error/20">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-error text-[20px]" style="font-variation-settings: 'wght' 300;">warning</span>
+<span class="font-label-md text-label-md text-error bg-error-container/30 px-2 py-0.5 rounded-full">Action Req</span>
+</div>
+<div class="mt-4">
+<h3 class="font-body-sm text-body-sm text-on-surface-variant mb-1">Flagged Cases</h3>
+<p class="font-headline-md-mobile text-headline-md-mobile text-error">12</p>
+</div>
+</div>
+<!-- KPI 3 (Full Width) -->
+<div class="col-span-2 bg-surface-container-lowest rounded-xl shadow-academic p-4">
+<div class="flex justify-between items-center mb-3">
+<h3 class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[18px]">timeline</span>
+                        Cohort Progress
+                    </h3>
+<span class="font-headline-md-mobile text-headline-md-mobile text-on-surface">68%</span>
+</div>
+<div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 68%;"></div>
+</div>
+</div>
+</div>
+<!-- Priority Alerts (AI Section) -->
+<section class="mt-2">
+<div class="flex justify-between items-center mb-4">
+<h2 class="font-title-lg text-title-lg text-on-surface">Priority Alerts</h2>
+<button class="font-label-md text-label-md text-primary">View All</button>
+</div>
+<div class="flex flex-col gap-3">
+<!-- AI Insight Card 1 -->
+<div class="bg-surface-container-lowest rounded-xl shadow-academic p-4 relative overflow-hidden border-l-[3px] border-primary">
+<div class="absolute top-4 right-4">
+<span class="material-symbols-outlined text-primary text-[20px]" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<div class="flex flex-col gap-2 pr-8">
+<div class="flex items-center gap-2">
+<span class="font-label-md text-label-md text-error bg-error-container/20 px-2 py-0.5 rounded-full">High Plagiarism Risk</span>
+</div>
+<h4 class="font-body-md text-body-md font-semibold text-on-surface">Thesis Draft Submission - M. Chen</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">AI has detected a 42% structural similarity with an external published paper. Immediate review recommended.</p>
+<button class="mt-2 text-left font-label-md text-label-md text-primary w-fit hover:underline">Review Analysis</button>
+</div>
+</div>
+<!-- AI Insight Card 2 -->
+<div class="bg-surface-container-lowest rounded-xl shadow-academic p-4 relative overflow-hidden border-l-[3px] border-primary">
+<div class="absolute top-4 right-4">
+<span class="material-symbols-outlined text-primary text-[20px]" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<div class="flex flex-col gap-2 pr-8">
+<div class="flex items-center gap-2">
+<span class="font-label-md text-label-md text-tertiary bg-tertiary-container/20 px-2 py-0.5 rounded-full">Velocity Warning</span>
+</div>
+<h4 class="font-body-md text-body-md font-semibold text-on-surface">Research Ethics Module - Cohort B</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Completion rate has stalled for 3 consecutive weeks. Predictive model suggests intervention needed.</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 px-4 pb-safe bg-surface dark:bg-surface-dim border-t border-outline-variant dark:border-outline shadow-sm font-label-md text-label-md">
+<!-- Active Tab: Dashboard -->
+<button class="flex flex-col items-center justify-center bg-primary-container dark:bg-primary-fixed-dim text-on-primary-container dark:text-on-primary-fixed-variant rounded-full px-4 py-1 active:scale-90 transition-all duration-150">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span>Dashboard</span>
+</button>
+<!-- Inactive Tab: Supervision -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-secondary-fixed-variant px-4 py-1 hover:bg-surface-container-high dark:hover:bg-surface-container-highest active:scale-90 transition-all duration-150 rounded-lg">
+<span class="material-symbols-outlined mb-1">supervised_user_circle</span>
+<span>Supervision</span>
+</button>
+<!-- Inactive Tab: Tasks -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-secondary-fixed-variant px-4 py-1 hover:bg-surface-container-high dark:hover:bg-surface-container-highest active:scale-90 transition-all duration-150 rounded-lg">
+<span class="material-symbols-outlined mb-1">assignment</span>
+<span>Tasks</span>
+</button>
+<!-- Inactive Tab: Profile -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-secondary-fixed-variant px-4 py-1 hover:bg-surface-container-high dark:hover:bg-surface-container-highest active:scale-90 transition-all duration-150 rounded-lg">
+<span class="material-symbols-outlined mb-1">account_circle</span>
+<span>Profile</span>
+</button>
+</nav>
+</body></html>

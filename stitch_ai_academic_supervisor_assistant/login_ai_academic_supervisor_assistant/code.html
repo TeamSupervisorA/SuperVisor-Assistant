@@ -1,0 +1,188 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Login - AI Academic Supervisor Assistant</title>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&amp;display=swap" rel="stylesheet">
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-surface-variant": "#464555",
+                        "outline-variant": "#c7c4d8",
+                        "secondary": "#5c5f61",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "on-error": "#ffffff",
+                        "surface-bright": "#f9f9ff",
+                        "on-primary-container": "#dad7ff",
+                        "secondary-container": "#e0e3e5",
+                        "secondary-fixed": "#e0e3e5",
+                        "tertiary-fixed": "#c9e6ff",
+                        "on-primary": "#ffffff",
+                        "surface-container-highest": "#d8e3fb",
+                        "surface": "#f9f9ff",
+                        "secondary-fixed-dim": "#c4c7c9",
+                        "error": "#ba1a1a",
+                        "inverse-primary": "#c3c0ff",
+                        "on-secondary-fixed-variant": "#444749",
+                        "on-primary-fixed": "#0f0069",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed": "#191c1e",
+                        "surface-tint": "#4d44e3",
+                        "inverse-on-surface": "#ecf1ff",
+                        "primary-container": "#4f46e5",
+                        "surface-container-low": "#f0f3ff",
+                        "on-surface": "#111c2d",
+                        "on-tertiary-container": "#b8e0ff",
+                        "on-tertiary-fixed-variant": "#004c6e",
+                        "surface-dim": "#cfdaf2",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "primary": "#3525cd",
+                        "inverse-surface": "#263143",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "tertiary": "#004d70",
+                        "surface-container-high": "#dee8ff",
+                        "on-secondary-container": "#626567",
+                        "surface-variant": "#d8e3fb",
+                        "outline": "#777587",
+                        "on-background": "#111c2d",
+                        "on-secondary": "#ffffff",
+                        "surface-container": "#e7eeff",
+                        "primary-fixed": "#e2dfff",
+                        "tertiary-fixed-dim": "#89ceff",
+                        "background": "#f9f9ff",
+                        "tertiary-container": "#006693",
+                        "on-tertiary-fixed": "#001e2f"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "gutter": "24px",
+                        "base": "8px",
+                        "margin_desktop": "40px",
+                        "sidebar_width": "280px",
+                        "margin_mobile": "16px",
+                        "container_max": "1440px"
+                    },
+                    fontFamily: {
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "display": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    fontSize: {
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "display": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Ambient Academic Shadow */
+        .shadow-academic {
+            box-shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.05), 0px 2px 4px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-background min-h-screen flex items-center justify-center relative font-body-md text-body-md text-on-background">
+<!-- Background Image with Overlay -->
+<div class="absolute inset-0 z-0 bg-surface-container-low" data-alt="A sophisticated, out-of-focus background representing a modern, prestigious university library or research center. The scene is bathed in bright, soft, natural daylight, emphasizing a high-key, modern aesthetic. The color palette features cool tones of Soft Blue-Gray and Indigo, aligning with an advanced AI technology theme. The atmosphere is quiet, scholarly, and technologically advanced, perfect for a subtle backdrop." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBlhLbFOJlDFqs42oiANIn-P_mLCCNzS0A8ov0p_JL4AeKQKG63n7XPMZJnFiWNH1sS9HOd5nbKBWKiUx8w9YZzhn4_zyN34j_SDhU05NGwLcjAZ2UKqrcn0n8hG1r0FjE8e0VK2LjU8Xc7ErBfPOn7GWNyezniaE3-xIc94oRnwejHTOm27s6sTwlMeUtDJJIl-F3CibXFj5WoBbQpblycW8bi_4H99gQl0flPL9ZY8-PXwVjbdatb75ZjlJYz_rTRsDtTLwrU60Y'); background-size: cover; background-position: center;">
+<div class="absolute inset-0 bg-surface-bright/80 backdrop-blur-md"></div>
+</div>
+<!-- Login Container -->
+<main class="relative z-10 w-full max-w-[440px] px-margin_mobile md:px-0">
+<!-- Main Card (AI Specific Styling) -->
+<div class="bg-surface-container-lowest rounded-[24px] shadow-academic border-l-[2px] border-primary p-8 relative overflow-hidden">
+<!-- AI Sparkle Icon -->
+<span class="material-symbols-outlined absolute top-6 right-6 text-primary" style="font-variation-settings: 'FILL' 1;">
+                auto_awesome
+            </span>
+<!-- Header -->
+<div class="text-center mb-8">
+<div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-surface-container-high text-primary mb-4">
+<span class="material-symbols-outlined text-[32px]">
+                        school
+                    </span>
+</div>
+<h1 class="font-headline-md text-headline-md text-on-surface mb-2">Academic AI</h1>
+<p class="font-body-md text-body-md text-secondary">Supervision Suite Sign In</p>
+</div>
+<!-- Login Form -->
+<form class="space-y-6">
+<!-- Email Field -->
+<div>
+<label class="block font-label-md text-label-md text-on-surface-variant mb-1.5" for="email">Email Address</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">
+                            mail
+                        </span>
+<input class="w-full bg-surface border border-outline-variant rounded-lg pl-10 pr-4 py-3 font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow placeholder:text-outline" id="email" name="email" placeholder="scholar@university.edu" required="" type="email">
+</div>
+</div>
+<!-- Password Field -->
+<div>
+<div class="flex justify-between items-center mb-1.5">
+<label class="block font-label-md text-label-md text-on-surface-variant" for="password">Password</label>
+<a class="font-label-md text-label-md text-primary hover:text-surface-tint transition-colors" href="#">Forgot password?</a>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">
+                            lock
+                        </span>
+<input class="w-full bg-surface border border-outline-variant rounded-lg pl-10 pr-4 py-3 font-body-md text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow placeholder:text-outline" id="password" name="password" placeholder="••••••••" required="" type="password">
+</div>
+</div>
+<!-- Action Button -->
+<button class="w-full bg-primary hover:bg-surface-tint text-on-primary font-title-lg text-title-lg py-3 rounded-lg transition-colors duration-200 mt-2 flex items-center justify-center gap-2" type="submit">
+                    Login
+                    <span class="material-symbols-outlined text-[20px]">
+                        arrow_forward
+                    </span>
+</button>
+</form>
+<!-- Footer Links -->
+<div class="mt-8 pt-6 border-t border-surface-variant text-center">
+<p class="font-body-sm text-body-sm text-secondary">
+                    New to the platform? 
+                    <a class="text-primary font-bold hover:underline transition-all" href="#">Request access</a>
+</p>
+</div>
+</div>
+<!-- System Status/Trust Indicator -->
+<div class="text-center mt-6">
+<p class="font-label-md text-label-md text-secondary inline-flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-[#10B981]"></span>
+                System Operational · Encrypted Connection
+            </p>
+</div>
+</main>
+</body></html>

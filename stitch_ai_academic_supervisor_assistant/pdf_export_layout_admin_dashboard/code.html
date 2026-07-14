@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Academic Report Export</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-container": "#4f46e5",
+                    "on-primary-fixed": "#0f0069",
+                    "surface-variant": "#d8e3fb",
+                    "on-surface": "#111c2d",
+                    "surface-dim": "#cfdaf2",
+                    "primary-fixed": "#e2dfff",
+                    "inverse-on-surface": "#ecf1ff",
+                    "inverse-surface": "#263143",
+                    "surface-tint": "#4d44e3",
+                    "background": "#f9f9ff",
+                    "on-secondary": "#ffffff",
+                    "surface-bright": "#f9f9ff",
+                    "primary": "#3525cd",
+                    "outline": "#777587",
+                    "on-error": "#ffffff",
+                    "on-secondary-fixed-variant": "#444749",
+                    "error-container": "#ffdad6",
+                    "secondary-container": "#e0e3e5",
+                    "secondary-fixed-dim": "#c4c7c9",
+                    "on-secondary-fixed": "#191c1e",
+                    "primary-fixed-dim": "#c3c0ff",
+                    "surface": "#f9f9ff",
+                    "on-background": "#111c2d",
+                    "tertiary": "#004d70",
+                    "on-primary-container": "#dad7ff",
+                    "on-primary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "tertiary-fixed": "#c9e6ff",
+                    "on-tertiary-container": "#b8e0ff",
+                    "surface-container-low": "#f0f3ff",
+                    "error": "#ba1a1a",
+                    "surface-container-highest": "#d8e3fb",
+                    "secondary": "#5c5f61",
+                    "secondary-fixed": "#e0e3e5",
+                    "inverse-primary": "#c3c0ff",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "tertiary-container": "#006693",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-fixed-variant": "#004c6e",
+                    "surface-container": "#e7eeff",
+                    "on-tertiary-fixed": "#001e2f",
+                    "outline-variant": "#c7c4d8",
+                    "on-tertiary": "#ffffff",
+                    "tertiary-fixed-dim": "#89ceff",
+                    "surface-container-high": "#dee8ff",
+                    "on-secondary-container": "#626567",
+                    "on-surface-variant": "#464555"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container_max": "1440px",
+                    "base": "8px",
+                    "sidebar_width": "280px",
+                    "margin_desktop": "40px",
+                    "gutter": "24px",
+                    "margin_mobile": "16px"
+            },
+            "fontFamily": {
+                    "headline-lg": ["Inter"],
+                    "label-md": ["Inter"],
+                    "display": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "title-lg": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-lg-mobile": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+        .document-shadow {
+            box-shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.05), 0px 2px 4px -2px rgba(0, 0, 0, 0.05);
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-surface-container-low text-on-surface font-body-md h-screen overflow-hidden flex flex-col">
+<!-- Top Navigation (Suppressed based on rules, this is a specific tool view) -->
+<header class="w-full h-16 sticky top-0 bg-surface shadow-sm flex justify-between items-center px-margin_desktop z-40">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-2xl">arrow_back</span>
+<span class="font-headline-md text-headline-md font-bold text-primary">ScholarTrack AI</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="font-title-lg text-title-lg text-on-surface">Export Report</span>
+</div>
+<div class="flex items-center gap-4 text-primary">
+<span class="material-symbols-outlined cursor-pointer hover:bg-surface-container transition-colors rounded-full p-2">help</span>
+</div>
+</header>
+<!-- Main Workspace -->
+<main class="flex-1 flex overflow-hidden">
+<!-- Document Preview Canvas -->
+<div class="flex-1 overflow-y-auto bg-[#F8FAFC] p-8 flex justify-center items-start scrollbar-hide">
+<!-- The "Paper" -->
+<div class="bg-surface-container-lowest w-full max-w-[816px] min-h-[1056px] p-12 document-shadow rounded-sm flex flex-col gap-8 relative">
+<!-- Watermark / AI Indicator -->
+<div class="absolute top-4 right-4 flex items-center gap-1 text-primary/40 font-label-md text-label-md">
+<span class="material-symbols-outlined text-sm">auto_awesome</span>
+                    Generated by AI
+                </div>
+<!-- Header -->
+<div class="flex flex-col items-center text-center border-b-2 border-outline-variant pb-8">
+<div class="w-24 h-24 bg-surface-container-high rounded-full mb-4 flex items-center justify-center">
+<img alt="University Crest" class="w-20 h-20 rounded-full object-cover" data-alt="A highly detailed crest logo for a prestigious university, featuring an open book and a shield design. The color palette incorporates deep indigo and gold accents against a clean white background. The style is classic yet vector-clean, suitable for modern academic branding. Soft, even lighting highlights the metallic gold elements." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_IyBooRhnpweYMq1BpTSQn2CR06aPBxdJk8R6tIOkFUC5O0cpb2uC7a1AvXtUSsT5c3IPf-1pSguwkYB8QXQRY_hksPzKuj9makM4h34eV1iN1mzEpTwsbTf-l9lRglA3sTU-up35Z-nR3nbr_s_WWUheTPJM7149_9a7BhkmXGteDdwsJ35d5WQNzDCilQvVc2azQIIjAMrNYlsrtjMQlWybZLGihp4SLzEHHezEWYaCOZ0wz642IAdpjxHyAbUnmouIQrOoaWU"/>
+</div>
+<h1 class="font-display text-display text-on-surface mb-2">Annual Academic Integrity Audit</h1>
+<h2 class="font-headline-md text-headline-md text-secondary">Department of Graduate Studies</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-4">Generated on October 24, 2023</p>
+</div>
+<!-- Executive Summary -->
+<div class="flex flex-col gap-4">
+<h3 class="font-title-lg text-title-lg text-on-surface border-l-4 border-primary pl-3">Executive Summary</h3>
+<p class="font-body-md text-body-md text-on-surface leading-relaxed">
+                        This report provides a comprehensive overview of academic integrity metrics across all graduate portfolios for the 2022-2023 academic year. The ScholarTrack AI system analyzed 14,230 submitted documents, identifying a 4.2% decrease in high-risk similarity indices compared to the previous cycle. The integration of continuous monitoring has demonstrably improved attribution practices among early-stage researchers.
+                    </p>
+</div>
+<!-- Key Metrics Grid -->
+<div class="grid grid-cols-3 gap-6">
+<div class="p-4 border border-outline-variant rounded-lg bg-surface-bright flex flex-col gap-2">
+<span class="font-label-md text-label-md text-secondary uppercase tracking-wider">Total Scans</span>
+<span class="font-headline-lg text-headline-lg text-on-surface">14,230</span>
+<span class="font-body-sm text-body-sm text-tertiary flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">trending_up</span> +12% YoY
+                        </span>
+</div>
+<div class="p-4 border border-outline-variant rounded-lg bg-surface-bright flex flex-col gap-2">
+<span class="font-label-md text-label-md text-secondary uppercase tracking-wider">Avg Similarity</span>
+<span class="font-headline-lg text-headline-lg text-on-surface">8.4%</span>
+<span class="font-body-sm text-body-sm text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">trending_down</span> -1.2% YoY
+                        </span>
+</div>
+<div class="p-4 border border-primary/20 rounded-lg bg-primary-container/5 flex flex-col gap-2 relative overflow-hidden">
+<div class="absolute top-0 right-0 w-1 h-full bg-primary"></div>
+<span class="font-label-md text-label-md text-secondary uppercase tracking-wider flex items-center gap-1">
+                            High-Risk Alerts
+                            <span class="material-symbols-outlined text-[14px] text-primary">auto_awesome</span>
+</span>
+<span class="font-headline-lg text-headline-lg text-error">42</span>
+<span class="font-body-sm text-body-sm text-secondary">Requires manual review</span>
+</div>
+</div>
+<!-- Similarity Trends Table -->
+<div class="flex flex-col gap-4 mt-4">
+<h3 class="font-title-lg text-title-lg text-on-surface border-l-4 border-primary pl-3">Departmental Similarity Trends</h3>
+<div class="border border-outline-variant rounded-lg overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low font-label-md text-label-md text-on-surface border-b border-outline-variant">
+<th class="p-4 font-semibold">Department</th>
+<th class="p-4 font-semibold">Submissions</th>
+<th class="p-4 font-semibold">Avg Index</th>
+<th class="p-4 font-semibold">Status</th>
+</tr>
+</thead>
+<tbody class="font-body-sm text-body-sm text-on-surface">
+<tr class="border-b border-outline-variant hover:bg-[#F1F5F9] transition-colors">
+<td class="p-4">Computer Science</td>
+<td class="p-4">3,450</td>
+<td class="p-4">12.1%</td>
+<td class="p-4"><span class="px-2 py-1 rounded bg-secondary-container text-on-secondary-container font-label-md text-label-md">Monitoring</span></td>
+</tr>
+<tr class="border-b border-outline-variant hover:bg-[#F1F5F9] transition-colors">
+<td class="p-4">Life Sciences</td>
+<td class="p-4">2,890</td>
+<td class="p-4">6.4%</td>
+<td class="p-4"><span class="px-2 py-1 rounded bg-[#b8e0ff] text-[#004d70] font-label-md text-label-md">Nominal</span></td>
+</tr>
+<tr class="border-b border-outline-variant hover:bg-[#F1F5F9] transition-colors">
+<td class="p-4">Humanities</td>
+<td class="p-4">4,120</td>
+<td class="p-4">4.2%</td>
+<td class="p-4"><span class="px-2 py-1 rounded bg-[#b8e0ff] text-[#004d70] font-label-md text-label-md">Nominal</span></td>
+</tr>
+<tr class="hover:bg-[#F1F5F9] transition-colors">
+<td class="p-4">Engineering</td>
+<td class="p-4">3,770</td>
+<td class="p-4 text-error font-semibold">15.8%</td>
+<td class="p-4"><span class="px-2 py-1 rounded bg-error-container text-on-error-container font-label-md text-label-md">Action Required</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Footer/Pagination simulation -->
+<div class="mt-auto pt-8 border-t border-outline-variant flex justify-between font-label-md text-label-md text-secondary">
+<span>ScholarTrack AI - Confidential</span>
+<span>Page 1 of 12</span>
+</div>
+</div>
+</div>
+<!-- Right Side Control Panel -->
+<aside class="w-[360px] bg-surface border-l border-outline-variant flex flex-col h-full shadow-sm">
+<div class="p-6 border-b border-outline-variant flex flex-col gap-2">
+<h2 class="font-headline-md text-headline-md text-on-surface">Export Settings</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Configure the parameters for your generated report.</p>
+</div>
+<div class="flex-1 overflow-y-auto p-6 flex flex-col gap-8">
+<!-- Format Selection -->
+<div class="flex flex-col gap-3">
+<label class="font-label-md text-label-md text-on-surface uppercase tracking-wider">File Format</label>
+<div class="flex gap-4">
+<label class="flex-1 relative cursor-pointer group">
+<input checked="" class="peer sr-only" name="format" type="radio"/>
+<div class="border-2 border-outline-variant rounded-lg p-4 flex flex-col items-center gap-2 peer-checked:border-primary peer-checked:bg-primary-container/5 transition-all">
+<span class="material-symbols-outlined text-3xl text-secondary peer-checked:text-primary">picture_as_pdf</span>
+<span class="font-title-lg text-title-lg text-on-surface">PDF</span>
+</div>
+</label>
+<label class="flex-1 relative cursor-pointer group">
+<input class="peer sr-only" name="format" type="radio"/>
+<div class="border-2 border-outline-variant rounded-lg p-4 flex flex-col items-center gap-2 peer-checked:border-primary peer-checked:bg-primary-container/5 transition-all">
+<span class="material-symbols-outlined text-3xl text-secondary peer-checked:text-primary">table_view</span>
+<span class="font-title-lg text-title-lg text-on-surface">Excel</span>
+</div>
+</label>
+</div>
+</div>
+<!-- Content Sections -->
+<div class="flex flex-col gap-3">
+<label class="font-label-md text-label-md text-on-surface uppercase tracking-wider">Include Sections</label>
+<div class="flex flex-col gap-2">
+<label class="flex items-center gap-3 p-3 border border-outline-variant rounded bg-surface-bright cursor-pointer hover:bg-surface-container transition-colors">
+<input checked="" class="w-5 h-5 rounded text-primary focus:ring-primary border-outline" type="checkbox"/>
+<span class="font-body-md text-body-md text-on-surface">Executive Summary</span>
+</label>
+<label class="flex items-center gap-3 p-3 border border-outline-variant rounded bg-surface-bright cursor-pointer hover:bg-surface-container transition-colors">
+<input checked="" class="w-5 h-5 rounded text-primary focus:ring-primary border-outline" type="checkbox"/>
+<span class="font-body-md text-body-md text-on-surface">Detailed Tables</span>
+</label>
+<label class="flex items-center gap-3 p-3 border border-outline-variant rounded bg-surface-bright cursor-pointer hover:bg-surface-container transition-colors">
+<input checked="" class="w-5 h-5 rounded text-primary focus:ring-primary border-outline" type="checkbox"/>
+<span class="font-body-md text-body-md text-on-surface">Similarity Trends</span>
+</label>
+<label class="flex items-center gap-3 p-3 border border-outline-variant rounded bg-surface-bright cursor-pointer hover:bg-surface-container transition-colors">
+<input class="w-5 h-5 rounded text-primary focus:ring-primary border-outline" type="checkbox"/>
+<span class="font-body-md text-body-md text-on-surface">Raw Appendix Data</span>
+</label>
+</div>
+</div>
+<!-- Page Range -->
+<div class="flex flex-col gap-3">
+<label class="font-label-md text-label-md text-on-surface uppercase tracking-wider">Page Range</label>
+<select class="w-full border-outline-variant rounded-md shadow-sm focus:border-primary focus:ring focus:ring-primary focus:ring-opacity-50 font-body-md text-body-md bg-surface-bright">
+<option>All Pages (1-12)</option>
+<option>Current Page</option>
+<option>Custom Range...</option>
+</select>
+</div>
+<!-- Watermark -->
+<div class="flex items-center gap-3 mt-2">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-surface-variant peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+<span class="font-body-md text-body-md text-on-surface">Include AI Watermark</span>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="p-6 border-t border-outline-variant bg-surface-bright flex flex-col gap-3 mt-auto">
+<button class="w-full bg-primary hover:bg-on-primary-fixed-variant text-on-primary font-title-lg text-title-lg py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm">
+<span class="material-symbols-outlined">download</span>
+                    Download Report
+                </button>
+<button class="w-full border border-primary text-primary hover:bg-primary-container/10 font-title-lg text-title-lg py-3 px-4 rounded-lg transition-colors">
+                    Cancel
+                </button>
+</div>
+</aside>
+</main>
+</body></html>

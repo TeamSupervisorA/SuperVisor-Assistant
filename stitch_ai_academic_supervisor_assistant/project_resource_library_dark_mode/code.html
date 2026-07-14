@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Academic AI - Resource Library</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config from Design System -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#171f33",
+                        "on-error-container": "#ffdad6",
+                        "on-surface-variant": "#c7c4d7",
+                        "surface-bright": "#31394d",
+                        "on-secondary-fixed": "#0d1c2d",
+                        "surface": "#0b1326",
+                        "surface-dim": "#0b1326",
+                        "inverse-on-surface": "#283044",
+                        "surface-container-highest": "#2d3449",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "on-secondary-fixed-variant": "#39485a",
+                        "tertiary-fixed-dim": "#ffb783",
+                        "secondary-fixed-dim": "#b9c8de",
+                        "tertiary-fixed": "#ffdcc5",
+                        "on-surface": "#dae2fd",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "on-background": "#dae2fd",
+                        "on-primary": "#1000a9",
+                        "inverse-primary": "#494bd6",
+                        "surface-container-lowest": "#060e20",
+                        "outline": "#908fa0",
+                        "on-secondary": "#233143",
+                        "surface-tint": "#c0c1ff",
+                        "on-tertiary-container": "#452000",
+                        "secondary": "#b9c8de",
+                        "on-primary-container": "#0d0096",
+                        "error-container": "#93000a",
+                        "surface-container-low": "#131b2e",
+                        "surface-container-high": "#222a3d",
+                        "primary-container": "#8083ff",
+                        "on-tertiary-fixed-variant": "#703700",
+                        "on-tertiary-fixed": "#301400",
+                        "on-primary-fixed": "#07006c",
+                        "on-secondary-container": "#a7b6cc",
+                        "outline-variant": "#464554",
+                        "tertiary-container": "#d97721",
+                        "tertiary": "#ffb783",
+                        "background": "#0b1326",
+                        "on-error": "#690005",
+                        "primary-fixed": "#e1e0ff",
+                        "secondary-container": "#39485a",
+                        "primary": "#c0c1ff",
+                        "on-tertiary": "#4f2500",
+                        "error": "#ffb4ab",
+                        "surface-variant": "#2d3449",
+                        "secondary-fixed": "#d4e4fa",
+                        "inverse-surface": "#dae2fd"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin": "32px",
+                        "gutter": "24px",
+                        "xl": "64px",
+                        "base": "8px",
+                        "md": "24px",
+                        "lg": "40px",
+                        "xs": "4px",
+                        "sm": "12px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-xl": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-xl-mobile": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                        "headline-xl": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "headline-xl-mobile": ["30px", {"lineHeight": "38px", "fontWeight": "700"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Hide scrollbar for clean UI while maintaining functionality */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2d3449;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #464554;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background h-screen flex overflow-hidden antialiased">
+<!-- Shared Component: SideNavBar -->
+<nav class="fixed left-0 top-0 h-full w-64 bg-surface dark:bg-surface flex flex-col py-md px-sm overflow-y-auto z-50 border-r border-surface-container-low">
+<!-- Brand Header -->
+<div class="flex items-center gap-sm px-sm mb-lg">
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-primary-container" style="font-variation-settings: 'FILL' 1;">biotech</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-md text-headline-md text-primary dark:text-primary font-bold tracking-tight">Academic AI</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Supervision Platform</span>
+</div>
+</div>
+<!-- Navigation Links -->
+<div class="flex flex-col gap-base mt-sm">
+<a class="flex items-center gap-sm px-sm py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-sm px-sm py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">supervisor_account</span>
+                Supervision
+            </a>
+<a class="flex items-center gap-sm px-sm py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">school</span>
+                Students
+            </a>
+<a class="flex items-center gap-sm px-sm py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">science</span>
+                Research
+            </a>
+<!-- Active Tab: Resources -->
+<a class="flex items-center gap-sm px-sm py-sm rounded-lg bg-surface-container-low text-primary dark:text-primary font-bold border-r-2 border-primary hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors opacity-80 transition-opacity font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">library_books</span>
+                Resources
+            </a>
+<a class="flex items-center gap-sm px-sm py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">settings</span>
+                Settings
+            </a>
+</div>
+</nav>
+<!-- Shared Component: TopNavBar -->
+<header class="fixed top-0 right-0 h-16 left-64 flex items-center justify-between px-md w-[calc(100%-16rem)] z-40 bg-surface dark:bg-surface border-b border-surface-container-low">
+<!-- Search Bar on Left -->
+<div class="flex items-center w-96 bg-surface-container rounded-full px-sm py-2 border border-outline-variant focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+<span class="material-symbols-outlined text-on-surface-variant mr-2">search</span>
+<input class="bg-transparent border-none outline-none text-on-surface font-body-sm text-body-sm w-full placeholder-on-surface-variant focus:ring-0" placeholder="Search resources..." type="text"/>
+</div>
+<!-- Trailing Actions & Profile -->
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-base">
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high rounded-full p-2 transition-all">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high rounded-full p-2 transition-all">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+</div>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant shrink-0 cursor-pointer hover:border-primary transition-colors">
+<img alt="User Profile Avatar" class="w-full h-full object-cover" data-alt="A tightly cropped, professional headshot of a confident academic researcher wearing dark rimmed glasses. The background is completely dark, matching a high-end corporate dark-mode aesthetic. Soft, directional studio lighting illuminates their face with a subtle cool-toned rim light. The mood is serious, intellectual, and sharply focused." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHZcs20p7f-lhglgUeJRD_TZNbpKUphRttjyoYPbAHNoFtWmpOvbm-r_lclu8UV5iO4XXeyA-f8Qadx_bD4AW6957g7zGcH76sVNLu73rR07szwVVCV2mxPHTlqFJyZgeuE_e7hRDQ4pOtGBYb1-CDFkLJ9eTeB1XrPZOPlcyMxqoXENARXJli_JviV42HZLi8AWcJ2EpWkjt1NqRiQaAwob-s4D8HOpq8mR7T-TKJ7TFW_sxRok2iDB5i-sa1x9dBoQDMOU7-nxs"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 mt-16 flex-1 overflow-y-auto bg-background p-margin">
+<!-- Page Header & Global Actions -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
+<div class="max-w-2xl">
+<h1 class="font-headline-xl text-headline-xl text-on-surface mb-base tracking-tight">Project Resources</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Central repository for shared literature, processed datasets, and verified codebase architectures across ongoing cohort studies.</p>
+</div>
+<button class="bg-primary text-on-primary font-label-md text-label-md px-md py-sm rounded-lg flex items-center justify-center gap-base hover:bg-primary-container hover:text-on-primary-container transition-all shadow-[0_0_15px_rgba(192,193,255,0.15)] shrink-0">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">cloud_upload</span>
+                Upload Asset
+            </button>
+</div>
+<!-- Filter Chips Section -->
+<div class="flex gap-sm mb-gutter overflow-x-auto pb-2 border-b border-surface-container-low">
+<button class="px-md py-1.5 rounded-full border border-primary text-primary bg-primary/10 font-label-md text-label-md transition-colors whitespace-nowrap">
+                All Resources
+            </button>
+<button class="px-md py-1.5 rounded-full border border-outline-variant text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors whitespace-nowrap">
+                PDFs &amp; Literature
+            </button>
+<button class="px-md py-1.5 rounded-full border border-outline-variant text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors whitespace-nowrap">
+                Processed Datasets
+            </button>
+<button class="px-md py-1.5 rounded-full border border-outline-variant text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors whitespace-nowrap">
+                Code Repos
+            </button>
+</div>
+<!-- Bento Grid Layout for Resources -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-gutter auto-rows-[minmax(200px,_auto)]">
+<!-- Featured Card (Dataset - Spans 2 cols on Desktop) -->
+<div class="col-span-1 md:col-span-2 xl:col-span-2 bg-surface-container rounded-xl p-md border border-surface-container-highest hover:border-outline-variant transition-all group flex flex-col justify-between relative overflow-hidden">
+<!-- Abstract BG pattern via CSS gradient -->
+<div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full pointer-events-none"></div>
+<div>
+<div class="flex justify-between items-start mb-sm">
+<div class="w-12 h-12 rounded-lg bg-tertiary-container/20 text-tertiary flex items-center justify-center">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">dataset</span>
+</div>
+<span class="bg-surface text-on-surface-variant text-xs font-label-sm px-2 py-1 rounded border border-surface-container-highest">Updated 2h ago</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-xs group-hover:text-primary transition-colors">Longitudinal Genomic Cohort (2024 V2)</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant max-w-xl">Fully sanitized core dataset containing over 100k anonymized sequences. Prepared for parallel processing pipelines. Includes mapped metadata fields.</p>
+</div>
+<div class="flex items-center justify-between mt-lg pt-sm border-t border-surface-container-highest">
+<div class="flex items-center gap-sm">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full bg-secondary-container border-2 border-surface-container text-[10px] flex items-center justify-center text-on-secondary-container font-bold z-20">AJ</div>
+<div class="w-6 h-6 rounded-full bg-primary-container border-2 border-surface-container text-[10px] flex items-center justify-center text-on-primary-container font-bold z-10">MR</div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">1.4 GB • CSV, JSON</span>
+</div>
+<button class="text-primary hover:text-primary-fixed flex items-center gap-xs font-label-md text-label-md">
+                        Explore Data <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Standard Card: PDF Literature -->
+<div class="bg-surface-container rounded-xl p-md border border-surface-container-highest hover:border-outline-variant transition-all group flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-sm">
+<div class="w-10 h-10 rounded-lg bg-error/10 text-error flex items-center justify-center">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">picture_as_pdf</span>
+</div>
+<span class="text-on-surface-variant text-xs font-label-sm">PDF Document</span>
+</div>
+<h3 class="font-label-md text-label-md text-on-surface mb-xs group-hover:text-primary transition-colors line-clamp-2">Attention Mechanisms in Multi-modal LLMs: A Comprehensive Review</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">Recent publication aggregated for the upcoming seminar series. Highly recommended reading for the vision-language subgroup.</p>
+</div>
+<div class="flex items-center justify-between mt-md pt-sm border-t border-surface-container-highest">
+<span class="font-label-sm text-label-sm text-on-surface-variant">4.2 MB • Dr. Chen</span>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+</div>
+<!-- Standard Card: Code Repo -->
+<div class="bg-surface-container rounded-xl p-md border border-surface-container-highest hover:border-outline-variant transition-all group flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-sm">
+<div class="w-10 h-10 rounded-lg bg-secondary-container/30 text-secondary flex items-center justify-center">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">code_blocks</span>
+</div>
+<span class="text-on-surface-variant text-xs font-label-sm">Repository</span>
+</div>
+<h3 class="font-label-md text-label-md text-on-surface mb-xs group-hover:text-primary transition-colors">academic-eval-pipeline</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">Python automated grading and evaluation scripts mapped to the new syllabus standards.</p>
+</div>
+<div class="flex items-center justify-between mt-md pt-sm border-t border-surface-container-highest">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Python • 12 Commits</span>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">open_in_new</span>
+</button>
+</div>
+</div>
+<!-- Standard Card: PDF Literature -->
+<div class="bg-surface-container rounded-xl p-md border border-surface-container-highest hover:border-outline-variant transition-all group flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-sm">
+<div class="w-10 h-10 rounded-lg bg-error/10 text-error flex items-center justify-center">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">picture_as_pdf</span>
+</div>
+<span class="text-on-surface-variant text-xs font-label-sm">PDF Document</span>
+</div>
+<h3 class="font-label-md text-label-md text-on-surface mb-xs group-hover:text-primary transition-colors line-clamp-2">Synthesis Methods for Crystalline Structures</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">Reference materials for Lab Assignment 4. Includes detailed diagrams of high-pressure chambers.</p>
+</div>
+<div class="flex items-center justify-between mt-md pt-sm border-t border-surface-container-highest">
+<span class="font-label-sm text-label-sm text-on-surface-variant">12.8 MB • Lab Assistant</span>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+</div>
+<!-- Standard Card: Dataset -->
+<div class="bg-surface-container rounded-xl p-md border border-surface-container-highest hover:border-outline-variant transition-all group flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-sm">
+<div class="w-10 h-10 rounded-lg bg-tertiary-container/20 text-tertiary flex items-center justify-center">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">dataset</span>
+</div>
+<span class="text-on-surface-variant text-xs font-label-sm">Raw Data</span>
+</div>
+<h3 class="font-label-md text-label-md text-on-surface mb-xs group-hover:text-primary transition-colors line-clamp-2">Telemetry Streams - Q3 Observational</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">Raw sensor outputs from the campus array. Requires pre-processing before ingestion into the main model.</p>
+</div>
+<div class="flex items-center justify-between mt-md pt-sm border-t border-surface-container-highest">
+<span class="font-label-sm text-label-sm text-on-surface-variant">800 MB • CSV Archive</span>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+</body></html>

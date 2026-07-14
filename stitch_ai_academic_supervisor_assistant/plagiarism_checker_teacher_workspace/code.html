@@ -1,0 +1,325 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>AcademiaAI - Plagiarism Checker</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-container": "#626567",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "on-secondary-fixed-variant": "#444749",
+                        "background": "#f9f9ff",
+                        "tertiary-container": "#006693",
+                        "surface-bright": "#f9f9ff",
+                        "primary-container": "#4f46e5",
+                        "surface-container-highest": "#d8e3fb",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "tertiary": "#004d70",
+                        "surface-dim": "#cfdaf2",
+                        "on-tertiary-fixed-variant": "#004c6e",
+                        "on-primary-fixed": "#0f0069",
+                        "surface-container": "#e7eeff",
+                        "on-tertiary-container": "#b8e0ff",
+                        "surface": "#f9f9ff",
+                        "on-surface": "#111c2d",
+                        "surface-tint": "#4d44e3",
+                        "secondary-fixed-dim": "#c4c7c9",
+                        "secondary-fixed": "#e0e3e5",
+                        "tertiary-fixed-dim": "#89ceff",
+                        "on-surface-variant": "#464555",
+                        "surface-container-low": "#f0f3ff",
+                        "primary-fixed": "#e2dfff",
+                        "on-primary": "#ffffff",
+                        "secondary-container": "#e0e3e5",
+                        "on-primary-container": "#dad7ff",
+                        "outline-variant": "#c7c4d8",
+                        "error-container": "#ffdad6",
+                        "error": "#ba1a1a",
+                        "surface-variant": "#d8e3fb",
+                        "on-secondary-fixed": "#191c1e",
+                        "on-tertiary": "#ffffff",
+                        "inverse-surface": "#263143",
+                        "inverse-on-surface": "#ecf1ff",
+                        "on-secondary": "#ffffff",
+                        "secondary": "#5c5f61",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "primary": "#3525cd",
+                        "on-tertiary-fixed": "#001e2f",
+                        "on-background": "#111c2d",
+                        "surface-container-high": "#dee8ff",
+                        "tertiary-fixed": "#c9e6ff",
+                        "outline": "#777587",
+                        "inverse-primary": "#c3c0ff",
+                        "on-error": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin_desktop": "40px",
+                        "container_max": "1440px",
+                        "sidebar_width": "280px",
+                        "gutter": "24px",
+                        "base": "8px",
+                        "margin_mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "title-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "display": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-lg-mobile": ["Inter"]
+                    },
+                    "fontSize": {
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "display": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .academic-shadow { box-shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.05), 0px 2px 4px -2px rgba(0, 0, 0, 0.05); }
+        .ai-border { border-left: 2px solid #3525cd; }
+        .highlight-red { background-color: rgba(186, 26, 26, 0.15); color: #ba1a1a; }
+        .highlight-orange { background-color: rgba(245, 158, 11, 0.15); color: #d97706; }
+    </style>
+</head>
+<body class="bg-background text-on-background antialiased flex">
+<!-- SideNavBar -->
+<nav class="hidden lg:flex flex-col fixed left-0 top-0 h-full w-sidebar_width py-8 px-4 z-40 bg-surface dark:bg-surface-dim flat no shadows border-r border-surface-container-high">
+<div class="mb-8 px-4">
+<h1 class="font-title-lg text-title-lg font-semibold text-on-surface dark:text-on-surface-variant flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">school</span>
+                Supervision Portal
+            </h1>
+<p class="font-body-sm text-body-sm text-secondary mt-1">Academic Oversight</p>
+</div>
+<button class="w-full bg-primary text-on-primary font-label-md text-label-md rounded-lg py-3 px-4 mb-6 flex items-center justify-center gap-2 hover:bg-surface-tint transition-colors">
+<span class="material-symbols-outlined">add</span>
+            New Report
+        </button>
+<ul class="flex flex-col gap-2 flex-grow">
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary dark:text-on-secondary-container hover:bg-surface-container-low dark:hover:bg-surface-container transition-all font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                    Dashboard
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary dark:text-on-secondary-container hover:bg-surface-container-low dark:hover:bg-surface-container transition-all font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">supervised_user_circle</span>
+                    Supervision
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 text-primary border-l-4 border-primary font-bold dark:bg-primary-container/20 dark:text-primary-fixed-dim dark:border-primary-fixed-dim transition-all font-label-md text-label-md active:translate-x-1" href="#">
+<span class="material-symbols-outlined">group</span>
+                    Students
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary dark:text-on-secondary-container hover:bg-surface-container-low dark:hover:bg-surface-container transition-all font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">science</span>
+                    Research
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary dark:text-on-secondary-container hover:bg-surface-container-low dark:hover:bg-surface-container transition-all font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">library_books</span>
+                    Resources
+                </a>
+</li>
+</ul>
+<div class="mt-auto">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary dark:text-on-secondary-container hover:bg-surface-container-low dark:hover:bg-surface-container transition-all font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">settings</span>
+                Settings
+            </a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 lg:ml-[280px] flex flex-col min-h-screen">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-margin_desktop h-16 sticky top-0 z-50 bg-surface dark:bg-surface-dim shadow-sm font-body-md text-body-md">
+<div class="flex items-center gap-4">
+<span class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed-dim">AcademiaAI</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden md:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="pl-10 pr-4 py-2 rounded-full bg-surface-container-low border-none focus:ring-2 focus:ring-primary text-body-sm w-64 text-on-surface" placeholder="Search..." type="text">
+</div>
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors active:scale-95">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors active:scale-95">
+<span class="material-symbols-outlined">auto_awesome</span>
+</button>
+<button class="p-2 rounded-full text-on-surface-variant hover:bg-surface-container-low transition-colors active:scale-95">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Page Content -->
+<main class="p-margin_desktop max-w-container_max mx-auto w-full flex-1">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+<div>
+<div class="flex items-center gap-2 mb-2 text-secondary">
+<span class="font-label-md text-label-md uppercase tracking-wider">Document Analysis</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="font-label-md text-label-md">Literature_Review_v1.pdf</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Plagiarism Scan Results</h2>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary text-primary font-label-md text-label-md hover:bg-primary/5 transition-colors">
+<span class="material-symbols-outlined">share</span>
+                        Share
+                    </button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors">
+<span class="material-symbols-outlined">download</span>
+                        Download Plagiarism Report
+                    </button>
+</div>
+</div>
+<!-- Main Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+<!-- Left Column: Summary & Sources -->
+<div class="lg:col-span-1 flex flex-col gap-6">
+<!-- Result Card -->
+<div class="bg-surface-container-lowest rounded-[24px] p-6 academic-shadow flex flex-col items-center justify-center text-center relative overflow-hidden ai-border">
+<span class="material-symbols-outlined absolute top-4 right-4 text-primary opacity-50" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<h3 class="font-title-lg text-title-lg text-on-surface mb-2">Overall Similarity</h3>
+<div class="relative w-48 h-48 flex items-center justify-center my-4">
+<!-- Circular Progress SVG Representation -->
+<svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+<circle cx="50" cy="50" fill="none" r="45" stroke="#ffdad6" stroke-width="10"></circle>
+<circle cx="50" cy="50" fill="none" r="45" stroke="#ba1a1a" stroke-dasharray="283" stroke-dashoffset="164" stroke-width="10"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-display text-display text-error">42%</span>
+</div>
+</div>
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-error-container text-on-error-container font-label-md text-label-md mb-4">
+<span class="material-symbols-outlined text-[16px]">warning</span>
+                            High Risk
+                        </div>
+<p class="font-body-sm text-body-sm text-secondary">
+                            Similarity score is a support tool; teacher must make the final decision.
+                        </p>
+</div>
+<!-- Matched Sources -->
+<div class="bg-surface-container-lowest rounded-[24px] p-6 academic-shadow flex-1">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">source</span>
+                            Matched Sources
+                        </h3>
+<div class="flex flex-col gap-4">
+<!-- Source 1 -->
+<div class="p-3 rounded-lg border border-surface-container-high hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-1">
+<span class="font-label-md text-label-md text-error">24% Match</span>
+<span class="material-symbols-outlined text-secondary text-[16px]">open_in_new</span>
+</div>
+<h4 class="font-body-md text-body-md text-on-surface font-semibold truncate">The Impact of AI on Academic Integrity</h4>
+<p class="font-body-sm text-body-sm text-secondary truncate">Journal of Educational Technology, 2023</p>
+</div>
+<!-- Source 2 -->
+<div class="p-3 rounded-lg border border-surface-container-high hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-1">
+<span class="font-label-md text-label-md text-[#d97706]">12% Match</span>
+<span class="material-symbols-outlined text-secondary text-[16px]">open_in_new</span>
+</div>
+<h4 class="font-body-md text-body-md text-on-surface font-semibold truncate">Machine Learning Methodologies in Higher Ed</h4>
+<p class="font-body-sm text-body-sm text-secondary truncate">arxiv.org/abs/2204.12345</p>
+</div>
+<!-- Source 3 -->
+<div class="p-3 rounded-lg border border-surface-container-high hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="flex justify-between items-start mb-1">
+<span class="font-label-md text-label-md text-secondary">6% Match</span>
+<span class="material-symbols-outlined text-secondary text-[16px]">open_in_new</span>
+</div>
+<h4 class="font-body-md text-body-md text-on-surface font-semibold truncate">Student Submission: John_Doe_Final_Draft.docx</h4>
+<p class="font-body-sm text-body-sm text-secondary truncate">Internal Database, Fall 2022</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Document Viewer -->
+<div class="lg:col-span-2 bg-surface-container-lowest rounded-[24px] p-0 academic-shadow flex flex-col overflow-hidden">
+<!-- Viewer Header -->
+<div class="border-b border-surface-container-high p-4 flex justify-between items-center bg-surface-bright">
+<h3 class="font-title-lg text-title-lg text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">find_in_page</span>
+                            Document Comparison View
+                        </h3>
+<div class="flex items-center gap-2">
+<button class="p-1.5 rounded hover:bg-surface-container-low text-secondary"><span class="material-symbols-outlined text-[20px]">zoom_out</span></button>
+<span class="font-body-sm text-body-sm text-secondary">100%</span>
+<button class="p-1.5 rounded hover:bg-surface-container-low text-secondary"><span class="material-symbols-outlined text-[20px]">zoom_in</span></button>
+</div>
+</div>
+<!-- Viewer Canvas -->
+<div class="flex-1 bg-surface-container-low p-8 overflow-y-auto" style="max-height: 800px;">
+<!-- Simulated Paper Page -->
+<div class="bg-surface-container-lowest shadow-sm mx-auto p-12 max-w-3xl min-h-[800px] font-body-md text-body-md leading-relaxed text-on-surface">
+<h1 class="font-headline-md text-headline-md mb-6 text-center">A Review of Artificial Intelligence Applications in Modern Pedagogy</h1>
+<p class="mb-4">
+                                The integration of artificial intelligence into educational frameworks has accelerated significantly over the past decade. 
+                                Educators are increasingly relying on automated systems to assist with grading, content delivery, and student engagement. 
+                                However, this technological shift brings profound challenges regarding academic integrity and original thought.
+                            </p>
+<p class="mb-4 highlight-red rounded px-1 group relative cursor-pointer">
+<span class="absolute -left-6 top-0 opacity-0 group-hover:opacity-100 transition-opacity text-error">
+<span class="material-symbols-outlined text-[16px]">warning</span>
+</span>
+                                As noted by several researchers, the rapid deployment of large language models has fundamentally altered the landscape of student assessment. Traditional methods of evaluation, such as essays and take-home examinations, are now highly vulnerable to algorithmic generation. Institutions must adapt their pedagogical strategies to emphasize critical thinking and in-class synthesis rather than mere factual recall.
+                            </p>
+<p class="mb-4">
+                                Furthermore, the ethical implications of these tools remain a topic of heated debate. 
+                                While some argue that AI acts as an equalizer, providing personalized tutoring to disadvantaged students, 
+                                others maintain that it exacerbates existing inequalities due to the digital divide.
+                            </p>
+<p class="mb-4 highlight-orange rounded px-1 group relative cursor-pointer">
+<span class="absolute -left-6 top-0 opacity-0 group-hover:opacity-100 transition-opacity text-[#d97706]">
+<span class="material-symbols-outlined text-[16px]">info</span>
+</span>
+                                To effectively navigate this transition, universities are urged to develop comprehensive policies regarding acceptable AI use. These policies should clearly define the boundaries between technological assistance and academic misconduct, ensuring that students understand the value of their own cognitive labor in the learning process.
+                            </p>
+<p class="mb-4">
+                                In conclusion, while artificial intelligence offers unprecedented opportunities for educational enhancement, 
+                                it necessitates a paradigm shift in how we conceive of and measure student learning. 
+                                Future research must focus on longitudinal studies assessing the long-term impact of these tools on cognitive development.
+                            </p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

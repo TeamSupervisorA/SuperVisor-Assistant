@@ -1,0 +1,307 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Academic AI - AI Academic Supervisor Assistant</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface-variant": "#464555",
+                    "outline-variant": "#c7c4d8",
+                    "secondary": "#5c5f61",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "on-error": "#ffffff",
+                    "surface-bright": "#f9f9ff",
+                    "on-primary-container": "#dad7ff",
+                    "secondary-container": "#e0e3e5",
+                    "secondary-fixed": "#e0e3e5",
+                    "tertiary-fixed": "#c9e6ff",
+                    "on-primary": "#ffffff",
+                    "surface-container-highest": "#d8e3fb",
+                    "surface": "#f9f9ff",
+                    "secondary-fixed-dim": "#c4c7c9",
+                    "error": "#ba1a1a",
+                    "inverse-primary": "#c3c0ff",
+                    "on-secondary-fixed-variant": "#444749",
+                    "on-primary-fixed": "#0f0069",
+                    "error-container": "#ffdad6",
+                    "on-secondary-fixed": "#191c1e",
+                    "surface-tint": "#4d44e3",
+                    "inverse-on-surface": "#ecf1ff",
+                    "primary-container": "#4f46e5",
+                    "surface-container-low": "#f0f3ff",
+                    "on-surface": "#111c2d",
+                    "on-tertiary-container": "#b8e0ff",
+                    "on-tertiary-fixed-variant": "#004c6e",
+                    "surface-dim": "#cfdaf2",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "primary": "#3525cd",
+                    "inverse-surface": "#263143",
+                    "primary-fixed-dim": "#c3c0ff",
+                    "tertiary": "#004d70",
+                    "surface-container-high": "#dee8ff",
+                    "on-secondary-container": "#626567",
+                    "surface-variant": "#d8e3fb",
+                    "outline": "#777587",
+                    "on-background": "#111c2d",
+                    "on-secondary": "#ffffff",
+                    "surface-container": "#e7eeff",
+                    "primary-fixed": "#e2dfff",
+                    "tertiary-fixed-dim": "#89ceff",
+                    "background": "#f9f9ff",
+                    "tertiary-container": "#006693",
+                    "on-tertiary-fixed": "#001e2f"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "24px",
+                    "base": "8px",
+                    "margin_desktop": "40px",
+                    "sidebar_width": "280px",
+                    "margin_mobile": "16px",
+                    "container_max": "1440px"
+            },
+            "fontFamily": {
+                    "headline-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "title-lg": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "label-md": ["Inter"],
+                    "display": ["Inter"],
+                    "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .ambient-shadow {
+            box-shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.05), 0px 2px 4px -2px rgba(0, 0, 0, 0.05);
+        }
+        .ai-border {
+            border-left: 2px solid #3525cd;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex flex-col">
+<!-- Top Navigation (Simplified for Landing Page) -->
+<header class="bg-surface-bright/90 backdrop-blur-md sticky top-0 z-50 px-margin_desktop h-16 flex justify-between items-center border-b border-outline-variant">
+<div class="flex items-center gap-2">
+<span aria-hidden="true" class="material-symbols-outlined text-primary text-3xl icon-fill">school</span>
+<span class="font-headline-md text-headline-md font-bold text-primary">Academic AI</span>
+</div>
+<div class="flex gap-4">
+<button class="font-label-md text-label-md text-primary border border-primary px-4 py-2 rounded-lg hover:bg-surface-container-low transition-colors duration-200">Login</button>
+<button class="font-label-md text-label-md bg-primary text-on-primary px-4 py-2 rounded-lg hover:bg-on-primary-fixed-variant transition-colors duration-200">Get Started</button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-grow flex flex-col items-center">
+<div class="w-full max-w-container_max px-margin_desktop">
+<!-- Hero Section -->
+<section class="py-24 flex flex-col items-center text-center">
+<h1 class="font-display text-display text-on-surface mb-6 max-w-4xl">AI Academic Supervisor Assistant</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mb-10">Smart supervision for SDP projects, assignments, research papers, and thesis papers.</p>
+<div class="flex gap-4">
+<button class="font-title-lg text-title-lg bg-primary text-on-primary px-8 py-3 rounded-lg hover:bg-on-primary-fixed-variant transition-colors duration-200 ambient-shadow">Get Started Now</button>
+<button class="font-title-lg text-title-lg text-primary border-2 border-primary px-8 py-3 rounded-lg hover:bg-surface-container-low transition-colors duration-200">Watch Demo</button>
+</div>
+</section>
+<!-- Features Bento Grid -->
+<section class="py-16">
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-10 text-center">Comprehensive Supervision Suite</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- AI Supervisor -->
+<div class="bg-surface-container-lowest rounded-xl p-6 ambient-shadow ai-border lg:col-span-2 relative overflow-hidden">
+<span aria-hidden="true" class="material-symbols-outlined text-primary absolute top-6 right-6">auto_awesome</span>
+<div class="flex items-center gap-3 mb-4">
+<span aria-hidden="true" class="material-symbols-outlined text-primary text-2xl">psychology</span>
+<h3 class="font-title-lg text-title-lg text-on-surface">AI Supervisor</h3>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-4 max-w-md">Intelligent guidance tailored to individual student research paths. The AI analyzes proposals, suggests methodologies, and highlights potential academic gaps.</p>
+<div class="bg-surface-container-low p-4 rounded-lg border border-outline-variant/30 flex items-start gap-3">
+<span aria-hidden="true" class="material-symbols-outlined text-secondary text-sm mt-1">info</span>
+<p class="font-body-sm text-body-sm text-secondary">"The literature review lacks recent sources on machine learning applied to fluid dynamics. Suggest reviewing papers published after 2022."</p>
+</div>
+</div>
+<!-- Progress Tracking -->
+<div class="bg-surface-container-lowest rounded-xl p-6 ambient-shadow">
+<div class="flex items-center gap-3 mb-4">
+<span aria-hidden="true" class="material-symbols-outlined text-tertiary-container text-2xl">timeline</span>
+<h3 class="font-title-lg text-title-lg text-on-surface">Progress Tracking</h3>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-6">Real-time monitoring of milestones and deliverables.</p>
+<div class="w-full bg-secondary-container h-1 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[65%] rounded-full"></div>
+</div>
+<div class="flex justify-between mt-2 font-label-md text-label-md text-secondary">
+<span>Chapter 3 Draft</span>
+<span>65% Complete</span>
+</div>
+</div>
+<!-- Plagiarism Checker -->
+<div class="bg-surface-container-lowest rounded-xl p-6 ambient-shadow">
+<div class="flex items-center gap-3 mb-4">
+<span aria-hidden="true" class="material-symbols-outlined text-error text-2xl">policy</span>
+<h3 class="font-title-lg text-title-lg text-on-surface">Plagiarism Checker</h3>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Deep semantic analysis against institutional databases to ensure academic integrity.</p>
+</div>
+<!-- Document Version Control -->
+<div class="bg-surface-container-lowest rounded-xl p-6 ambient-shadow">
+<div class="flex items-center gap-3 mb-4">
+<span aria-hidden="true" class="material-symbols-outlined text-secondary text-2xl">history</span>
+<h3 class="font-title-lg text-title-lg text-on-surface">Document Version Control</h3>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Seamlessly manage iterations, track changes, and revert to previous drafts with ease.</p>
+</div>
+<!-- Meeting Scheduling -->
+<div class="bg-surface-container-lowest rounded-xl p-6 ambient-shadow">
+<div class="flex items-center gap-3 mb-4">
+<span aria-hidden="true" class="material-symbols-outlined text-primary text-2xl">event</span>
+<h3 class="font-title-lg text-title-lg text-on-surface">Meeting Scheduling</h3>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Automated calendar syncing to find optimal consultation times between supervisors and students.</p>
+</div>
+<!-- Teacher Feedback -->
+<div class="bg-surface-container-lowest rounded-xl p-6 ambient-shadow lg:col-span-2 flex flex-col md:flex-row gap-6">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-4">
+<span aria-hidden="true" class="material-symbols-outlined text-primary text-2xl">rate_review</span>
+<h3 class="font-title-lg text-title-lg text-on-surface">Teacher Feedback</h3>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Structured feedback forms with AI-assisted drafting to provide comprehensive and actionable critiques faster.</p>
+</div>
+<div class="flex-1 bg-surface-variant/30 rounded-lg p-4 border border-outline-variant/50">
+<div class="flex items-center gap-2 mb-2">
+<div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+<span aria-hidden="true" class="material-symbols-outlined text-primary text-sm icon-fill">person</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface">Dr. Smith</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Excellent derivation in section 4.2. However, consider clarifying the initial assumptions.</p>
+</div>
+</div>
+<!-- Report Generation -->
+<div class="bg-surface-container-lowest rounded-xl p-6 ambient-shadow ai-border lg:col-span-3 flex justify-between items-center relative overflow-hidden group hover:bg-surface-container-low transition-colors duration-300 cursor-pointer">
+<span aria-hidden="true" class="material-symbols-outlined text-primary absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">auto_awesome</span>
+<div>
+<div class="flex items-center gap-3 mb-2">
+<span aria-hidden="true" class="material-symbols-outlined text-primary text-2xl">summarize</span>
+<h3 class="font-title-lg text-title-lg text-on-surface">Report Generation</h3>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">Instantly compile semester progress reports, committee summaries, and institutional compliance documents with a single click.</p>
+</div>
+<button class="hidden md:flex font-label-md text-label-md bg-primary text-on-primary px-6 py-2 rounded-lg items-center gap-2">
+                            Generate Now <span aria-hidden="true" class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Roles Section -->
+<section class="py-16 border-t border-outline-variant/30">
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-4 text-center">Empowering All Roles</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mb-10 text-center max-w-2xl mx-auto">Tailored interfaces and tools designed specifically for the unique needs of administrators, educators, and researchers.</p>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Admin -->
+<div class="bg-surface-container-lowest rounded-xl p-8 ambient-shadow text-center flex flex-col items-center">
+<div class="w-16 h-16 rounded-full bg-surface-variant flex items-center justify-center mb-6">
+<span aria-hidden="true" class="material-symbols-outlined text-primary text-3xl icon-fill">admin_panel_settings</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-3">Admin</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Oversee departmental progress, allocate supervisory resources efficiently, and generate institutional analytics to maintain academic standards.</p>
+</div>
+<!-- Teacher -->
+<div class="bg-surface-container-lowest rounded-xl p-8 ambient-shadow text-center flex flex-col items-center border border-primary/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transform -translate-y-2">
+<div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+<span aria-hidden="true" class="material-symbols-outlined text-primary text-3xl icon-fill">supervisor_account</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-3">Teacher</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Manage multiple student projects seamlessly. Utilize AI to draft initial feedback, track deadlines, and identify at-risk projects early.</p>
+</div>
+<!-- Student -->
+<div class="bg-surface-container-lowest rounded-xl p-8 ambient-shadow text-center flex flex-col items-center">
+<div class="w-16 h-16 rounded-full bg-surface-variant flex items-center justify-center mb-6">
+<span aria-hidden="true" class="material-symbols-outlined text-primary text-3xl icon-fill">school</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-3">Student</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Receive structured guidance, organize citations, manage versions, and submit deliverables through a clear, stress-free portal.</p>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-inverse-surface text-inverse-on-surface mt-20 pt-16 pb-8 border-t border-outline-variant/10">
+<div class="w-full max-w-container_max px-margin_desktop mx-auto">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+<div class="col-span-1 md:col-span-2">
+<div class="flex items-center gap-2 mb-4">
+<span aria-hidden="true" class="material-symbols-outlined text-inverse-primary text-2xl icon-fill">school</span>
+<span class="font-headline-md text-headline-md font-bold text-inverse-primary">Academic AI</span>
+</div>
+<p class="font-body-sm text-body-sm text-secondary-fixed-dim max-w-sm">
+                        Elevating academic research and supervision through intelligent, institutional-grade technology.
+                    </p>
+</div>
+<div>
+<h4 class="font-title-lg text-title-lg text-on-tertiary mb-4">Platform</h4>
+<ul class="space-y-2 font-body-sm text-body-sm text-secondary-fixed-dim">
+<li><a class="hover:text-inverse-primary transition-colors" href="#">Features</a></li>
+<li><a class="hover:text-inverse-primary transition-colors" href="#">Pricing</a></li>
+<li><a class="hover:text-inverse-primary transition-colors" href="#">Security</a></li>
+<li><a class="hover:text-inverse-primary transition-colors" href="#">Integration</a></li>
+</ul>
+</div>
+<div>
+<h4 class="font-title-lg text-title-lg text-on-tertiary mb-4">Institution</h4>
+<ul class="space-y-2 font-body-sm text-body-sm text-secondary-fixed-dim">
+<li><a class="hover:text-inverse-primary transition-colors" href="#">About Us</a></li>
+<li><a class="hover:text-inverse-primary transition-colors" href="#">Research Ethics</a></li>
+<li><a class="hover:text-inverse-primary transition-colors" href="#">Privacy Policy</a></li>
+<li><a class="hover:text-inverse-primary transition-colors" href="#">Contact Support</a></li>
+</ul>
+</div>
+</div>
+<div class="border-t border-secondary/30 pt-8 flex flex-col md:flex-row justify-between items-center font-body-sm text-body-sm text-secondary-fixed-dim">
+<p>© 2024 Academic AI Systems. All rights reserved.</p>
+<div class="flex gap-4 mt-4 md:mt-0">
+<a class="hover:text-inverse-primary transition-colors" href="#">Terms of Service</a>
+<a class="hover:text-inverse-primary transition-colors" href="#">Accessibility</a>
+</div>
+</div>
+</div>
+</footer>
+</body></html>

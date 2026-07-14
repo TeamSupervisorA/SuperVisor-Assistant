@@ -1,0 +1,295 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Academic AI - Meeting Scheduler</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-container": "#dad7ff",
+                        "on-surface-variant": "#464555",
+                        "on-primary": "#ffffff",
+                        "on-surface": "#111c2d",
+                        "outline": "#777587",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-bright": "#f9f9ff",
+                        "primary-container": "#4f46e5",
+                        "tertiary-fixed": "#c9e6ff",
+                        "error": "#ba1a1a",
+                        "on-error": "#ffffff",
+                        "secondary-container": "#e0e3e5",
+                        "on-secondary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "primary-fixed": "#e2dfff",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "inverse-on-surface": "#ecf1ff",
+                        "surface": "#f9f9ff",
+                        "inverse-surface": "#263143",
+                        "secondary-fixed": "#e0e3e5",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-fixed-variant": "#444749",
+                        "surface-tint": "#4d44e3",
+                        "tertiary-container": "#006693",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "surface-variant": "#d8e3fb",
+                        "surface-container-highest": "#d8e3fb",
+                        "surface-container-low": "#f0f3ff",
+                        "surface-container-high": "#dee8ff",
+                        "on-secondary-fixed": "#191c1e",
+                        "surface-container": "#e7eeff",
+                        "on-background": "#111c2d",
+                        "inverse-primary": "#c3c0ff",
+                        "on-tertiary-container": "#b8e0ff",
+                        "on-tertiary-fixed": "#001e2f",
+                        "on-primary-fixed": "#0f0069",
+                        "background": "#f9f9ff",
+                        "tertiary": "#004d70",
+                        "secondary": "#5c5f61",
+                        "primary": "#3525cd",
+                        "on-tertiary-fixed-variant": "#004c6e",
+                        "surface-dim": "#cfdaf2",
+                        "outline-variant": "#c7c4d8",
+                        "tertiary-fixed-dim": "#89ceff",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#c4c7c9",
+                        "on-secondary-container": "#626567"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin_mobile": "16px",
+                        "container_max": "1440px",
+                        "sidebar_width": "280px",
+                        "base": "8px",
+                        "margin_desktop": "40px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "display": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen">
+<!-- SideNavBar -->
+<nav class="hidden md:flex fixed left-0 top-0 h-full w-[280px] bg-surface dark:bg-on-surface shadow-sm flex flex-col py-base z-40">
+<div class="px-6 py-4 flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold">
+<span class="material-symbols-outlined" data-icon="school">school</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">Academic Pilot</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant">PhD Supervision Portal</p>
+</div>
+</div>
+<div class="mt-8 flex-1 px-2 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-outline-variant hover:text-primary hover:bg-surface-container-low transition-colors duration-200 ease-in-out rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-primary/10 dark:bg-primary-container/20 border-l-4 border-primary text-primary font-semibold hover:bg-surface-container-low transition-colors duration-200 ease-in-out rounded-r-lg" href="#">
+<span class="material-symbols-outlined" data-icon="supervised_user_circle">supervised_user_circle</span>
+<span>Supervision</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-outline-variant hover:text-primary hover:bg-surface-container-low transition-colors duration-200 ease-in-out rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span>Students</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-outline-variant hover:text-primary hover:bg-surface-container-low transition-colors duration-200 ease-in-out rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span>Research</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-outline-variant hover:text-primary hover:bg-surface-container-low transition-colors duration-200 ease-in-out rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+<span>Resources</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-outline-variant hover:text-primary hover:bg-surface-container-low transition-colors duration-200 ease-in-out rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+</div>
+<div class="px-6 py-4">
+<button class="w-full bg-primary text-on-primary py-2 px-4 rounded-lg font-body-md font-semibold hover:opacity-90 transition-opacity">
+                New Supervision
+            </button>
+</div>
+<div class="mt-auto px-2 pb-4 space-y-1 border-t border-surface-variant pt-4">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-outline-variant hover:text-primary hover:bg-surface-container-low transition-colors duration-200 ease-in-out rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span>Help Center</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-outline-variant hover:text-primary hover:bg-surface-container-low transition-colors duration-200 ease-in-out rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span>Logout</span>
+</a>
+</div>
+</nav>
+<!-- TopNavBar -->
+<header class="hidden md:flex sticky top-0 z-30 w-full bg-white/80 dark:bg-on-surface/80 backdrop-blur-md shadow-sm ml-[280px] max-w-[1440px] flex justify-between items-center h-16 px-margin_desktop transition-transform scale-95 active:scale-100">
+<div class="flex items-center gap-4">
+<div class="relative text-on-surface-variant">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-full focus:ring-2 focus:ring-primary outline-none font-body-sm w-64" placeholder="Search..." type="text">
+</div>
+</div>
+<div class="flex items-center gap-6 text-on-surface-variant">
+<button class="hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="history_edu">history_edu</span>
+</button>
+<button class="hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="md:ml-[280px] max-w-[1440px] mx-auto p-margin_mobile md:p-margin_desktop">
+<div class="flex flex-col lg:flex-row gap-gutter">
+<!-- Calendar Section -->
+<section class="flex-1 bg-surface-container-lowest rounded-xl shadow-sm border border-surface-variant p-6 flex flex-col h-[800px]">
+<div class="flex justify-between items-center mb-6">
+<div>
+<h2 class="font-headline-md text-headline-md font-semibold text-on-surface">Schedule</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">October 2023</p>
+</div>
+<div class="flex gap-2">
+<button class="p-2 rounded hover:bg-surface-container-low text-on-surface-variant">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="px-4 py-2 font-body-sm rounded hover:bg-surface-container-low text-on-surface-variant border border-outline-variant">Today</button>
+<button class="p-2 rounded hover:bg-surface-container-low text-on-surface-variant">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Calendar Grid (Simplified for visual) -->
+<div class="flex-1 flex flex-col overflow-hidden">
+<div class="grid grid-cols-7 gap-1 bg-surface-variant border border-surface-variant rounded-t-lg text-center py-2 font-label-md text-label-md text-on-surface-variant">
+<div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+</div>
+<div class="calendar-grid bg-surface-variant border-x border-b border-surface-variant rounded-b-lg flex-1 overflow-y-auto">
+<!-- Simulated Days -->
+<div class="bg-surface-container-lowest min-h-[100px] p-2"></div>
+<div class="bg-surface-container-lowest min-h-[100px] p-2"></div>
+<div class="bg-surface-container-lowest min-h-[100px] p-2"></div>
+<div class="bg-surface-container-lowest min-h-[100px] p-2">
+<span class="font-label-md text-label-md text-on-surface-variant">1</span>
+</div>
+<div class="bg-surface-container-lowest min-h-[100px] p-2">
+<span class="font-label-md text-label-md text-on-surface-variant">2</span>
+</div>
+<div class="bg-surface-container-lowest min-h-[100px] p-2">
+<span class="font-label-md text-label-md text-on-surface-variant">3</span>
+</div>
+<div class="bg-surface-container-lowest min-h-[100px] p-2">
+<span class="font-label-md text-label-md text-on-surface-variant">4</span>
+</div>
+<!-- Row 2 -->
+<div class="bg-surface-container-lowest min-h-[100px] p-2">
+<span class="font-label-md text-label-md text-on-surface-variant">5</span>
+</div>
+<div class="bg-surface-container-lowest min-h-[100px] p-2">
+<span class="font-label-md text-label-md text-on-surface-variant">6</span>
+<div class="mt-1 bg-primary-container/20 text-primary px-2 py-1 rounded text-[10px] truncate">10:00 AM - Viva Prep</div>
+</div>
+<div class="bg-surface-container-lowest min-h-[100px] p-2 bg-primary/5 border border-primary/20">
+<span class="font-label-md text-label-md text-primary">7</span>
+<div class="mt-1 bg-tertiary-container/20 text-tertiary-container px-2 py-1 rounded text-[10px] truncate">2:00 PM - Consultation</div>
+</div>
+<div class="bg-surface-container-lowest min-h-[100px] p-2">
+<span class="font-label-md text-label-md text-on-surface-variant">8</span>
+</div>
+<!-- ... fill remaining cells similarly ... -->
+<div class="bg-surface-container-lowest min-h-[100px] p-2"><span class="font-label-md text-label-md text-on-surface-variant">9</span></div>
+<div class="bg-surface-container-lowest min-h-[100px] p-2"><span class="font-label-md text-label-md text-on-surface-variant">10</span></div>
+<div class="bg-surface-container-lowest min-h-[100px] p-2"><span class="font-label-md text-label-md text-on-surface-variant">11</span></div>
+</div>
+</div>
+</section>
+<!-- Sidebar / Upcoming & Form -->
+<div class="w-full lg:w-[400px] flex flex-col gap-gutter">
+<!-- Action Button -->
+<button class="w-full bg-primary text-on-primary py-3 px-6 rounded-lg font-title-lg text-title-lg font-semibold flex items-center justify-center gap-2 hover:opacity-90 shadow-md transition-opacity">
+<span class="material-symbols-outlined">add</span>
+                    Schedule Meeting
+                </button>
+<!-- Upcoming Meetings -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-variant p-6 flex-1">
+<h3 class="font-title-lg text-title-lg font-semibold text-on-surface mb-4">Upcoming</h3>
+<div class="space-y-4">
+<!-- Meeting Card -->
+<div class="p-4 rounded-lg border border-surface-variant bg-surface hover:bg-surface-container-low transition-colors">
+<div class="flex justify-between items-start mb-2">
+<h4 class="font-body-md text-body-md font-semibold text-on-surface">Chapter 3 Review</h4>
+<span class="bg-tertiary-container/10 text-tertiary-container px-2 py-1 rounded text-xs font-bold uppercase tracking-wider">Online</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">person</span>
+                                Sarah Jenkins
+                            </p>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+                                Today, 2:00 PM
+                            </p>
+</div>
+<!-- Meeting Card -->
+<div class="p-4 rounded-lg border border-surface-variant bg-surface hover:bg-surface-container-low transition-colors">
+<div class="flex justify-between items-start mb-2">
+<h4 class="font-body-md text-body-md font-semibold text-on-surface">Pre-Viva Consultation</h4>
+<span class="bg-secondary-container text-on-secondary-container px-2 py-1 rounded text-xs font-bold uppercase tracking-wider">Offline</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">group</span>
+                                Team Alpha
+                            </p>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+                                Tomorrow, 10:00 AM
+                            </p>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+</body></html>

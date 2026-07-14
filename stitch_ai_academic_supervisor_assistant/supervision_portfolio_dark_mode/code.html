@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Teacher Supervision Portfolio</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container": "#171f33",
+                      "on-error-container": "#ffdad6",
+                      "on-surface-variant": "#c7c4d7",
+                      "surface-bright": "#31394d",
+                      "on-secondary-fixed": "#0d1c2d",
+                      "surface": "#0b1326",
+                      "surface-dim": "#0b1326",
+                      "inverse-on-surface": "#283044",
+                      "surface-container-highest": "#2d3449",
+                      "primary-fixed-dim": "#c0c1ff",
+                      "on-secondary-fixed-variant": "#39485a",
+                      "tertiary-fixed-dim": "#ffb783",
+                      "secondary-fixed-dim": "#b9c8de",
+                      "tertiary-fixed": "#ffdcc5",
+                      "on-surface": "#dae2fd",
+                      "on-primary-fixed-variant": "#2f2ebe",
+                      "on-background": "#dae2fd",
+                      "on-primary": "#1000a9",
+                      "inverse-primary": "#494bd6",
+                      "surface-container-lowest": "#060e20",
+                      "outline": "#908fa0",
+                      "on-secondary": "#233143",
+                      "surface-tint": "#c0c1ff",
+                      "on-tertiary-container": "#452000",
+                      "secondary": "#b9c8de",
+                      "on-primary-container": "#0d0096",
+                      "error-container": "#93000a",
+                      "surface-container-low": "#131b2e",
+                      "surface-container-high": "#222a3d",
+                      "primary-container": "#8083ff",
+                      "on-tertiary-fixed-variant": "#703700",
+                      "on-tertiary-fixed": "#301400",
+                      "on-primary-fixed": "#07006c",
+                      "on-secondary-container": "#a7b6cc",
+                      "outline-variant": "#464554",
+                      "tertiary-container": "#d97721",
+                      "tertiary": "#ffb783",
+                      "background": "#0b1326",
+                      "on-error": "#690005",
+                      "primary-fixed": "#e1e0ff",
+                      "secondary-container": "#39485a",
+                      "primary": "#c0c1ff",
+                      "on-tertiary": "#4f2500",
+                      "error": "#ffb4ab",
+                      "surface-variant": "#2d3449",
+                      "secondary-fixed": "#d4e4fa",
+                      "inverse-surface": "#dae2fd"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "margin": "32px",
+                      "gutter": "24px",
+                      "xl": "64px",
+                      "base": "8px",
+                      "md": "24px",
+                      "lg": "40px",
+                      "xs": "4px",
+                      "sm": "12px"
+              },
+              "fontFamily": {
+                      "headline-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "label-md": ["Inter"],
+                      "headline-xl": ["Inter"],
+                      "label-sm": ["Inter"],
+                      "headline-lg-mobile": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "headline-xl-mobile": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "body-sm": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                      "headline-xl": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "headline-xl-mobile": ["30px", {"lineHeight": "38px", "fontWeight": "700"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        body { background-color: theme('colors.background'); }
+        /* Data Viz Placeholder Styles */
+        .chart-grid {
+            background-image: linear-gradient(theme('colors.outline-variant') 1px, transparent 1px),
+                              linear-gradient(90deg, theme('colors.outline-variant') 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: center bottom;
+            opacity: 0.15;
+        }
+    </style>
+</head>
+<body class="font-body-md text-body-md text-on-background min-h-screen flex selection:bg-primary-container selection:text-on-primary-container">
+<!-- SideNavBar (Shared Component) -->
+<nav class="bg-surface dark:bg-surface text-primary dark:text-primary font-body-md text-body-md fixed left-0 top-0 h-full w-64 bg-surface-container-low dark:bg-surface-container-low flex flex-col h-screen py-md px-sm overflow-y-auto z-50 shadow-none border-r border-outline-variant/20">
+<!-- Header -->
+<div class="flex items-center gap-sm px-sm mb-lg mt-sm">
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-primary-container" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md text-primary dark:text-primary font-bold tracking-tight">Academic AI</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-80">Supervision Platform</p>
+</div>
+</div>
+<!-- Navigation Links -->
+<ul class="flex flex-col gap-xs flex-1">
+<!-- Dashboard (Inactive) -->
+<li>
+<a class="flex items-center gap-sm px-sm py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-on-surface transition-colors">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+</li>
+<!-- Supervision (Active) -->
+<li>
+<a class="flex items-center gap-sm px-sm py-sm rounded-lg text-primary dark:text-primary font-bold border-r-2 border-primary bg-surface-container-high/50 opacity-80 transition-opacity" href="#">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">supervisor_account</span>
+<span class="font-label-md text-label-md">Supervision</span>
+</a>
+</li>
+<!-- Students (Inactive) -->
+<li>
+<a class="flex items-center gap-sm px-sm py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-on-surface transition-colors">school</span>
+<span class="font-label-md text-label-md">Students</span>
+</a>
+</li>
+<!-- Research (Inactive) -->
+<li>
+<a class="flex items-center gap-sm px-sm py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-on-surface transition-colors">science</span>
+<span class="font-label-md text-label-md">Research</span>
+</a>
+</li>
+<!-- Resources (Inactive) -->
+<li>
+<a class="flex items-center gap-sm px-sm py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-on-surface transition-colors">library_books</span>
+<span class="font-label-md text-label-md">Resources</span>
+</a>
+</li>
+</ul>
+<!-- Bottom Actions -->
+<div class="mt-auto pt-sm border-t border-outline-variant/20">
+<!-- Settings (Inactive) -->
+<a class="flex items-center gap-sm px-sm py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high transition-colors group" href="#">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-on-surface transition-colors">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</div>
+</nav>
+<!-- TopNavBar (Shared Component) -->
+<header class="bg-surface dark:bg-surface text-primary dark:text-primary font-body-md text-body-md fixed top-0 right-0 h-16 left-64 bg-surface dark:bg-surface flex items-center justify-between px-md w-full h-16 z-40 border-b border-outline-variant/10">
+<!-- Search Bar (on_left) -->
+<div class="flex-1 max-w-md">
+<div class="relative flex items-center w-full max-w-sm rounded-full bg-surface-container focus-within:ring-2 focus-within:ring-primary focus-within:bg-surface-container-high transition-all">
+<span class="material-symbols-outlined absolute left-3 text-on-surface-variant">search</span>
+<input class="w-full bg-transparent border-none py-2 pl-10 pr-4 text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-0 font-body-sm text-body-sm rounded-full" placeholder="Search portfolios, students..." type="text"/>
+</div>
+</div>
+<!-- Trailing Actions & Profile -->
+<div class="flex items-center gap-sm pr-[260px]"> <!-- Compensating for left-64 to keep true center/right alignment within the remaining space if needed, actually left-64 handles offset. Pr-64 is safe buffer. -->
+<button aria-label="notifications" class="text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high rounded-full p-2 transition-all active:scale-95 transition-transform">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button aria-label="help_outline" class="text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-high rounded-full p-2 transition-all active:scale-95 transition-transform">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<div class="w-px h-6 bg-outline-variant/30 mx-sm"></div>
+<button class="w-8 h-8 rounded-full bg-surface-container-highest border border-outline-variant/50 overflow-hidden ml-xs focus:ring-2 focus:ring-primary focus:outline-none">
+<!-- Using a placeholder pattern since no specific image URL provided for profile, but need data-alt -->
+<div class="w-full h-full bg-gradient-to-br from-primary-container to-tertiary-container flex justify-center items-center" data-alt="A small, stylized profile avatar indicating a user account. The aesthetic is clean, professional, and uses a subtle gradient of deep indigo and soft coral against the dark navy UI theme.">
+<span class="font-label-md text-label-md text-on-primary-container">DR</span>
+</div>
+</button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="ml-64 mt-16 w-full p-margin max-w-[1400px] mx-auto pb-xl">
+<!-- Header Section: Professor Identity -->
+<section class="flex flex-col md:flex-row items-start md:items-center justify-between gap-md mb-lg">
+<div class="flex items-center gap-md">
+<div class="w-20 h-20 rounded-full bg-surface-container-highest border-2 border-primary/30 flex items-center justify-center overflow-hidden shrink-0" data-alt="A professional headshot placeholder for a distinguished academic professor. Set against a dark, minimalist background. The lighting is soft and authoritative, conveying expertise and mentorship within a modern academic digital interface.">
+<span class="material-symbols-outlined text-4xl text-on-surface-variant">person</span>
+</div>
+<div>
+<h2 class="font-headline-xl text-headline-xl text-on-surface">Dr. Evelyn Vance</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant mt-1">Distinguished Professor of Cognitive Sciences</p>
+<div class="flex items-center gap-sm mt-3">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full font-label-sm text-label-sm bg-primary/10 text-primary border border-primary/20">Tenured</span>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full font-label-sm text-label-sm bg-tertiary/10 text-tertiary border border-tertiary/20">AI Research Lab</span>
+</div>
+</div>
+</div>
+<div class="flex gap-sm">
+<button class="px-4 py-2 rounded-lg font-label-md text-label-md border border-outline-variant text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                    Export Report
+                </button>
+<button class="px-4 py-2 rounded-lg font-label-md text-label-md bg-primary text-on-primary hover:bg-primary/90 transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    New Advisee
+                </button>
+</div>
+</section>
+<!-- Bento Grid Layout for Metrics & Visuals -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- Key Metrics Row -->
+<div class="col-span-12 grid grid-cols-1 md:grid-cols-4 gap-gutter">
+<!-- Metric 1 -->
+<div class="bg-surface-container rounded-xl p-md border border-outline-variant/20 hover:border-outline-variant/40 transition-colors flex flex-col justify-between">
+<div class="flex justify-between items-start mb-4">
+<p class="font-label-md text-label-md text-on-surface-variant">Total Supervised</p>
+<span class="material-symbols-outlined text-primary/70">groups</span>
+</div>
+<div>
+<p class="font-headline-xl text-headline-xl text-on-surface">142</p>
+<p class="font-body-sm text-body-sm text-secondary flex items-center mt-1">
+<span class="material-symbols-outlined text-[16px] mr-1">trending_up</span>
+                            +12 this academic year
+                        </p>
+</div>
+</div>
+<!-- Metric 2 -->
+<div class="bg-surface-container rounded-xl p-md border border-outline-variant/20 hover:border-outline-variant/40 transition-colors flex flex-col justify-between">
+<div class="flex justify-between items-start mb-4">
+<p class="font-label-md text-label-md text-on-surface-variant">Avg. Time to Grad</p>
+<span class="material-symbols-outlined text-tertiary/70">hourglass_top</span>
+</div>
+<div>
+<p class="font-headline-xl text-headline-xl text-on-surface">4.2 <span class="font-headline-md text-headline-md text-on-surface-variant">yrs</span></p>
+<p class="font-body-sm text-body-sm text-primary flex items-center mt-1">
+<span class="material-symbols-outlined text-[16px] mr-1">trending_down</span>
+                            -0.4 yrs below dept avg
+                        </p>
+</div>
+</div>
+<!-- Metric 3 -->
+<div class="bg-surface-container rounded-xl p-md border border-outline-variant/20 hover:border-outline-variant/40 transition-colors flex flex-col justify-between relative overflow-hidden">
+<div class="absolute -right-4 -top-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
+<div class="flex justify-between items-start mb-4 relative z-10">
+<p class="font-label-md text-label-md text-on-surface-variant">Placement Rate</p>
+<span class="material-symbols-outlined text-primary/70">work</span>
+</div>
+<div class="relative z-10">
+<p class="font-headline-xl text-headline-xl text-on-surface">94%</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Within 6 months of defense</p>
+</div>
+</div>
+<!-- Metric 4 -->
+<div class="bg-surface-container rounded-xl p-md border border-outline-variant/20 hover:border-outline-variant/40 transition-colors flex flex-col justify-between">
+<div class="flex justify-between items-start mb-4">
+<p class="font-label-md text-label-md text-on-surface-variant">H-Index (Advisees)</p>
+<span class="material-symbols-outlined text-tertiary/70">auto_graph</span>
+</div>
+<div>
+<p class="font-headline-xl text-headline-xl text-on-surface">28</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Top 15% in Faculty</p>
+</div>
+</div>
+</div>
+<!-- Main Data Visualizations -->
+<!-- Graduation Trends Chart -->
+<div class="col-span-12 md:col-span-8 bg-surface-container rounded-xl border border-outline-variant/20 p-md flex flex-col h-[400px]">
+<div class="flex justify-between items-center mb-6">
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface">Graduation &amp; Intake Trends</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">10-year historical overview</p>
+</div>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Chart Area Placeholder (Stylized using CSS/HTML) -->
+<div class="flex-1 relative w-full h-full chart-grid flex items-end justify-between px-4 pb-8 pt-4">
+<!-- Y Axis Labels -->
+<div class="absolute left-0 top-4 bottom-8 w-8 flex flex-col justify-between text-right pr-2">
+<span class="font-label-sm text-label-sm text-outline">15</span>
+<span class="font-label-sm text-label-sm text-outline">10</span>
+<span class="font-label-sm text-label-sm text-outline">5</span>
+<span class="font-label-sm text-label-sm text-outline">0</span>
+</div>
+<!-- Bars / Lines simulation -->
+<div class="w-full h-full ml-8 relative flex items-end justify-around">
+<!-- Simulated Data Points -->
+<div class="w-12 h-[30%] bg-surface-variant rounded-t-sm relative group cursor-pointer hover:bg-surface-bright transition-colors">
+<div class="absolute bottom-0 w-full bg-primary/40 rounded-t-sm" style="height: 60%"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 font-label-sm text-label-sm text-on-surface-variant">2019</span>
+</div>
+<div class="w-12 h-[45%] bg-surface-variant rounded-t-sm relative group cursor-pointer hover:bg-surface-bright transition-colors">
+<div class="absolute bottom-0 w-full bg-primary/60 rounded-t-sm" style="height: 50%"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 font-label-sm text-label-sm text-on-surface-variant">2020</span>
+</div>
+<div class="w-12 h-[55%] bg-surface-variant rounded-t-sm relative group cursor-pointer hover:bg-surface-bright transition-colors">
+<div class="absolute bottom-0 w-full bg-primary/50 rounded-t-sm" style="height: 70%"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 font-label-sm text-label-sm text-on-surface-variant">2021</span>
+</div>
+<div class="w-12 h-[80%] bg-surface-variant rounded-t-sm relative group cursor-pointer hover:bg-surface-bright transition-colors border border-primary">
+<div class="absolute bottom-0 w-full bg-primary/80 rounded-t-sm" style="height: 40%"></div>
+<!-- Tooltip for active -->
+<div class="absolute -top-12 left-1/2 -translate-x-1/2 bg-surface-container-highest border border-outline-variant text-on-surface font-label-sm text-label-sm py-1 px-2 rounded whitespace-nowrap shadow-lg">
+                                Intake: 12 | Grad: 5
+                            </div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 font-label-sm text-label-sm text-primary font-bold">2022</span>
+</div>
+<div class="w-12 h-[65%] bg-surface-variant rounded-t-sm relative group cursor-pointer hover:bg-surface-bright transition-colors">
+<div class="absolute bottom-0 w-full bg-primary/50 rounded-t-sm" style="height: 80%"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 font-label-sm text-label-sm text-on-surface-variant">2023</span>
+</div>
+<div class="w-12 h-[75%] bg-surface-variant rounded-t-sm relative group cursor-pointer hover:bg-surface-bright transition-colors">
+<div class="absolute bottom-0 w-full bg-primary/40 rounded-t-sm" style="height: 60%"></div>
+<span class="absolute -bottom-6 left-1/2 -translate-x-1/2 font-label-sm text-label-sm text-on-surface-variant">2024</span>
+</div>
+</div>
+</div>
+<div class="flex justify-center gap-md mt-4">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-surface-variant"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">New Intake</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-primary/60"></div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Graduated</span>
+</div>
+</div>
+</div>
+<!-- Research Impact Radar -->
+<div class="col-span-12 md:col-span-4 bg-surface-container rounded-xl border border-outline-variant/20 p-md flex flex-col h-[400px]">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface">Advisee Impact Matrix</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Post-graduation trajectories</p>
+</div>
+</div>
+<div class="flex-1 relative flex items-center justify-center">
+<!-- Abstract representation of a radar chart -->
+<div class="relative w-48 h-48 rounded-full border border-outline-variant/30 flex items-center justify-center">
+<div class="absolute w-32 h-32 rounded-full border border-outline-variant/20"></div>
+<div class="absolute w-16 h-16 rounded-full border border-outline-variant/10"></div>
+<!-- Axis Lines -->
+<div class="absolute w-full h-px bg-outline-variant/20 rotate-0"></div>
+<div class="absolute w-full h-px bg-outline-variant/20 rotate-45"></div>
+<div class="absolute w-full h-px bg-outline-variant/20 rotate-90"></div>
+<div class="absolute w-full h-px bg-outline-variant/20 rotate-[135deg]"></div>
+<!-- Data Polygon (Stylized CSS) -->
+<div class="absolute w-full h-full" style="clip-path: polygon(50% 10%, 80% 30%, 90% 70%, 50% 85%, 20% 60%, 30% 20%); background: radial-gradient(circle, rgba(192,193,255,0.4) 0%, rgba(192,193,255,0.1) 100%); border: 1px solid theme('colors.primary'); border-radius: 20px;"></div>
+<!-- Labels -->
+<span class="absolute -top-6 font-label-sm text-label-sm text-on-surface">Publications</span>
+<span class="absolute -right-8 font-label-sm text-label-sm text-on-surface">Patents</span>
+<span class="absolute -bottom-6 font-label-sm text-label-sm text-on-surface">Academia</span>
+<span class="absolute -left-8 font-label-sm text-label-sm text-on-surface">Industry</span>
+</div>
+</div>
+</div>
+<!-- Current Active Roster List -->
+<div class="col-span-12 bg-surface-container rounded-xl border border-outline-variant/20 overflow-hidden mt-sm">
+<div class="p-md border-b border-outline-variant/20 flex justify-between items-center bg-surface-container-low">
+<h3 class="font-headline-md text-headline-md text-on-surface">Active Roster (Current Candidates)</h3>
+<button class="font-label-md text-label-md text-primary hover:text-primary-fixed transition-colors">View All Directory</button>
+</div>
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant/20">
+<th class="p-4 font-label-md text-label-md text-on-surface-variant font-medium">Candidate Name</th>
+<th class="p-4 font-label-md text-label-md text-on-surface-variant font-medium">Program</th>
+<th class="p-4 font-label-md text-label-md text-on-surface-variant font-medium">Research Area</th>
+<th class="p-4 font-label-md text-label-md text-on-surface-variant font-medium">Progress</th>
+<th class="p-4 font-label-md text-label-md text-on-surface-variant font-medium">Status</th>
+<th class="p-4 w-12"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-high/50 transition-colors group">
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center font-label-sm text-label-sm">JS</div>
+<div>
+<p class="font-body-md text-body-md text-on-surface font-medium">Julian Silva</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Started 2021</p>
+</div>
+</div>
+</td>
+<td class="p-4 font-body-sm text-body-sm text-on-surface">Ph.D. Cognitive Sci</td>
+<td class="p-4 font-body-sm text-body-sm text-on-surface-variant">Neural Networks in Linguistics</td>
+<td class="p-4">
+<div class="flex items-center gap-2">
+<div class="w-full bg-surface-variant rounded-full h-2 max-w-[120px]">
+<div class="bg-primary h-2 rounded-full" style="width: 75%"></div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">75%</span>
+</div>
+</td>
+<td class="p-4">
+<span class="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary border border-primary/20 font-label-sm text-label-sm">Writing Thesis</span>
+</td>
+<td class="p-4 text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-high/50 transition-colors group">
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-label-sm text-label-sm">MK</div>
+<div>
+<p class="font-body-md text-body-md text-on-surface font-medium">Maya Kovach</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Started 2023</p>
+</div>
+</div>
+</td>
+<td class="p-4 font-body-sm text-body-sm text-on-surface">M.S. Applied AI</td>
+<td class="p-4 font-body-sm text-body-sm text-on-surface-variant">Ethical Alignment</td>
+<td class="p-4">
+<div class="flex items-center gap-2">
+<div class="w-full bg-surface-variant rounded-full h-2 max-w-[120px]">
+<div class="bg-primary h-2 rounded-full" style="width: 30%"></div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">30%</span>
+</div>
+</td>
+<td class="p-4">
+<span class="inline-flex items-center px-2 py-1 rounded-md bg-secondary/10 text-secondary border border-secondary/20 font-label-sm text-label-sm">Coursework</span>
+</td>
+<td class="p-4 text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+</body></html>
