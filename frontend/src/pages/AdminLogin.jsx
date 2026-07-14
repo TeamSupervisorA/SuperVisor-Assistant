@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../lib/api';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -10,27 +11,18 @@ const AdminLogin = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     try {
-      const response = await fetch('http://localhost:5000/api/auth/admin-login', {
+      const data = await apiFetch('/api/auth/admin-login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify({ email, password })
       });
 
-      const data = await response.json();
-
-      if (data.success) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        navigate('/admin-dashboard');
-      } else {
-        setError(data.error || 'Failed to login');
-      }
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      navigate('/admin-dashboard');
     } catch (err) {
-      setError('An error occurred while logging in.');
+      setError(err.message || 'An error occurred while logging in.');
     }
   };
 

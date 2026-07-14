@@ -7,6 +7,7 @@ import StudentDashboard from './pages/StudentDashboard';
 import SupervisorDashboard from './pages/SupervisorDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import DashboardLayout from './components/DashboardLayout';
+import ProtectedRoute from './components/ProtectedRoute';
 import TasksMilestones from './pages/TasksMilestones';
 import TeamManagement from './pages/TeamManagement';
 import ProjectResourceLibrary from './pages/ProjectResourceLibrary';
@@ -30,22 +31,32 @@ function App() {
         <Route path="/admin/login" element={<AdminLogin />} />
         
         {/* Protected Dashboard Routes */}
-        <Route element={<DashboardLayout />}>
-          <Route path="/dashboard" element={<StudentDashboard />} />
-          <Route path="/supervisor-dashboard" element={<SupervisorDashboard />} />
-          <Route path="/admin-dashboard" element={<AdminDashboard />} />
-          <Route path="/tasks-milestones" element={<TasksMilestones />} />
-          <Route path="/team-management" element={<TeamManagement />} />
-          <Route path="/project-resource-library" element={<ProjectResourceLibrary />} />
-          <Route path="/create-new-work" element={<CreateNewWork />} />
-          <Route path="/detailed-feedback" element={<DetailedFeedback />} />
-          <Route path="/meeting-management" element={<MeetingManagement />} />
-          <Route path="/plagiarism-checker" element={<PlagiarismChecker />} />
-          <Route path="/rubric-marking" element={<RubricMarking />} />
-          <Route path="/course-management" element={<CourseManagement />} />
-          <Route path="/template-management" element={<TemplateManagement />} />
-          <Route path="/system-reports" element={<SystemReports />} />
-          <Route path="/settings" element={<Settings />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<DashboardLayout />}>
+            <Route path="/dashboard" element={<StudentDashboard />} />
+            <Route path="/tasks-milestones" element={<TasksMilestones />} />
+            <Route path="/team-management" element={<TeamManagement />} />
+            <Route path="/project-resource-library" element={<ProjectResourceLibrary />} />
+            <Route path="/create-new-work" element={<CreateNewWork />} />
+            <Route path="/detailed-feedback" element={<DetailedFeedback />} />
+            <Route path="/meeting-management" element={<MeetingManagement />} />
+            <Route path="/settings" element={<Settings />} />
+
+            {/* Supervisor + Admin only */}
+            <Route element={<ProtectedRoute roles={['supervisor', 'admin']} />}>
+              <Route path="/supervisor-dashboard" element={<SupervisorDashboard />} />
+              <Route path="/plagiarism-checker" element={<PlagiarismChecker />} />
+              <Route path="/rubric-marking" element={<RubricMarking />} />
+            </Route>
+
+            {/* Admin only */}
+            <Route element={<ProtectedRoute roles={['admin']} />}>
+              <Route path="/admin-dashboard" element={<AdminDashboard />} />
+              <Route path="/course-management" element={<CourseManagement />} />
+              <Route path="/template-management" element={<TemplateManagement />} />
+              <Route path="/system-reports" element={<SystemReports />} />
+            </Route>
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>
