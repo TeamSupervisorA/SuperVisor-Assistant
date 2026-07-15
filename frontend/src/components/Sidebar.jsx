@@ -17,6 +17,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
   const studentItems = [
     { name: 'Dashboard', icon: 'dashboard', path: '/dashboard' },
     { name: 'Tasks & Milestones', icon: 'checklist', path: '/tasks-milestones' },
+    { name: 'Submissions', icon: 'upload_file', path: '/student-submissions' },
     { name: 'Team', icon: 'groups', path: '/team-management' },
     { name: 'Resources', icon: 'library_books', path: '/project-resource-library' },
     ...commonItems,
@@ -26,6 +27,8 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
   const supervisorItems = [
     { name: 'Dashboard', icon: 'dashboard', path: '/supervisor-dashboard' },
     { name: 'Tasks & Milestones', icon: 'checklist', path: '/tasks-milestones' },
+    { name: 'Evaluations', icon: 'grading', path: '/evaluations' },
+    { name: 'Plagiarism', icon: 'policy', path: '/plagiarism-checker' },
     { name: 'Feedback', icon: 'rate_review', path: '/detailed-feedback' },
     ...commonItems,
     { name: 'Settings', icon: 'settings', path: '/settings' },

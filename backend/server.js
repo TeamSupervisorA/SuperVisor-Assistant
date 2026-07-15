@@ -62,6 +62,7 @@ app.set('io', io);
 // New Routes
 app.use('/api/messages', require('./routes/messageRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/plagiarism', require('./routes/plagiarismRoutes'));
 
 const PORT = process.env.PORT || 5000;
 

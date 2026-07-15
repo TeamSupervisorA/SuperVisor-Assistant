@@ -202,18 +202,7 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
         />
       </form>
       
-      <div className="flex items-center gap-1.5">
-        {/* Dark Mode Toggle */}
-        <button
-          onClick={toggleDark}
-          className="p-2.5 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors duration-200 group"
-          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          <span className="material-symbols-outlined text-[22px] group-hover:scale-110 transition-transform">
-            {isDark ? 'light_mode' : 'dark_mode'}
-          </span>
-        </button>
-
+      <div className="flex items-center gap-2">
         {/* Notifications */}
         <div className="relative" ref={notifRef}>
           <button
@@ -295,12 +284,6 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
             )}
           </AnimatePresence>
         </div>
-        
-        {/* Chat */}
-        <button onClick={() => navigate('/chat')} className="p-2.5 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors duration-200 group">
-          <span className="material-symbols-outlined text-[22px] group-hover:scale-110 transition-transform">chat</span>
-        </button>
-        
         {/* User Avatar & Dropdown */}
         <div className="relative" ref={userMenuRef}>
           <button 
@@ -345,7 +328,7 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
                   {[
                     { icon: 'person', label: 'My Profile', action: () => { setShowUserMenu(false); navigate('/settings'); } },
                     { icon: 'settings', label: 'Settings', action: () => { setShowUserMenu(false); navigate('/settings'); } },
-                    { icon: 'help', label: 'Help & Support', action: () => { setShowUserMenu(false); } },
+                    { icon: isDark ? 'light_mode' : 'dark_mode', label: isDark ? 'Light Mode' : 'Dark Mode', action: () => { toggleDark(); } },
                   ].map((item, i) => (
                     <button
                       key={i}
