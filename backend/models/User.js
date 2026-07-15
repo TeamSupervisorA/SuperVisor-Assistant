@@ -33,6 +33,17 @@ const userSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  settings: {
+    aiChatbot: { type: Boolean, default: true },
+    ideaGenerator: { type: Boolean, default: true },
+    proposalFeedback: { type: Boolean, default: true },
+    plagiarismAutoCheck: { type: Boolean, default: false },
+    systemPrompt: { 
+      type: String, 
+      default: 'You are a strict but fair academic supervisor. Your primary role is to guide students through their research process without writing the content for them. Always encourage critical thinking and cite relevant methodological frameworks when offering feedback.' 
+    },
+    plagiarismTolerance: { type: Number, default: 20 }
   }
 });
 
