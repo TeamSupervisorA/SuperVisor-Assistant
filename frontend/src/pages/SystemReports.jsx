@@ -1,6 +1,22 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../lib/api';
 
 const SystemReports = () => {
+  const [metrics, setMetrics] = useState(null);
+
+  useEffect(() => {
+    loadMetrics();
+  }, []);
+
+  const loadMetrics = async () => {
+    try {
+      const res = await apiFetch('/api/dashboard/admin');
+      if (res.data) setMetrics(res.data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <div className="max-w-[1440px] mx-auto p-margin_mobile md:p-margin_desktop w-full flex flex-col gap-8 pb-12">
       {/* Page Header & Global Actions */}
@@ -18,6 +34,26 @@ const SystemReports = () => {
             <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
             Export PDF
           </button>
+        </div>
+      </section>
+
+      {/* Overview Metrics */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/30 shadow-sm">
+          <h3 className="text-secondary text-sm font-semibold mb-2 uppercase tracking-wider">Total Students</h3>
+          <p className="text-3xl font-bold text-primary">{metrics?.totalStudents || 0}</p>
+        </div>
+        <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/30 shadow-sm">
+          <h3 className="text-secondary text-sm font-semibold mb-2 uppercase tracking-wider">Total Teachers</h3>
+          <p className="text-3xl font-bold text-primary">{metrics?.totalTeachers || 0}</p>
+        </div>
+        <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/30 shadow-sm">
+          <h3 className="text-secondary text-sm font-semibold mb-2 uppercase tracking-wider">Active Projects</h3>
+          <p className="text-3xl font-bold text-primary">{metrics?.activeProjects || 0}</p>
+        </div>
+        <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/30 shadow-sm">
+          <h3 className="text-secondary text-sm font-semibold mb-2 uppercase tracking-wider">Submissions</h3>
+          <p className="text-3xl font-bold text-primary">{metrics?.assignmentsSubmitted || 0}</p>
         </div>
       </section>
 
@@ -96,98 +132,6 @@ const SystemReports = () => {
               <span className="material-symbols-outlined text-[18px]">magic_button</span>
               AI Generate
             </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Recent Reports Table */}
-      <section className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-title-lg text-[20px] font-semibold text-on-surface">Recent Reports</h3>
-          <a className="font-label-md text-[12px] font-semibold text-primary hover:underline" href="#">View All</a>
-        </div>
-        <div className="bg-surface-container-lowest rounded-[24px] border border-outline-variant shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-2px_rgba(0,0,0,0.05)] overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[800px]">
-              <thead>
-                <tr className="border-b border-outline-variant bg-surface-container-low/50">
-                  <th className="py-4 px-6 font-label-md text-[12px] font-semibold text-on-surface-variant uppercase tracking-wider w-2/5">Report Name</th>
-                  <th className="py-4 px-6 font-label-md text-[12px] font-semibold text-on-surface-variant uppercase tracking-wider w-1/5">Department</th>
-                  <th className="py-4 px-6 font-label-md text-[12px] font-semibold text-on-surface-variant uppercase tracking-wider w-1/5">Generated On</th>
-                  <th className="py-4 px-6 font-label-md text-[12px] font-semibold text-on-surface-variant uppercase tracking-wider w-32">Status</th>
-                  <th className="py-4 px-6 font-label-md text-[12px] font-semibold text-on-surface-variant uppercase tracking-wider text-right w-24">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="font-body-sm text-[14px] text-on-surface">
-                <tr className="border-b border-outline-variant/50 hover:bg-[#F1F5F9] transition-colors group">
-                  <td className="py-4 px-6 font-medium">Q3 Faculty Workload Analysis</td>
-                  <td className="py-4 px-6 text-on-surface-variant">Computer Science</td>
-                  <td className="py-4 px-6 text-on-surface-variant">Oct 24, 2023</td>
-                  <td className="py-4 px-6">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-highest text-primary font-label-md text-[11px] font-semibold">
-                      <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                      Generated
-                    </span>
-                  </td>
-                  <td className="py-4 px-6 text-right">
-                    <button className="text-on-surface-variant hover:text-primary transition-colors p-1" title="Download PDF">
-                      <span className="material-symbols-outlined">download</span>
-                    </button>
-                  </td>
-                </tr>
-                <tr className="border-b border-outline-variant/50 hover:bg-[#F1F5F9] transition-colors group">
-                  <td className="py-4 px-6 font-medium">Annual Academic Integrity Audit</td>
-                  <td className="py-4 px-6 text-on-surface-variant">All Departments</td>
-                  <td className="py-4 px-6 text-on-surface-variant">Oct 22, 2023</td>
-                  <td className="py-4 px-6">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-highest text-primary font-label-md text-[11px] font-semibold">
-                      <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                      Generated
-                    </span>
-                  </td>
-                  <td className="py-4 px-6 text-right">
-                    <button className="text-on-surface-variant hover:text-primary transition-colors p-1" title="Download PDF">
-                      <span className="material-symbols-outlined">download</span>
-                    </button>
-                  </td>
-                </tr>
-                <tr className="border-b border-outline-variant/50 hover:bg-[#F1F5F9] transition-colors group">
-                  <td className="py-4 px-6 font-medium flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary/60 text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-                    Student Success Trends - Risk Cohorts
-                  </td>
-                  <td className="py-4 px-6 text-on-surface-variant">Life Sciences</td>
-                  <td className="py-4 px-6 text-on-surface-variant">Just now</td>
-                  <td className="py-4 px-6">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FFF3E0] text-[#E65100] font-label-md text-[11px] font-semibold">
-                      <span className="material-symbols-outlined text-[14px] animate-spin">sync</span>
-                      Pending AI
-                    </span>
-                  </td>
-                  <td className="py-4 px-6 text-right">
-                    <button className="text-outline-variant cursor-not-allowed p-1" disabled title="Processing...">
-                      <span className="material-symbols-outlined">download</span>
-                    </button>
-                  </td>
-                </tr>
-                <tr className="hover:bg-[#F1F5F9] transition-colors group">
-                  <td className="py-4 px-6 font-medium">Departmental Budget Review</td>
-                  <td className="py-4 px-6 text-on-surface-variant">Humanities</td>
-                  <td className="py-4 px-6 text-on-surface-variant">Sep 15, 2023</td>
-                  <td className="py-4 px-6">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-highest text-primary font-label-md text-[11px] font-semibold">
-                      <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                      Generated
-                    </span>
-                  </td>
-                  <td className="py-4 px-6 text-right">
-                    <button className="text-on-surface-variant hover:text-primary transition-colors p-1" title="Download PDF">
-                      <span className="material-symbols-outlined">download</span>
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
           </div>
         </div>
       </section>
