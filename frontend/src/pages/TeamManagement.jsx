@@ -1,40 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { apiFetch } from '../lib/api';
+import React, { useState } from 'react';
+import { useAuth } from '../components/AuthContext';
 
 const TeamManagement = () => {
-  const [teams, setTeams] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { activeProject } = useAuth();
   const [newMember, setNewMember] = useState({ email: '', role: 'Frontend Developer' });
-
-  useEffect(() => {
-    loadTeams();
-  }, []);
-
-  const loadTeams = async () => {
-    try {
-      const res = await apiFetch('/api/teams');
-      if (res.data) {
-        setTeams(res.data);
-      }
-    } catch (error) {
-      console.error('Failed to load teams', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleInvite = async (e) => {
     e.preventDefault();
-    alert(`Invite sent to ${newMember.email} as ${newMember.role}!`);
+    alert(`Invite sent to ${newMember.email} as ${newMember.role}! (To be implemented)`);
     setNewMember({ email: '', role: 'Frontend Developer' });
   };
 
-  // Mock initial data if no teams exist to preserve UI
-  const displayMembers = teams.length > 0 ? teams[0].members : [
-    { _id: '1', role: 'Leader', user: { name: 'Sarah Jenkins' } },
-    { _id: '2', role: 'AI INTEGRATION', user: { name: 'James Chen' } },
-    { _id: '3', role: 'FRONTEND', user: { name: 'Maria Rodriguez' } }
-  ];
+  if (!activeProject) {
+    return (
+      <div className="flex-1 p-margin_mobile md:p-margin_desktop w-full max-w-container_max mx-auto flex items-center justify-center">
+        <div className="text-center bg-surface-container-lowest border border-outline-variant/30 p-10 rounded-2xl">
+          <span className="material-symbols-outlined text-4xl text-outline mb-2">group_off</span>
+          <h2 className="font-headline-md text-on-surface">No Project Selected</h2>
+          <p className="font-body-md text-secondary mt-2">Please select an active project from the top navigation to view the team.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Construct roster from active project
+  let displayMembers = [];
+  if (activeProject.supervisor) {
+    displayMembers.push({ _id: activeProject.supervisor._id, role: 'Supervisor', user: activeProject.supervisor });
+  }
+  if (activeProject.students && activeProject.students.length > 0) {
+    activeProject.students.forEach((student, idx) => {
+      displayMembers.push({ _id: student._id, role: `Student Member ${idx + 1}`, user: student });
+    });
+  }
 
   return (
     <div className="flex-1 p-margin_mobile md:p-margin_desktop max-w-container_max mx-auto w-full">
@@ -42,7 +40,7 @@ const TeamManagement = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h1 className="font-headline-lg text-[32px] font-bold text-on-surface mb-1">Team Management</h1>
-          <p className="font-body-lg text-[18px] text-secondary">SDP Project: <span className="font-semibold text-primary">AI Health Monitor</span></p>
+          <p className="font-body-lg text-[18px] text-secondary">Project: <span className="font-semibold text-primary">{activeProject.title}</span></p>
         </div>
         <div className="flex gap-3">
           <button className="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-lg font-body-md text-[16px] hover:bg-primary/90 transition-colors shadow-sm">
@@ -88,8 +86,8 @@ const TeamManagement = () => {
               <h3 className="font-title-lg text-[20px] font-semibold text-on-surface">Active Roster & Contributions</h3>
               <span className="bg-primary/10 text-primary px-3 py-1 rounded-full font-label-md text-[12px] font-semibold">{displayMembers.length} MEMBERS</span>
             </div>
-            {loading ? (
-              <p className="text-secondary">Loading...</p>
+            {displayMembers.length === 0 ? (
+              <p className="text-secondary p-4 text-center">No team members assigned yet.</p>
             ) : (
               <div className="flex flex-col gap-4">
                 {displayMembers.map((member, i) => (

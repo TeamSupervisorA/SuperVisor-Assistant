@@ -1,7 +1,41 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../lib/api';
+import { useAuth } from '../components/AuthContext';
 
 const CreateNewWork = () => {
   const [selectedType, setSelectedType] = useState('sdp');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
+  
+  const navigate = useNavigate();
+  const { setActiveProject, getDashboardPath } = useAuth();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!title.trim() || !description.trim()) return alert('Please fill all fields');
+    
+    setLoading(true);
+    try {
+      const res = await apiFetch('/api/projects', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: `[${selectedType.toUpperCase()}] ${title}`,
+          description,
+          status: 'pending'
+        })
+      });
+      if (res.success) {
+        setActiveProject(res.data);
+        navigate(getDashboardPath());
+      }
+    } catch (error) {
+      alert('Error creating project: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex-1 w-full max-w-[1440px] mx-auto p-4 md:p-margin_desktop">
@@ -17,36 +51,21 @@ const CreateNewWork = () => {
       <div className="mb-12 max-w-3xl mx-auto">
         <div className="flex justify-between items-center relative">
           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-surface-container-high rounded-full z-0"></div>
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1/3 h-1 bg-primary rounded-full z-0 transition-all duration-500"></div>
-          {/* Step 1 */}
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-primary rounded-full z-0 transition-all duration-500"></div>
           <div className="relative z-10 flex flex-col items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-md text-[12px] font-semibold shadow-sm">
-              1
+              <span className="material-symbols-outlined text-[18px]">check</span>
             </div>
-            <span className="font-label-md text-[12px] font-semibold text-primary">Work Type</span>
-          </div>
-          {/* Step 2 */}
-          <div className="relative z-10 flex flex-col items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-surface text-on-surface-variant border-2 border-surface-container-high flex items-center justify-center font-label-md text-[12px] font-semibold">
-              2
-            </div>
-            <span className="font-label-md text-[12px] font-semibold text-on-surface-variant">Supervision</span>
-          </div>
-          {/* Step 3 */}
-          <div className="relative z-10 flex flex-col items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-surface text-on-surface-variant border-2 border-surface-container-high flex items-center justify-center font-label-md text-[12px] font-semibold">
-              3
-            </div>
-            <span className="font-label-md text-[12px] font-semibold text-on-surface-variant">Details</span>
+            <span className="font-label-md text-[12px] font-semibold text-primary">Work Details</span>
           </div>
         </div>
       </div>
 
       {/* Main Form Card */}
-      <div className="bg-surface rounded-[24px] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),_0px_2px_4px_-2px_rgba(0,0,0,0.05)] p-6 md:p-10 max-w-3xl mx-auto border border-surface-container-lowest">
+      <form onSubmit={handleSubmit} className="bg-surface rounded-[24px] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),_0px_2px_4px_-2px_rgba(0,0,0,0.05)] p-6 md:p-10 max-w-3xl mx-auto border border-surface-container-lowest">
         <div className="mb-8">
-          <h3 className="font-headline-md text-[24px] font-semibold text-on-surface mb-2">Step 1: Select Work Type</h3>
-          <p className="font-body-md text-[16px] text-on-surface-variant">Choose the category that best describes the academic work you are initiating.</p>
+          <h3 className="font-headline-md text-[24px] font-semibold text-on-surface mb-2">Project Proposal</h3>
+          <p className="font-body-md text-[16px] text-on-surface-variant">Provide the details for your new academic work.</p>
         </div>
 
         {/* Bento Grid for Selection */}
@@ -148,17 +167,41 @@ const CreateNewWork = () => {
           </label>
         </div>
 
+        {/* Project Details Fields */}
+        <div className="flex flex-col gap-6 mb-10">
+          <div>
+            <label className="block text-sm font-medium text-on-surface mb-2">Project Title</label>
+            <input 
+              required
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="e.g. AI-driven Healthcare Diagnostics"
+              className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-on-surface mb-2">Description</label>
+            <textarea 
+              required
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Describe the main objectives and scope..."
+              className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface h-32 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"
+            ></textarea>
+          </div>
+        </div>
+
         {/* Action Buttons */}
         <div className="flex items-center justify-between pt-6 border-t border-surface-container-high">
-          <button className="px-6 py-2.5 rounded-lg border border-primary text-primary font-label-md text-[12px] font-semibold hover:bg-primary/5 transition-colors focus:ring-2 focus:ring-primary/50 outline-none">
-            Save Draft
+          <button type="button" onClick={() => navigate(-1)} className="px-6 py-2.5 rounded-lg border border-primary text-primary font-label-md text-[12px] font-semibold hover:bg-primary/5 transition-colors focus:ring-2 focus:ring-primary/50 outline-none">
+            Cancel
           </button>
-          <button className="px-6 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-[12px] font-semibold hover:bg-primary/90 transition-colors focus:ring-2 focus:ring-primary outline-none flex items-center gap-2">
-            Next Step
-            <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+          <button type="submit" disabled={loading} className="px-6 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-[12px] font-semibold hover:bg-primary/90 transition-colors focus:ring-2 focus:ring-primary outline-none flex items-center gap-2 disabled:opacity-70">
+            {loading ? 'Creating...' : 'Submit Proposal'}
+            {!loading && <span className="material-symbols-outlined text-[18px]">done</span>}
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 };

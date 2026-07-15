@@ -9,8 +9,12 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
   const [notifications, setNotifications] = useState([]);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [myProjects, setMyProjects] = useState([]);
+  const [showProjectSelector, setShowProjectSelector] = useState(false);
+  const projectSelectorRef = useRef(null);
+
   const navigate = useNavigate();
-  const { user, token, logout } = useAuth();
+  const { user, token, logout, activeProject, setActiveProject } = useAuth();
 
   const notifRef = useRef(null);
   const userMenuRef = useRef(null);
@@ -28,7 +32,29 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
         // Silent fail — notifications are non-critical
       }
     };
+    
+    const loadProjects = async () => {
+      try {
+        if (!token) return;
+        const res = await apiFetch('/api/projects');
+        if (res.data) {
+          setMyProjects(res.data);
+          // Auto-select first project if none is active
+          if (res.data.length > 0 && !activeProject) {
+            setActiveProject(res.data[0]);
+          } else if (activeProject) {
+            // Update active project with fresh data if it exists in the list
+            const updatedProject = res.data.find(p => p._id === activeProject._id);
+            if (updatedProject) setActiveProject(updatedProject);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load user projects");
+      }
+    };
+
     loadNotifications();
+    loadProjects();
   }, [token]);
 
   // Close dropdowns on outside click
@@ -36,6 +62,7 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
     const handleClickOutside = (e) => {
       if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotifPanel(false);
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) setShowUserMenu(false);
+      if (projectSelectorRef.current && !projectSelectorRef.current.contains(e.target)) setShowProjectSelector(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -99,9 +126,72 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
       >
         <span className="material-symbols-outlined">menu</span>
       </button>
+
+      {/* Global Project Selector */}
+      <div className="relative ml-2 mr-auto" ref={projectSelectorRef}>
+        <button 
+          onClick={() => setShowProjectSelector(!showProjectSelector)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-surface-container transition-colors max-w-[200px] md:max-w-[300px]"
+        >
+          <span className="material-symbols-outlined text-primary text-[20px]">folder_open</span>
+          <div className="flex flex-col text-left min-w-0">
+            <span className="font-label-sm text-[10px] text-secondary uppercase tracking-wider leading-tight">Active Context</span>
+            <span className="font-label-md text-[14px] font-bold text-on-surface truncate leading-tight">
+              {activeProject ? activeProject.title : (myProjects.length === 0 ? 'No Projects' : 'Select Project')}
+            </span>
+          </div>
+          <span className="material-symbols-outlined text-outline text-[18px]">expand_more</span>
+        </button>
+
+        <AnimatePresence>
+          {showProjectSelector && (
+            <motion.div
+              initial={{ opacity: 0, y: 8, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.95 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="absolute left-0 top-full mt-2 w-72 bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl overflow-hidden z-50 flex flex-col max-h-96"
+            >
+              <div className="px-4 py-3 border-b border-outline-variant/20 bg-surface-container-lowest">
+                <h3 className="font-label-md font-bold text-on-surface">Your Projects</h3>
+              </div>
+              <div className="overflow-y-auto p-2 space-y-1">
+                {myProjects.length === 0 ? (
+                  <p className="p-3 text-[13px] text-secondary text-center">You have no active projects.</p>
+                ) : (
+                  myProjects.map(proj => (
+                    <button
+                      key={proj._id}
+                      onClick={() => { setActiveProject(proj); setShowProjectSelector(false); }}
+                      className={`w-full text-left px-3 py-2 rounded-xl flex items-center gap-3 transition-colors ${activeProject?._id === proj._id ? 'bg-primary/10 text-primary' : 'hover:bg-surface-container-low text-on-surface'}`}
+                    >
+                      <span className="material-symbols-outlined text-[18px] shrink-0">
+                        {activeProject?._id === proj._id ? 'check_circle' : 'work'}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className={`font-label-md text-[13px] font-semibold truncate ${activeProject?._id === proj._id ? 'text-primary' : 'text-on-surface'}`}>{proj.title}</p>
+                        <p className="font-label-md text-[11px] text-secondary capitalize">{proj.status.replace('_', ' ')}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+              <div className="px-2 py-2 border-t border-outline-variant/20 bg-surface-container-lowest">
+                <button
+                  onClick={() => { setShowProjectSelector(false); navigate('/create-new-work'); }}
+                  className="w-full text-left px-3 py-2 rounded-xl flex items-center gap-3 hover:bg-surface-container-low transition-colors text-primary"
+                >
+                  <span className="material-symbols-outlined text-[18px]">add</span>
+                  <span className="font-label-md text-[13px] font-semibold">Propose New Work</span>
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
       
       {/* Search */}
-      <form onSubmit={handleSearch} className="relative hidden sm:flex items-center">
+      <form onSubmit={handleSearch} className="relative hidden lg:flex items-center ml-4">
         <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[20px]">search</span>
         <input 
           className="h-10 pl-11 pr-4 rounded-full bg-surface-container-highest/60 border border-transparent text-[14px] focus:outline-none focus:bg-surface focus:border-primary/30 w-64 lg:w-80 transition-all focus:ring-2 focus:ring-primary/10 placeholder:text-outline" 

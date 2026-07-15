@@ -12,12 +12,23 @@ const roleHome = {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
+  const [activeProject, setActiveProject] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Hydrate from localStorage on mount
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
+    const storedActiveProject = localStorage.getItem('activeProject');
+    
+    if (storedActiveProject) {
+      try {
+        setActiveProject(JSON.parse(storedActiveProject));
+      } catch (e) {
+        localStorage.removeItem('activeProject');
+      }
+    }
+
     if (storedToken && storedUser) {
       try {
         setToken(storedToken);
@@ -40,8 +51,19 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('activeProject');
     setToken(null);
     setUser(null);
+    setActiveProject(null);
+  };
+
+  const handleSetActiveProject = (project) => {
+    if (project) {
+      localStorage.setItem('activeProject', JSON.stringify(project));
+    } else {
+      localStorage.removeItem('activeProject');
+    }
+    setActiveProject(project);
   };
 
   const getDashboardPath = () => {
@@ -50,7 +72,17 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, getDashboardPath, isAuthenticated: !!token }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      token, 
+      loading, 
+      activeProject,
+      setActiveProject: handleSetActiveProject,
+      login, 
+      logout, 
+      getDashboardPath, 
+      isAuthenticated: !!token 
+    }}>
       {children}
     </AuthContext.Provider>
   );

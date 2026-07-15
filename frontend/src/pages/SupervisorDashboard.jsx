@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { apiFetch } from '../lib/api';
+import { useAuth } from '../components/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -16,24 +18,36 @@ const itemVariants = {
 };
 
 const SupervisorDashboard = () => {
+  const { user, setActiveProject } = useAuth();
+  const navigate = useNavigate();
   const [metrics, setMetrics] = useState({
     assignedTeams: 0,
     pendingReviews: 0,
     plagiarismAlerts: 0,
     upcomingMeetings: 0
   });
+  const [projects, setProjects] = useState([]);
 
   useEffect(() => {
-    const fetchMetrics = async () => {
+    const fetchMetricsAndProjects = async () => {
       try {
-        const data = await apiFetch('/api/dashboard/supervisor');
-        setMetrics(data.data);
+        const [metricsRes, projectsRes] = await Promise.all([
+          apiFetch('/api/dashboard/supervisor'),
+          apiFetch('/api/projects')
+        ]);
+        if (metricsRes.data) setMetrics(metricsRes.data);
+        if (projectsRes.data) setProjects(projectsRes.data);
       } catch (err) {
-        console.error("Failed to fetch supervisor metrics", err);
+        console.error("Failed to fetch supervisor data", err);
       }
     };
-    fetchMetrics();
+    fetchMetricsAndProjects();
   }, []);
+
+  const handleProjectClick = (project) => {
+    setActiveProject(project);
+    navigate('/tasks-milestones');
+  };
 
   return (
     <motion.div 
@@ -45,7 +59,7 @@ const SupervisorDashboard = () => {
       
       <motion.div variants={itemVariants} className="mb-gutter">
         <h1 className="font-headline-lg-mobile md:font-headline-lg text-[24px] md:text-[32px] font-bold text-on-surface mb-2">Teacher Dashboard</h1>
-        <p className="font-body-lg text-[18px] text-secondary">Good morning, Dr. Sarah. Here's an overview of your supervised works.</p>
+        <p className="font-body-lg text-[18px] text-secondary">Good morning, {user?.name || 'Supervisor'}. Here's an overview of your supervised works.</p>
       </motion.div>
 
       <motion.div 
@@ -92,7 +106,7 @@ const SupervisorDashboard = () => {
 
       <motion.div variants={itemVariants} className="bg-surface-container-lowest rounded-[24px] shadow-sm border border-outline-variant/20 overflow-hidden mb-8 hover:shadow-md transition-shadow">
         <div className="p-6 md:p-8 border-b border-surface-container flex justify-between items-center bg-surface/50 backdrop-blur-sm">
-          <h3 className="font-title-lg text-[20px] font-semibold text-on-surface">Recent Submissions</h3>
+          <h3 className="font-title-lg text-[20px] font-semibold text-on-surface">Supervised Projects</h3>
           <button className="text-primary font-label-md text-[14px] font-semibold hover:text-primary-fixed-variant transition-colors flex items-center gap-1">
             View All <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
           </button>
@@ -101,45 +115,44 @@ const SupervisorDashboard = () => {
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-surface-container-low/50">
-                <th className="p-4 px-6 font-label-md text-[12px] font-bold text-secondary uppercase tracking-wider">Student/Team</th>
-                <th className="p-4 px-6 font-label-md text-[12px] font-bold text-secondary uppercase tracking-wider">Work Type</th>
-                <th className="p-4 px-6 font-label-md text-[12px] font-bold text-secondary uppercase tracking-wider">Submission Date</th>
-                <th className="p-4 px-6 font-label-md text-[12px] font-bold text-secondary uppercase tracking-wider">Plagiarism Score</th>
+                <th className="p-4 px-6 font-label-md text-[12px] font-bold text-secondary uppercase tracking-wider">Project Title</th>
+                <th className="p-4 px-6 font-label-md text-[12px] font-bold text-secondary uppercase tracking-wider">Students</th>
+                <th className="p-4 px-6 font-label-md text-[12px] font-bold text-secondary uppercase tracking-wider">Created</th>
                 <th className="p-4 px-6 font-label-md text-[12px] font-bold text-secondary uppercase tracking-wider">Status</th>
                 <th className="p-4 px-6 font-label-md text-[12px] font-bold text-secondary uppercase tracking-wider text-right">Action</th>
               </tr>
             </thead>
             <tbody className="font-body-md text-[16px] text-on-surface divide-y divide-surface-container">
-              {[
-                { name: 'Team Delta', initials: 'TD', work: 'Thesis Draft', date: 'Oct 24, 2023', score: '42%', scoreColor: 'text-error bg-error/10', icon: 'warning', status: 'In Review', statusColor: 'bg-[#FEF3C7] text-[#92400E]' },
-                { name: 'Alice Smith', initials: 'AS', work: 'SDP Proposal', date: 'Oct 23, 2023', score: '5%', scoreColor: 'text-[#059669] bg-[#059669]/10', icon: 'check_circle', status: 'Delayed', statusColor: 'bg-[#FEE2E2] text-[#991B1B]' },
-                { name: 'Bob Jones', initials: 'BJ', work: 'Literature Review', date: 'Oct 20, 2023', score: '12%', scoreColor: 'text-[#059669] bg-[#059669]/10', icon: 'check_circle', status: 'Approved', statusColor: 'bg-[#D1FAE5] text-[#065F46]' }
-              ].map((row, idx) => (
+              {projects.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="p-8 text-center text-secondary">No projects assigned yet.</td>
+                </tr>
+              ) : projects.map((project, idx) => (
                 <motion.tr 
-                  key={idx}
+                  key={project._id || idx}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.6 + idx * 0.1 }}
+                  transition={{ delay: 0.2 + idx * 0.1 }}
                   className="hover:bg-[#F1F5F9] transition-colors group cursor-pointer"
+                  onClick={() => handleProjectClick(project)}
                 >
                   <td className="p-4 px-6 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container font-bold text-sm shadow-sm group-hover:scale-110 transition-transform">
-                      {row.initials}
+                    <div className="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container font-bold text-sm shadow-sm group-hover:scale-110 transition-transform uppercase">
+                      {project.title.substring(0, 2)}
                     </div>
-                    <span className="font-semibold">{row.name}</span>
+                    <span className="font-semibold">{project.title}</span>
                   </td>
-                  <td className="p-4 px-6 text-secondary font-medium group-hover:text-primary transition-colors">{row.work}</td>
-                  <td className="p-4 px-6 text-secondary">{row.date}</td>
+                  <td className="p-4 px-6 text-secondary font-medium group-hover:text-primary transition-colors">
+                    {project.students?.length || 0} Student(s)
+                  </td>
+                  <td className="p-4 px-6 text-secondary">{new Date(project.createdAt || Date.now()).toLocaleDateString()}</td>
                   <td className="p-4 px-6">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-label-md text-[12px] font-bold ${row.scoreColor}`}>
-                      <span className="material-symbols-outlined text-[14px]">{row.icon}</span> {row.score}
+                    <span className={`px-3 py-1.5 rounded-full font-label-md text-[12px] font-bold uppercase tracking-wide ${project.status === 'completed' ? 'bg-[#D1FAE5] text-[#065F46]' : project.status === 'pending' ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#E0E7FF] text-[#3730A3]'}`}>
+                      {project.status?.replace('_', ' ') || 'Active'}
                     </span>
                   </td>
-                  <td className="p-4 px-6">
-                    <span className={`${row.statusColor} px-3 py-1.5 rounded-full font-label-md text-[12px] font-bold uppercase tracking-wide`}>{row.status}</span>
-                  </td>
                   <td className="p-4 px-6 text-right">
-                    <button className="text-secondary hover:text-primary bg-surface p-2 rounded-full shadow-sm border border-outline-variant/30 hover:border-primary/50 transition-all"><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>more_horiz</span></button>
+                    <button className="text-secondary hover:text-primary bg-surface p-2 rounded-full shadow-sm border border-outline-variant/30 hover:border-primary/50 transition-all"><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>chevron_right</span></button>
                   </td>
                 </motion.tr>
               ))}

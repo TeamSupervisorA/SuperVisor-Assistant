@@ -72,18 +72,26 @@ exports.getProject = async (req, res) => {
 
 // @desc    Create project
 // @route   POST /api/projects
-// @access  Private (supervisor/admin)
+// @access  Private (student/supervisor/admin)
 exports.createProject = async (req, res) => {
   try {
     const { title, description, students, status } = req.body;
 
-    const project = await Project.create({
+    let projectData = {
       title,
       description,
-      students,
-      status,
-      supervisor: req.user.role === 'admin' && req.body.supervisor ? req.body.supervisor : req.user.id
-    });
+      status: status || 'pending'
+    };
+
+    if (req.user.role === 'student') {
+      projectData.students = [req.user.id];
+      projectData.supervisor = null; // To be assigned later
+    } else {
+      projectData.students = students || [];
+      projectData.supervisor = req.user.role === 'admin' && req.body.supervisor ? req.body.supervisor : req.user.id;
+    }
+
+    const project = await Project.create(projectData);
 
     res.status(201).json({ success: true, data: project });
   } catch (error) {

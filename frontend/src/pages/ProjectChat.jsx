@@ -1,17 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import API_BASE_URL from '../lib/api';
+import { useAuth } from '../components/AuthContext';
 
 const ProjectChat = () => {
+  const { activeProject, user } = useAuth();
   const [socket, setSocket] = useState(null);
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const messagesEndRef = useRef(null);
   
-  // For demo, we assume a static project ID. In reality, it comes from URL params or context.
-  const projectId = '666666666666666666666666'; 
+  const projectId = activeProject?._id;
   
   useEffect(() => {
+    if (!projectId) return;
     // Connect to Socket.IO server
     const newSocket = io(API_BASE_URL);
     setSocket(newSocket);
@@ -53,12 +55,12 @@ const ProjectChat = () => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!inputMessage.trim() || !socket) return;
+    if (!inputMessage.trim() || !socket || !projectId) return;
 
     const newMessage = {
       project: projectId,
       content: inputMessage,
-      sender: { _id: 'self', name: 'You' }, // Optimistic mock
+      sender: { _id: user?._id || 'self', name: user?.name || 'You' }, // Optimistic mock using real user context
       createdAt: new Date().toISOString()
     };
 
@@ -88,6 +90,18 @@ const ProjectChat = () => {
     setInputMessage('');
   };
 
+  if (!activeProject) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-4rem)] bg-surface-container-lowest items-center justify-center">
+        <div className="text-center bg-surface border border-outline-variant/30 p-10 rounded-2xl">
+          <span className="material-symbols-outlined text-4xl text-outline mb-2">forum</span>
+          <h2 className="font-headline-md text-on-surface">No Project Selected</h2>
+          <p className="font-body-md text-secondary mt-2">Please select an active project from the top navigation to view chat.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] bg-surface-container-lowest">
       {/* Header */}
@@ -98,7 +112,7 @@ const ProjectChat = () => {
           </div>
           <div>
             <h1 className="font-title-lg font-bold text-on-surface tracking-tight">Project Team Chat</h1>
-            <p className="text-body-sm text-on-surface-variant">4 members online</p>
+            <p className="text-body-sm text-on-surface-variant">{activeProject.title}</p>
           </div>
         </div>
         <div className="flex gap-2">

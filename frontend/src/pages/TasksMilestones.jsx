@@ -1,21 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../components/AuthContext';
 
 const TasksMilestones = () => {
+  const { activeProject } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [newTask, setNewTask] = useState({ title: '', description: '', status: 'todo', dueDate: '' });
 
   useEffect(() => {
-    loadTasks();
-  }, []);
+    if (activeProject) {
+      loadTasks();
+    } else {
+      setLoading(false);
+    }
+  }, [activeProject]);
 
   const loadTasks = async () => {
     try {
-      // Mocking project ID since it would normally come from context/URL
-      const res = await apiFetch('/api/tasks');
+      setLoading(true);
+      const res = await apiFetch(`/api/tasks?project=${activeProject._id}`);
       if (res.data) {
         setTasks(res.data);
       }
@@ -28,10 +34,11 @@ const TasksMilestones = () => {
 
   const handleCreateTask = async (e) => {
     e.preventDefault();
+    if (!activeProject) return;
     try {
       const res = await apiFetch('/api/tasks', {
         method: 'POST',
-        body: JSON.stringify({ ...newTask, project: '60d0fe4f5311236168a109ca' }) // Hardcoded mock project ID for now
+        body: JSON.stringify({ ...newTask, project: activeProject._id })
       });
       if (res.success) {
         setShowModal(false);
@@ -49,13 +56,25 @@ const TasksMilestones = () => {
 
   const progress = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
 
+  if (!activeProject) {
+    return (
+      <div className="flex-1 p-margin_mobile md:p-margin_desktop w-full max-w-container_max mx-auto flex items-center justify-center">
+        <div className="text-center bg-surface-container-lowest border border-outline-variant/30 p-10 rounded-2xl">
+          <span className="material-symbols-outlined text-4xl text-outline mb-2">folder_off</span>
+          <h2 className="font-headline-md text-on-surface">No Project Selected</h2>
+          <p className="font-body-md text-secondary mt-2">Please select an active project from the top navigation to view tasks.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 p-margin_mobile md:p-margin_desktop w-full max-w-container_max mx-auto flex flex-col gap-gutter">
       {/* Page Header Row */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="font-headline-lg text-[32px] font-bold text-on-surface">Tasks & Milestones</h2>
-          <p className="font-title-lg text-[20px] font-semibold text-on-surface-variant mt-1">SDP Project: <span className="text-primary font-bold">AI Health Monitor</span></p>
+          <p className="font-title-lg text-[20px] font-semibold text-on-surface-variant mt-1">Project: <span className="text-primary font-bold">{activeProject.title}</span></p>
         </div>
         <button onClick={() => setShowModal(true)} className="bg-primary text-on-primary px-5 py-2.5 rounded-lg font-body-md text-[16px] font-semibold hover:bg-primary-container transition-colors shadow-sm flex items-center gap-2">
           <span className="material-symbols-outlined text-[20px]">add</span>

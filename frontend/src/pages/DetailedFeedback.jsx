@@ -1,6 +1,21 @@
 import React from 'react';
+import { useAuth } from '../components/AuthContext';
 
 const DetailedFeedback = () => {
+  const { activeProject } = useAuth();
+  
+  if (!activeProject) {
+    return (
+      <div className="flex-1 p-margin_mobile md:p-margin_desktop w-full max-w-container_max mx-auto flex items-center justify-center">
+        <div className="text-center bg-surface-container-lowest border border-outline-variant/30 p-10 rounded-2xl">
+          <span className="material-symbols-outlined text-4xl text-outline mb-2">find_in_page</span>
+          <h2 className="font-headline-md text-on-surface">No Active Context</h2>
+          <p className="font-body-md text-secondary mt-2">Select a project to view feedback for its submissions.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 p-margin_mobile md:p-margin_desktop max-w-container_max mx-auto w-full">
       {/* Page Header */}
@@ -8,7 +23,7 @@ const DetailedFeedback = () => {
         <div>
           <h2 className="font-headline-lg text-[24px] md:text-[32px] font-bold text-on-surface">Evaluation Feedback</h2>
           <p className="font-body-lg text-[18px] text-on-surface-variant mt-2 max-w-2xl">
-            Detailed review for "Advanced ML Systems" submitted by Sarah Jenkins. Reviewed on Oct 24, 2023.
+            Detailed review for "{activeProject.title}" latest submission.
           </p>
         </div>
         <div className="flex gap-3">

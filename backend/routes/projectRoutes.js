@@ -16,7 +16,7 @@ router.get('/explore', require('../controllers/projectController').exploreProjec
 
 router.route('/')
   .get(getProjects)
-  .post(authorize('supervisor', 'admin'), createProject);
+  .post(authorize('student', 'supervisor', 'admin'), createProject);
 
 router.route('/:id')
   .get(getProject)
