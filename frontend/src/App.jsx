@@ -21,6 +21,7 @@ import ProjectChat from './pages/ProjectChat';
 import PlagiarismChecker from './pages/PlagiarismChecker';
 import StudentSubmissions from './pages/StudentSubmissions';
 import EvaluationsGrades from './pages/EvaluationsGrades';
+import ExploreProjects from './pages/ExploreProjects';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -38,6 +39,7 @@ function App() {
             <Route element={<DashboardLayout />}>
               {/* Student */}
               <Route path="/dashboard" element={<StudentDashboard />} />
+              <Route path="/explore" element={<ExploreProjects />} />
               <Route path="/tasks-milestones" element={<TasksMilestones />} />
               <Route path="/team-management" element={<TeamManagement />} />
               <Route path="/project-resource-library" element={<ProjectResourceLibrary />} />
