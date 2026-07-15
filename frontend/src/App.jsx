@@ -15,15 +15,8 @@ import ProjectResourceLibrary from './pages/ProjectResourceLibrary';
 import CreateNewWork from './pages/CreateNewWork';
 import DetailedFeedback from './pages/DetailedFeedback';
 import MeetingManagement from './pages/MeetingManagement';
-import PlagiarismChecker from './pages/PlagiarismChecker';
-import RubricMarking from './pages/RubricMarking';
 import CourseManagement from './pages/CourseManagement';
-import TemplateManagement from './pages/TemplateManagement';
-import SystemReports from './pages/SystemReports';
 import Settings from './pages/Settings';
-import ExploreProjects from './pages/ExploreProjects';
-import StudentSubmissions from './pages/StudentSubmissions';
-import EvaluationsGrades from './pages/EvaluationsGrades';
 import ProjectChat from './pages/ProjectChat';
 import NotFound from './pages/NotFound';
 
@@ -42,12 +35,10 @@ function App() {
             <Route element={<DashboardLayout />}>
               {/* Student */}
               <Route path="/dashboard" element={<StudentDashboard />} />
-              <Route path="/explore" element={<ExploreProjects />} />
               <Route path="/tasks-milestones" element={<TasksMilestones />} />
               <Route path="/team-management" element={<TeamManagement />} />
               <Route path="/project-resource-library" element={<ProjectResourceLibrary />} />
               <Route path="/create-new-work" element={<CreateNewWork />} />
-              <Route path="/student-submissions" element={<StudentSubmissions />} />
               <Route path="/detailed-feedback" element={<DetailedFeedback />} />
               <Route path="/meeting-management" element={<MeetingManagement />} />
               <Route path="/settings" element={<Settings />} />
@@ -56,17 +47,12 @@ function App() {
               {/* Supervisor + Admin only */}
               <Route element={<ProtectedRoute roles={['supervisor', 'admin']} />}>
                 <Route path="/supervisor-dashboard" element={<SupervisorDashboard />} />
-                <Route path="/evaluations" element={<EvaluationsGrades />} />
-                <Route path="/plagiarism-checker" element={<PlagiarismChecker />} />
-                <Route path="/rubric-marking" element={<RubricMarking />} />
               </Route>
 
               {/* Admin only */}
               <Route element={<ProtectedRoute roles={['admin']} />}>
                 <Route path="/admin-dashboard" element={<AdminDashboard />} />
                 <Route path="/course-management" element={<CourseManagement />} />
-                <Route path="/template-management" element={<TemplateManagement />} />
-                <Route path="/system-reports" element={<SystemReports />} />
               </Route>
             </Route>
           </Route>

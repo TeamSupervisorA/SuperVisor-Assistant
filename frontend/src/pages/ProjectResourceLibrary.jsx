@@ -1,20 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../components/AuthContext';
 
 const ProjectResourceLibrary = () => {
+  const { activeProject } = useAuth();
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [newResource, setNewResource] = useState({ title: '', type: 'Document', category: 'General', url: '' });
 
   useEffect(() => {
-    loadResources();
-  }, []);
+    if (activeProject) {
+      loadResources();
+    } else {
+      setLoading(false);
+    }
+  }, [activeProject]);
 
   const loadResources = async () => {
     try {
-      const res = await apiFetch('/api/resources');
+      setLoading(true);
+      const res = await apiFetch(`/api/resources?project=${activeProject._id}`);
       if (res.data) {
         setResources(res.data);
       }
@@ -27,10 +34,11 @@ const ProjectResourceLibrary = () => {
 
   const handleUpload = async (e) => {
     e.preventDefault();
+    if (!activeProject) return;
     try {
       const res = await apiFetch('/api/resources', {
         method: 'POST',
-        body: JSON.stringify({ ...newResource, project: '60d0fe4f5311236168a109ca' }) // Mock project ID
+        body: JSON.stringify({ ...newResource, project: activeProject._id })
       });
       if (res.success) {
         setShowModal(false);
@@ -60,6 +68,18 @@ const ProjectResourceLibrary = () => {
       default: return 'bg-primary-container text-on-primary-container';
     }
   };
+
+  if (!activeProject) {
+    return (
+      <div className="flex-1 p-margin_mobile md:p-margin_desktop w-full max-w-container_max mx-auto flex items-center justify-center">
+        <div className="text-center bg-surface-container-lowest border border-outline-variant/30 p-10 rounded-2xl">
+          <span className="material-symbols-outlined text-4xl text-outline mb-2">library_books</span>
+          <h2 className="font-headline-md text-on-surface">No Project Selected</h2>
+          <p className="font-body-md text-secondary mt-2">Please select an active project from the top navigation to view resources.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-container_max mx-auto p-margin_mobile md:p-margin_desktop w-full">

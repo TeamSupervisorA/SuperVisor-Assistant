@@ -11,14 +11,12 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
 
   // Role-based nav items
   const commonItems = [
-    { name: 'Explore Projects', icon: 'travel_explore', path: '/explore' },
     { name: 'Chat', icon: 'chat', path: '/chat' },
   ];
 
   const studentItems = [
     { name: 'Dashboard', icon: 'dashboard', path: '/dashboard' },
     { name: 'Tasks & Milestones', icon: 'checklist', path: '/tasks-milestones' },
-    { name: 'Submissions', icon: 'upload_file', path: '/student-submissions' },
     { name: 'Team', icon: 'groups', path: '/team-management' },
     { name: 'Resources', icon: 'library_books', path: '/project-resource-library' },
     ...commonItems,
@@ -27,11 +25,8 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
 
   const supervisorItems = [
     { name: 'Dashboard', icon: 'dashboard', path: '/supervisor-dashboard' },
-    { name: 'Evaluations', icon: 'grading', path: '/evaluations' },
-    { name: 'Plagiarism Checker', icon: 'policy', path: '/plagiarism-checker' },
-    { name: 'Rubric Marking', icon: 'rubric', path: '/rubric-marking' },
+    { name: 'Tasks & Milestones', icon: 'checklist', path: '/tasks-milestones' },
     { name: 'Feedback', icon: 'rate_review', path: '/detailed-feedback' },
-    { name: 'Meetings', icon: 'event', path: '/meeting-management' },
     ...commonItems,
     { name: 'Settings', icon: 'settings', path: '/settings' },
   ];
@@ -39,8 +34,6 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
   const adminItems = [
     { name: 'Dashboard', icon: 'dashboard', path: '/admin-dashboard' },
     { name: 'Course Management', icon: 'school', path: '/course-management' },
-    { name: 'Templates', icon: 'description', path: '/template-management' },
-    { name: 'System Reports', icon: 'analytics', path: '/system-reports' },
     ...commonItems,
     { name: 'Settings', icon: 'settings', path: '/settings' },
   ];
@@ -95,16 +88,18 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
       </div>
       
       {/* New Work Button */}
-      <div className="px-3 mt-5 shrink-0">
-        <Link 
-          to="/create-new-work" 
-          onClick={closeMobile}
-          className={`w-full bg-primary text-on-primary h-11 rounded-xl flex items-center ${isCollapsed ? 'justify-center' : 'justify-center gap-2'} font-label-md text-[13px] font-semibold hover:bg-surface-tint transition-all shadow-sm hover:shadow-md hover:shadow-primary/20 active:scale-95`}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>add</span>
-          {!isCollapsed && <span>Create New Work</span>}
-        </Link>
-      </div>
+      {role === 'student' && (
+        <div className="px-3 mt-5 shrink-0">
+          <Link 
+            to="/create-new-work" 
+            onClick={closeMobile}
+            className={`w-full bg-primary text-on-primary h-11 rounded-xl flex items-center ${isCollapsed ? 'justify-center' : 'justify-center gap-2'} font-label-md text-[13px] font-semibold hover:bg-surface-tint transition-all shadow-sm hover:shadow-md hover:shadow-primary/20 active:scale-95`}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>add</span>
+            {!isCollapsed && <span>Create New Work</span>}
+          </Link>
+        </div>
+      )}
       
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-5 space-y-0.5">

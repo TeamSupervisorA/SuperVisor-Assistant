@@ -1,20 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../components/AuthContext';
 
 const MeetingManagement = () => {
+  const { activeProject } = useAuth();
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [newMeeting, setNewMeeting] = useState({ title: '', date: '', time: '', type: 'Online' });
 
   useEffect(() => {
-    loadMeetings();
-  }, []);
+    if (activeProject) {
+      loadMeetings();
+    } else {
+      setLoading(false);
+    }
+  }, [activeProject]);
 
   const loadMeetings = async () => {
     try {
-      const res = await apiFetch('/api/meetings');
+      setLoading(true);
+      const res = await apiFetch(`/api/meetings?project=${activeProject._id}`);
       if (res.data) {
         setMeetings(res.data);
       }
@@ -27,10 +34,11 @@ const MeetingManagement = () => {
 
   const handleCreateMeeting = async (e) => {
     e.preventDefault();
+    if (!activeProject) return;
     try {
       const res = await apiFetch('/api/meetings', {
         method: 'POST',
-        body: JSON.stringify({ ...newMeeting, project: '60d0fe4f5311236168a109ca' }) // Mock project ID
+        body: JSON.stringify({ ...newMeeting, project: activeProject._id })
       });
       if (res.success) {
         setShowModal(false);
@@ -58,6 +66,18 @@ const MeetingManagement = () => {
 
   const calendarDays = getCalendarDays();
   const today = new Date();
+
+  if (!activeProject) {
+    return (
+      <div className="flex-1 p-margin_mobile md:p-margin_desktop w-full max-w-container_max mx-auto flex items-center justify-center">
+        <div className="text-center bg-surface-container-lowest border border-outline-variant/30 p-10 rounded-2xl">
+          <span className="material-symbols-outlined text-4xl text-outline mb-2">event_busy</span>
+          <h2 className="font-headline-md text-on-surface">No Project Selected</h2>
+          <p className="font-body-md text-secondary mt-2">Please select an active project from the top navigation to view and schedule meetings.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[1440px] mx-auto p-margin_mobile md:p-margin_desktop">
