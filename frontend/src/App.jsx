@@ -21,6 +21,8 @@ import TemplateManagement from './pages/TemplateManagement';
 import SystemReports from './pages/SystemReports';
 import Settings from './pages/Settings';
 import ExploreProjects from './pages/ExploreProjects';
+import StudentSubmissions from './pages/StudentSubmissions';
+import EvaluationsGrades from './pages/EvaluationsGrades';
 
 function App() {
   return (
@@ -40,6 +42,7 @@ function App() {
             <Route path="/team-management" element={<TeamManagement />} />
             <Route path="/project-resource-library" element={<ProjectResourceLibrary />} />
             <Route path="/create-new-work" element={<CreateNewWork />} />
+            <Route path="/student-submissions" element={<StudentSubmissions />} />
             <Route path="/detailed-feedback" element={<DetailedFeedback />} />
             <Route path="/meeting-management" element={<MeetingManagement />} />
             <Route path="/settings" element={<Settings />} />
@@ -47,6 +50,7 @@ function App() {
             {/* Supervisor + Admin only */}
             <Route element={<ProtectedRoute roles={['supervisor', 'admin']} />}>
               <Route path="/supervisor-dashboard" element={<SupervisorDashboard />} />
+              <Route path="/evaluations" element={<EvaluationsGrades />} />
               <Route path="/plagiarism-checker" element={<PlagiarismChecker />} />
               <Route path="/rubric-marking" element={<RubricMarking />} />
             </Route>

@@ -24,6 +24,7 @@ app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/teams', require('./routes/teamRoutes'));
 app.use('/api/meetings', require('./routes/meetingRoutes'));
 app.use('/api/resources', require('./routes/resourceRoutes'));
+app.use('/api/submissions', require('./routes/submissionRoutes'));
 
 const PORT = process.env.PORT || 5000;
 
