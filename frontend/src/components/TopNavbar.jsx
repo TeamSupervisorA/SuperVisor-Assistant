@@ -16,7 +16,7 @@ const TopNavbar = ({ onMenuClick }) => {
       
       <div className="flex items-center gap-2">
         <div className="relative hidden sm:flex items-center">
-          <span className="material-symbols-outlined absolute left-3 text-outline" style={{ fontSize: '20px' }}>search</span>
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none" style={{ fontSize: '20px' }}>search</span>
           <input 
             className="h-10 pl-10 pr-4 rounded-full bg-surface-container-low border border-outline-variant text-body-sm font-body-sm focus:outline-none focus-within:ring-2 focus-within:ring-primary w-64 transition-all" 
             placeholder="Search..." 
