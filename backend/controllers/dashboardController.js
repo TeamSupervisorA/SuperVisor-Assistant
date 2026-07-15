@@ -1,6 +1,8 @@
 const User = require('../models/User');
 const Project = require('../models/Project');
 const Task = require('../models/Task');
+const Submission = require('../models/Submission');
+const Meeting = require('../models/Meeting');
 
 exports.getAdminMetrics = async (req, res) => {
   try {
@@ -46,6 +48,53 @@ exports.getSupervisorMetrics = async (req, res) => {
         pendingReviews,
         plagiarismAlerts,
         upcomingMeetings
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+exports.getStudentMetrics = async (req, res) => {
+  try {
+    const studentId = req.user._id;
+
+    // Count projects the student is part of
+    const activeProjects = await Project.countDocuments({
+      students: studentId,
+      status: { $in: ['pending', 'in_progress'] }
+    });
+
+    // Count tasks
+    const totalTasks = await Task.countDocuments({ assignee: studentId });
+    const completedTasks = await Task.countDocuments({ assignee: studentId, status: 'completed' });
+
+    // Pending feedback (submitted but not graded)
+    const pendingFeedback = await Submission.countDocuments({
+      student: studentId,
+      status: { $in: ['Pending', 'In Review'] }
+    });
+
+    // Next deadline — find nearest future task due date
+    const nextTask = await Task.findOne({
+      assignee: studentId,
+      status: { $ne: 'completed' },
+      dueDate: { $gte: new Date() }
+    }).sort({ dueDate: 1 }).lean();
+
+    const daysUntilDeadline = nextTask?.dueDate
+      ? Math.max(0, Math.ceil((new Date(nextTask.dueDate) - new Date()) / (1000 * 60 * 60 * 24)))
+      : null;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        activeProjects,
+        completedTasks,
+        totalTasks,
+        pendingFeedback,
+        daysUntilDeadline,
+        nextMilestone: nextTask?.title || null
       }
     });
   } catch (error) {

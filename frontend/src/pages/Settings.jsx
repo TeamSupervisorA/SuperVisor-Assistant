@@ -79,7 +79,7 @@ const Settings = () => {
                   <p className="font-body-sm text-[14px] text-secondary">Enable the 24/7 student query assistant.</p>
                 </div>
                 <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                  <input checked={settings.aiChatbot} onChange={e => handleChange('aiChatbot', e.target.checked)} className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-outline appearance-none cursor-pointer z-10 transition-transform duration-200 checked:right-0 checked:border-primary" type="checkbox" />
+                  <input checked={settings.aiChatbot} onChange={e => handleChange('aiChatbot', e.target.checked)} className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-surface-container-lowest border-4 border-outline appearance-none cursor-pointer z-10 transition-transform duration-200 checked:right-0 checked:border-primary" type="checkbox" />
                   <label className="toggle-label block overflow-hidden h-6 rounded-full bg-surface-variant cursor-pointer transition-colors duration-200"></label>
                 </div>
               </div>
@@ -91,7 +91,7 @@ const Settings = () => {
                   <p className="font-body-sm text-[14px] text-secondary">Allow students to generate research topics.</p>
                 </div>
                 <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                  <input checked={settings.ideaGenerator} onChange={e => handleChange('ideaGenerator', e.target.checked)} className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-outline appearance-none cursor-pointer z-10 transition-transform duration-200 checked:right-0 checked:border-primary" type="checkbox" />
+                  <input checked={settings.ideaGenerator} onChange={e => handleChange('ideaGenerator', e.target.checked)} className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-surface-container-lowest border-4 border-outline appearance-none cursor-pointer z-10 transition-transform duration-200 checked:right-0 checked:border-primary" type="checkbox" />
                   <label className="toggle-label block overflow-hidden h-6 rounded-full bg-surface-variant cursor-pointer transition-colors duration-200"></label>
                 </div>
               </div>
@@ -103,7 +103,7 @@ const Settings = () => {
                   <p className="font-body-sm text-[14px] text-secondary">Automated critique on initial draft submissions.</p>
                 </div>
                 <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                  <input checked={settings.proposalFeedback} onChange={e => handleChange('proposalFeedback', e.target.checked)} className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-outline appearance-none cursor-pointer z-10 transition-transform duration-200 checked:right-0 checked:border-primary" type="checkbox" />
+                  <input checked={settings.proposalFeedback} onChange={e => handleChange('proposalFeedback', e.target.checked)} className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-surface-container-lowest border-4 border-outline appearance-none cursor-pointer z-10 transition-transform duration-200 checked:right-0 checked:border-primary" type="checkbox" />
                   <label className="toggle-label block overflow-hidden h-6 rounded-full bg-surface-variant cursor-pointer transition-colors duration-200"></label>
                 </div>
               </div>
@@ -115,7 +115,7 @@ const Settings = () => {
                   <p className="font-body-sm text-[14px] text-secondary">Run similarity reports on all document uploads automatically.</p>
                 </div>
                 <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                  <input checked={settings.plagiarismAutoCheck} onChange={e => handleChange('plagiarismAutoCheck', e.target.checked)} className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-outline appearance-none cursor-pointer z-10 transition-transform duration-200 checked:right-0 checked:border-primary" type="checkbox" />
+                  <input checked={settings.plagiarismAutoCheck} onChange={e => handleChange('plagiarismAutoCheck', e.target.checked)} className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-surface-container-lowest border-4 border-outline appearance-none cursor-pointer z-10 transition-transform duration-200 checked:right-0 checked:border-primary" type="checkbox" />
                   <label className="toggle-label block overflow-hidden h-6 rounded-full bg-surface-variant cursor-pointer transition-colors duration-200"></label>
                 </div>
               </div>

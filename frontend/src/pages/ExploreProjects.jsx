@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import api from '../lib/api';
+import { apiFetch } from '../lib/api';
 
 const ExploreProjects = () => {
   const [projects, setProjects] = useState([]);
@@ -23,8 +23,8 @@ const ExploreProjects = () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await api.get(`/projects/explore${query ? `?search=${encodeURIComponent(query)}` : ''}`);
-      setProjects(res.data.data);
+      const res = await apiFetch(`/api/projects/explore${query ? `?search=${encodeURIComponent(query)}` : ''}`);
+      setProjects(res.data || []);
     } catch (err) {
       setError('Failed to load projects. Please try again later.');
       console.error(err);

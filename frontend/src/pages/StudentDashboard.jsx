@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useAuth } from '../components/AuthContext';
+import { apiFetch } from '../lib/api';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -15,6 +17,35 @@ const itemVariants = {
 };
 
 const StudentDashboard = () => {
+  const { user } = useAuth();
+  const [metrics, setMetrics] = useState({
+    activeProjects: 0,
+    completedTasks: 0,
+    totalTasks: 0,
+    pendingFeedback: 0,
+    daysUntilDeadline: null,
+    nextMilestone: null
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const data = await apiFetch('/api/dashboard/student');
+        if (data.data) setMetrics(data.data);
+      } catch (err) {
+        console.error('Failed to fetch student metrics', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMetrics();
+  }, []);
+
+  const progress = metrics.totalTasks > 0
+    ? Math.round((metrics.completedTasks / metrics.totalTasks) * 100)
+    : 0;
+
   return (
     <motion.div 
       initial="hidden" 
@@ -24,7 +55,7 @@ const StudentDashboard = () => {
     >
       <motion.div variants={itemVariants} className="mb-8 md:mb-10">
         <h2 className="font-headline-lg-mobile md:font-headline-lg text-[24px] md:text-[32px] font-bold text-on-surface mb-2">Student Workspace</h2>
-        <p className="font-body-lg text-[18px] text-secondary">Welcome back, James. Track your progress and deadlines.</p>
+        <p className="font-body-lg text-[18px] text-secondary">Welcome back, {user?.name || 'Student'}. Track your progress and deadlines.</p>
       </motion.div>
 
       <motion.div variants={containerVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter mb-gutter">
@@ -36,7 +67,9 @@ const StudentDashboard = () => {
             </div>
           </div>
           <div className="flex items-end gap-3">
-            <span className="font-display text-[42px] lg:text-[48px] font-bold text-primary leading-none">2</span>
+            <span className="font-display text-[42px] lg:text-[48px] font-bold text-primary leading-none">
+              {loading ? '—' : metrics.activeProjects}
+            </span>
             <span className="font-body-sm text-[14px] text-secondary mb-1 lg:mb-2">in progress</span>
           </div>
         </motion.div>
@@ -49,8 +82,10 @@ const StudentDashboard = () => {
             </div>
           </div>
           <div className="flex items-end gap-3">
-            <span className="font-display text-[42px] lg:text-[48px] font-bold text-on-surface leading-none">14</span>
-            <span className="font-body-sm text-[14px] text-secondary mb-1 lg:mb-2">this month</span>
+            <span className="font-display text-[42px] lg:text-[48px] font-bold text-on-surface leading-none">
+              {loading ? '—' : metrics.completedTasks}
+            </span>
+            <span className="font-body-sm text-[14px] text-secondary mb-1 lg:mb-2">tasks done</span>
           </div>
         </motion.div>
 
@@ -62,7 +97,9 @@ const StudentDashboard = () => {
             </div>
           </div>
           <div className="flex items-end gap-3">
-            <span className="font-display text-[42px] lg:text-[48px] font-bold text-on-surface leading-none">1</span>
+            <span className="font-display text-[42px] lg:text-[48px] font-bold text-on-surface leading-none">
+              {loading ? '—' : metrics.pendingFeedback}
+            </span>
             <span className="font-body-sm text-[14px] text-secondary mb-1 lg:mb-2">awaiting review</span>
           </div>
         </motion.div>
@@ -76,7 +113,9 @@ const StudentDashboard = () => {
             </div>
           </div>
           <div className="flex items-end gap-3 relative z-10">
-            <span className="font-display text-[42px] lg:text-[48px] font-bold text-on-surface leading-none">5</span>
+            <span className="font-display text-[42px] lg:text-[48px] font-bold text-on-surface leading-none">
+              {loading ? '—' : (metrics.daysUntilDeadline !== null ? metrics.daysUntilDeadline : '∞')}
+            </span>
             <span className="font-body-sm text-[14px] text-secondary mb-1 lg:mb-2">days left</span>
           </div>
         </motion.div>
@@ -87,7 +126,9 @@ const StudentDashboard = () => {
           <div className="flex justify-between items-start mb-6">
             <div>
               <span className="inline-block px-3 py-1 rounded-full bg-surface-container text-primary font-label-md text-[12px] font-semibold mb-3">CURRENT PROJECT</span>
-              <h3 className="font-headline-md text-[24px] font-semibold text-on-surface line-clamp-1">SDP Project: AI Health Monitor</h3>
+              <h3 className="font-headline-md text-[24px] font-semibold text-on-surface line-clamp-1">
+                {metrics.nextMilestone ? `Next: ${metrics.nextMilestone}` : 'SDP Project Workspace'}
+              </h3>
             </div>
             <button className="p-2 text-secondary hover:bg-surface-container rounded-full transition-colors shrink-0">
               <span className="material-symbols-outlined">more_vert</span>
@@ -97,12 +138,12 @@ const StudentDashboard = () => {
           <div className="mb-8">
             <div className="flex justify-between items-center mb-2">
               <span className="font-body-md text-[16px] font-semibold text-on-surface">Overall Progress</span>
-              <span className="font-body-md text-[16px] text-primary font-bold">65%</span>
+              <span className="font-body-md text-[16px] text-primary font-bold">{progress}%</span>
             </div>
             <div className="w-full h-2 bg-surface-variant rounded-full overflow-hidden">
               <motion.div 
                 initial={{ width: 0 }}
-                animate={{ width: "65%" }}
+                animate={{ width: `${progress}%` }}
                 transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
                 className="h-full bg-primary rounded-full"
               />
@@ -114,14 +155,14 @@ const StudentDashboard = () => {
               <span className="block font-label-md text-[12px] font-semibold text-secondary mb-1 uppercase tracking-wider">Next Milestone</span>
               <span className="font-title-lg text-[18px] md:text-[20px] font-semibold text-on-surface flex items-center gap-2 line-clamp-1">
                 <span className="material-symbols-outlined text-tertiary shrink-0">flag</span>
-                Methodology Update
+                {metrics.nextMilestone || 'No pending milestones'}
               </span>
             </div>
             <div>
               <span className="block font-label-md text-[12px] font-semibold text-secondary mb-1 uppercase tracking-wider">Deadline Countdown</span>
               <span className="font-title-lg text-[18px] md:text-[20px] font-semibold text-on-surface flex items-center gap-2 line-clamp-1">
                 <span className="material-symbols-outlined text-error shrink-0">timer</span>
-                5 Days Remaining
+                {metrics.daysUntilDeadline !== null ? `${metrics.daysUntilDeadline} Days Remaining` : 'No upcoming deadlines'}
               </span>
             </div>
           </div>
@@ -135,7 +176,7 @@ const StudentDashboard = () => {
         </motion.div>
 
         <motion.div variants={itemVariants} className="bg-surface-container-lowest rounded-xl p-6 md:p-8 shadow-card border-l-[3px] border-primary ai-sparkle-card flex flex-col relative overflow-hidden hover:shadow-lg transition-shadow"
-             style={{ boxShadow: "inset 0 0 0 1px rgba(53, 37, 205, 0.15)", background: "linear-gradient(135deg, #ffffff 0%, #f0f3ff 100%)" }}>
+             style={{ boxShadow: "inset 0 0 0 1px rgba(53, 37, 205, 0.15)", background: "linear-gradient(135deg, var(--color-surface) 0%, var(--color-surface-container-low) 100%)" }}>
           <div className="absolute -right-10 -top-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
           
           <div className="flex justify-between items-start mb-6 relative z-10">

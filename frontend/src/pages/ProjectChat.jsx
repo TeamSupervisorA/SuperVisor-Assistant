@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
+import API_BASE_URL from '../lib/api';
 
 const ProjectChat = () => {
   const [socket, setSocket] = useState(null);
@@ -12,7 +13,7 @@ const ProjectChat = () => {
   
   useEffect(() => {
     // Connect to Socket.IO server
-    const newSocket = io('http://localhost:5000');
+    const newSocket = io(API_BASE_URL);
     setSocket(newSocket);
 
     // Join the project room
@@ -32,7 +33,7 @@ const ProjectChat = () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
-        const res = await fetch(`http://localhost:5000/api/messages/${projectId}`, {
+        const res = await fetch(`${API_BASE_URL}/api/messages/${projectId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const json = await res.json();
@@ -67,7 +68,7 @@ const ProjectChat = () => {
     // Save to DB
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/messages', {
+      const res = await fetch(`${API_BASE_URL}/api/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

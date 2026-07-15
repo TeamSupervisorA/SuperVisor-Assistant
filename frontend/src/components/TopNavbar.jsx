@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from './AuthContext';
-import { apiFetch } from '../lib/api';
+import API_BASE_URL, { apiFetch } from '../lib/api';
 
 const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -19,7 +19,7 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
     const loadNotifications = async () => {
       try {
         if (!token) return;
-        const res = await fetch('http://localhost:5000/api/notifications', {
+        const res = await fetch(`${API_BASE_URL}/api/notifications`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const json = await res.json();
