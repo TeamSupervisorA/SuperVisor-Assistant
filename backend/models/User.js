@@ -26,6 +26,18 @@ const userSchema = new mongoose.Schema({
     enum: ['student', 'supervisor', 'admin'],
     default: 'student'
   },
+  studentId: {
+    type: String,
+    default: null
+  },
+  department: {
+    type: String,
+    default: null
+  },
+  batch: {
+    type: String,
+    default: null
+  },
   googleId: {
     type: String,
     default: null

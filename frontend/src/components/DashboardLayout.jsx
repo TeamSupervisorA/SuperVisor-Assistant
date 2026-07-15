@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopNavbar from './TopNavbar';
@@ -7,6 +7,25 @@ import { motion, AnimatePresence } from 'framer-motion';
 const DashboardLayout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    // Hydrate from localStorage or system preference
+    const stored = localStorage.getItem('theme');
+    if (stored) return stored === 'dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDark) {
+      root.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      root.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDark]);
+
+  const toggleDark = () => setIsDark(prev => !prev);
 
   return (
     <div className="bg-background text-on-surface font-body-md antialiased min-h-screen flex overflow-hidden">
@@ -33,7 +52,11 @@ const DashboardLayout = () => {
       </div>
 
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        <TopNavbar onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
+        <TopNavbar
+          onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          isDark={isDark}
+          toggleDark={toggleDark}
+        />
 
         <main className="flex-1 overflow-y-auto w-full relative">
           <Outlet />

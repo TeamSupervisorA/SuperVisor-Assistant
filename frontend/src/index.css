@@ -57,6 +57,57 @@
   --spacing-container_max: 1440px;
 }
 
+/* Dark Mode Theme Override */
+.dark {
+  --color-on-surface-variant: #c9c5d6;
+  --color-outline-variant: #48465a;
+  --color-secondary: #c4c7c9;
+  --color-on-primary-fixed-variant: #c3c0ff;
+  --color-on-error: #690005;
+  --color-surface-bright: #3b3d4e;
+  --color-on-primary-container: #e2dfff;
+  --color-secondary-container: #444749;
+  --color-secondary-fixed: #e0e3e5;
+  --color-tertiary-fixed: #c9e6ff;
+  --color-on-primary: #1a0099;
+  --color-surface-container-highest: #353647;
+  --color-surface: #131318;
+  --color-secondary-fixed-dim: #c4c7c9;
+  --color-error: #ffb4ab;
+  --color-inverse-primary: #3525cd;
+  --color-on-secondary-fixed-variant: #444749;
+  --color-on-primary-fixed: #0f0069;
+  --color-error-container: #93000a;
+  --color-on-secondary-fixed: #191c1e;
+  --color-surface-tint: #c3c0ff;
+  --color-inverse-on-surface: #111c2d;
+  --color-primary-container: #3a30b8;
+  --color-surface-container-low: #1b1b22;
+  --color-on-surface: #e5e1ec;
+  --color-on-tertiary-container: #c9e6ff;
+  --color-on-tertiary-fixed-variant: #004c6e;
+  --color-surface-dim: #131318;
+  --color-surface-container-lowest: #0e0e13;
+  --color-on-tertiary: #003350;
+  --color-on-error-container: #ffdad6;
+  --color-primary: #c3c0ff;
+  --color-inverse-surface: #e5e1ec;
+  --color-primary-fixed-dim: #c3c0ff;
+  --color-tertiary: #89ceff;
+  --color-surface-container-high: #262630;
+  --color-on-secondary-container: #e0e3e5;
+  --color-surface-variant: #48465a;
+  --color-outline: #918f9e;
+  --color-on-background: #e5e1ec;
+  --color-on-secondary: #2e3133;
+  --color-surface-container: #1f1f28;
+  --color-primary-fixed: #e2dfff;
+  --color-tertiary-fixed-dim: #89ceff;
+  --color-background: #131318;
+  --color-tertiary-container: #004d70;
+  --color-on-tertiary-fixed: #001e2f;
+}
+
 @layer base {
   html {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -72,5 +123,31 @@
   }
   .ai-border {
     border-left: 2px solid #3525cd;
+  }
+}
+
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@layer utilities {
+  .animate-gradient {
+    animation: gradient 8s ease infinite;
+  }
+  .animate-fade-in-up {
+    animation: fade-in-up 0.4s ease-out forwards;
   }
 }

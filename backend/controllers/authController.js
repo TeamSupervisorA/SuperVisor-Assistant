@@ -15,7 +15,10 @@ const sendTokenResponse = (user, statusCode, res) => {
       id: user._id,
       name: user.name,
       email: user.email,
-      role: user.role
+      role: user.role,
+      department: user.department,
+      studentId: user.studentId,
+      batch: user.batch
     }
   });
 };
@@ -25,14 +28,17 @@ const sendTokenResponse = (user, statusCode, res) => {
 // @access  Public
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, studentId, department, batch } = req.body;
 
     // Create user
     const user = await User.create({
       name,
       email,
       password,
-      role: role || 'student'
+      role: role || 'student',
+      studentId: studentId || null,
+      department: department || null,
+      batch: batch || null
     });
 
     sendTokenResponse(user, 201, res);

@@ -26,6 +26,43 @@ app.use('/api/meetings', require('./routes/meetingRoutes'));
 app.use('/api/resources', require('./routes/resourceRoutes'));
 app.use('/api/submissions', require('./routes/submissionRoutes'));
 
+const http = require('http');
+const { Server } = require('socket.io');
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  }
+});
+
+// Socket.io connection handling
+io.on('connection', (socket) => {
+  console.log('New client connected:', socket.id);
+
+  socket.on('join_project', (projectId) => {
+    socket.join(projectId);
+    console.log(`Socket ${socket.id} joined project ${projectId}`);
+  });
+
+  socket.on('send_message', (data) => {
+    // broadcast to project room
+    io.to(data.project).emit('receive_message', data);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+});
+
+// Make io accessible to routers
+app.set('io', io);
+
+// New Routes
+app.use('/api/messages', require('./routes/messageRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
+
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
