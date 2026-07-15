@@ -58,19 +58,19 @@ const AdminDashboard = () => {
 
       <motion.div variants={containerVariants} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
         {[
-          { title: 'Total Students', value: metrics.totalStudents, icon: 'groups', color: 'primary', bg: 'surface-container' },
-          { title: 'Total Teachers', value: metrics.totalTeachers, icon: 'badge', color: 'on-tertiary-container', bg: 'tertiary-container' },
-          { title: 'Active SDP Projects', value: metrics.activeProjects, icon: 'folder_open', color: 'primary', bg: 'surface-container-high', special: true },
-          { title: 'Assignments Submitted', value: metrics.assignmentsSubmitted, icon: 'task', color: 'on-secondary-container', bg: 'secondary-container' },
+          { title: 'Total Students', value: metrics.totalStudents, icon: 'groups', textClass: 'text-primary', bgClass: 'bg-surface-container', borderHoverClass: 'hover:border-primary/30' },
+          { title: 'Total Teachers', value: metrics.totalTeachers, icon: 'badge', textClass: 'text-on-tertiary-container', bgClass: 'bg-tertiary-container', borderHoverClass: 'hover:border-tertiary/30' },
+          { title: 'Active SDP Projects', value: metrics.activeProjects, icon: 'folder_open', textClass: 'text-primary', bgClass: 'bg-surface-container-high', borderHoverClass: 'hover:border-primary/30', special: true },
+          { title: 'Assignments Submitted', value: metrics.assignmentsSubmitted, icon: 'task', textClass: 'text-on-secondary-container', bgClass: 'bg-secondary-container', borderHoverClass: 'hover:border-secondary/30' },
         ].map((stat, idx) => (
-          <motion.div key={idx} variants={itemVariants} className={`bg-surface-bright rounded-[24px] p-6 shadow-sm border border-outline-variant/20 hover:border-${stat.color}/30 hover:shadow-md transition-all hover:-translate-y-1 ${stat.special ? 'shadow-[inset_1px_0px_0px_0px_#4f46e5] relative overflow-hidden' : 'flex flex-col justify-between'}`}>
+          <motion.div key={idx} variants={itemVariants} className={`bg-surface-bright rounded-[24px] p-6 shadow-sm border border-outline-variant/20 ${stat.borderHoverClass} hover:shadow-md transition-all hover:-translate-y-1 ${stat.special ? 'shadow-[inset_1px_0px_0px_0px_#4f46e5] relative overflow-hidden' : 'flex flex-col justify-between'}`}>
             {stat.special && (
               <div className="absolute top-4 right-4 text-primary">
                 <span className="material-symbols-outlined animate-pulse" style={{ fontSize: '18px' }}>auto_awesome</span>
               </div>
             )}
             <div className="flex justify-between items-start mb-4">
-              <div className={`p-3 bg-${stat.bg} text-${stat.color} rounded-xl`}>
+              <div className={`p-3 ${stat.bgClass} ${stat.textClass} rounded-xl`}>
                 <span className="material-symbols-outlined">{stat.icon}</span>
               </div>
             </div>

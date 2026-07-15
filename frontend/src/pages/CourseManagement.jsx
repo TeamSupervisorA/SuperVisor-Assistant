@@ -1,8 +1,55 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../lib/api';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const CourseManagement = () => {
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newCourse, setNewCourse] = useState({ code: '', name: '', department: 'Computer Science', sections: 1 });
+
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+  const fetchCourses = async () => {
+    try {
+      const res = await apiFetch('/api/courses');
+      setCourses(res.data);
+    } catch (err) {
+      console.error('Failed to fetch courses:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateCourse = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await apiFetch('/api/courses', {
+        method: 'POST',
+        body: JSON.stringify(newCourse)
+      });
+      setCourses([...courses, res.data]);
+      setShowAddModal(false);
+      setNewCourse({ code: '', name: '', department: 'Computer Science', sections: 1 });
+    } catch (err) {
+      alert('Failed to create course: ' + err.message);
+    }
+  };
+
+  const getDeptStats = (deptName) => {
+    const deptCourses = courses.filter(c => c.department === deptName);
+    const totalSections = deptCourses.reduce((sum, c) => sum + (c.sections || 1), 0);
+    return { courses: deptCourses.length, sections: totalSections };
+  };
+
+  const csStats = getDeptStats('Computer Science');
+  const eeeStats = getDeptStats('Electrical Engineering');
+  const baStats = getDeptStats('Business Admin');
+
   return (
-    <div className="max-w-container_max mx-auto space-y-10 p-margin_desktop">
+    <div className="max-w-container_max mx-auto space-y-10 p-margin_desktop relative">
       {/* Page Header & Global Actions */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
@@ -14,7 +61,7 @@ const CourseManagement = () => {
             <span className="material-symbols-outlined text-[20px]">add_box</span>
             Add Section
           </button>
-          <button className="px-5 py-2.5 rounded-lg bg-primary text-on-primary font-body-md text-[16px] font-semibold hover:bg-primary/90 transition-colors shadow-sm flex items-center gap-2">
+          <button onClick={() => setShowAddModal(true)} className="px-5 py-2.5 rounded-lg bg-primary text-on-primary font-body-md text-[16px] font-semibold hover:bg-primary/90 transition-colors shadow-sm flex items-center gap-2">
             <span className="material-symbols-outlined text-[20px]">library_add</span>
             Add Course
           </button>
@@ -35,12 +82,12 @@ const CourseManagement = () => {
           <p className="font-body-sm text-[14px] text-secondary mb-4">School of Engineering</p>
           <div className="mt-auto flex items-center gap-4 border-t border-outline-variant/20 pt-4">
             <div>
-              <div className="font-headline-md text-[24px] font-semibold text-on-surface">42</div>
+              <div className="font-headline-md text-[24px] font-semibold text-on-surface">{csStats.courses}</div>
               <div className="font-label-md text-[12px] font-semibold text-secondary uppercase tracking-wider">Active Courses</div>
             </div>
             <div className="h-8 w-px bg-outline-variant/40"></div>
             <div>
-              <div className="font-headline-md text-[24px] font-semibold text-on-surface">128</div>
+              <div className="font-headline-md text-[24px] font-semibold text-on-surface">{csStats.sections}</div>
               <div className="font-label-md text-[12px] font-semibold text-secondary uppercase tracking-wider">Sections</div>
             </div>
           </div>
@@ -58,12 +105,12 @@ const CourseManagement = () => {
           <p className="font-body-sm text-[14px] text-secondary mb-4">School of Engineering</p>
           <div className="mt-auto flex items-center gap-4 border-t border-outline-variant/20 pt-4">
             <div>
-              <div className="font-headline-md text-[24px] font-semibold text-on-surface">28</div>
+              <div className="font-headline-md text-[24px] font-semibold text-on-surface">{eeeStats.courses}</div>
               <div className="font-label-md text-[12px] font-semibold text-secondary uppercase tracking-wider">Active Courses</div>
             </div>
             <div className="h-8 w-px bg-outline-variant/40"></div>
             <div>
-              <div className="font-headline-md text-[24px] font-semibold text-on-surface">84</div>
+              <div className="font-headline-md text-[24px] font-semibold text-on-surface">{eeeStats.sections}</div>
               <div className="font-label-md text-[12px] font-semibold text-secondary uppercase tracking-wider">Sections</div>
             </div>
           </div>
@@ -81,12 +128,12 @@ const CourseManagement = () => {
           <p className="font-body-sm text-[14px] text-secondary mb-4">School of Business</p>
           <div className="mt-auto flex items-center gap-4 border-t border-outline-variant/20 pt-4">
             <div>
-              <div className="font-headline-md text-[24px] font-semibold text-on-surface">35</div>
+              <div className="font-headline-md text-[24px] font-semibold text-on-surface">{baStats.courses}</div>
               <div className="font-label-md text-[12px] font-semibold text-secondary uppercase tracking-wider">Active Courses</div>
             </div>
             <div className="h-8 w-px bg-outline-variant/40"></div>
             <div>
-              <div className="font-headline-md text-[24px] font-semibold text-on-surface">110</div>
+              <div className="font-headline-md text-[24px] font-semibold text-on-surface">{baStats.sections}</div>
               <div className="font-label-md text-[12px] font-semibold text-secondary uppercase tracking-wider">Sections</div>
             </div>
           </div>
@@ -133,98 +180,106 @@ const CourseManagement = () => {
               </tr>
             </thead>
             <tbody className="font-body-sm text-[14px] text-on-surface divide-y divide-outline-variant/20">
-              <tr className="hover:bg-[#F1F5F9] transition-colors group">
-                <td className="py-4 px-6 font-semibold">CS-101</td>
-                <td className="py-4 px-6">Introduction to Computer Science</td>
-                <td className="py-4 px-6 text-secondary">Computer Science</td>
-                <td className="py-4 px-6 text-center">
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-container-high text-primary font-semibold text-xs">8</span>
-                </td>
-                <td className="py-4 px-6 flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-tertiary/20 flex items-center justify-center text-xs text-tertiary font-bold">AT</div>
-                  Dr. Alan Turing
-                </td>
-                <td className="py-4 px-6 text-right">
-                  <button className="text-secondary hover:text-primary p-1 rounded transition-colors"><span className="material-symbols-outlined text-[20px]">edit</span></button>
-                  <button className="text-secondary hover:text-primary p-1 rounded transition-colors"><span className="material-symbols-outlined text-[20px]">settings</span></button>
-                  <button className="text-secondary hover:text-error p-1 rounded transition-colors"><span className="material-symbols-outlined text-[20px]">delete</span></button>
-                </td>
-              </tr>
-              <tr className="hover:bg-[#F1F5F9] transition-colors group">
-                <td className="py-4 px-6 font-semibold">CS-350</td>
-                <td className="py-4 px-6 flex items-center gap-2">
-                  Machine Learning
-                  <span className="material-symbols-outlined text-primary text-[16px]" title="AI Assisted Curriculum">auto_awesome</span>
-                </td>
-                <td className="py-4 px-6 text-secondary">Computer Science</td>
-                <td className="py-4 px-6 text-center">
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-container-high text-primary font-semibold text-xs">4</span>
-                </td>
-                <td className="py-4 px-6 flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-tertiary/20 flex items-center justify-center text-xs text-tertiary font-bold">AL</div>
-                  Prof. Ada Lovelace
-                </td>
-                <td className="py-4 px-6 text-right">
-                  <button className="text-secondary hover:text-primary p-1 rounded transition-colors"><span className="material-symbols-outlined text-[20px]">edit</span></button>
-                  <button className="text-secondary hover:text-primary p-1 rounded transition-colors"><span className="material-symbols-outlined text-[20px]">settings</span></button>
-                  <button className="text-secondary hover:text-error p-1 rounded transition-colors"><span className="material-symbols-outlined text-[20px]">delete</span></button>
-                </td>
-              </tr>
-              <tr className="hover:bg-[#F1F5F9] transition-colors group">
-                <td className="py-4 px-6 font-semibold">EEE-205</td>
-                <td className="py-4 px-6">Signals and Systems</td>
-                <td className="py-4 px-6 text-secondary">Electrical Engineering</td>
-                <td className="py-4 px-6 text-center">
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-container-high text-primary font-semibold text-xs">6</span>
-                </td>
-                <td className="py-4 px-6 flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-tertiary/20 flex items-center justify-center text-xs text-tertiary font-bold">NT</div>
-                  Dr. Nikola Tesla
-                </td>
-                <td className="py-4 px-6 text-right">
-                  <button className="text-secondary hover:text-primary p-1 rounded transition-colors"><span className="material-symbols-outlined text-[20px]">edit</span></button>
-                  <button className="text-secondary hover:text-primary p-1 rounded transition-colors"><span className="material-symbols-outlined text-[20px]">settings</span></button>
-                  <button className="text-secondary hover:text-error p-1 rounded transition-colors"><span className="material-symbols-outlined text-[20px]">delete</span></button>
-                </td>
-              </tr>
-              <tr className="hover:bg-[#F1F5F9] transition-colors group">
-                <td className="py-4 px-6 font-semibold">MGT-410</td>
-                <td className="py-4 px-6">Strategic Management</td>
-                <td className="py-4 px-6 text-secondary">Business Admin</td>
-                <td className="py-4 px-6 text-center">
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-container-high text-primary font-semibold text-xs">5</span>
-                </td>
-                <td className="py-4 px-6 flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-tertiary/20 flex items-center justify-center text-xs text-tertiary font-bold">PD</div>
-                  Prof. Peter Drucker
-                </td>
-                <td className="py-4 px-6 text-right">
-                  <button className="text-secondary hover:text-primary p-1 rounded transition-colors"><span className="material-symbols-outlined text-[20px]">edit</span></button>
-                  <button className="text-secondary hover:text-primary p-1 rounded transition-colors"><span className="material-symbols-outlined text-[20px]">settings</span></button>
-                  <button className="text-secondary hover:text-error p-1 rounded transition-colors"><span className="material-symbols-outlined text-[20px]">delete</span></button>
-                </td>
-              </tr>
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="py-8 text-center text-secondary">Loading courses...</td>
+                </tr>
+              ) : courses.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="py-8 text-center text-secondary">No courses found. Add your first course.</td>
+                </tr>
+              ) : courses.map(course => (
+                <tr key={course._id} className="hover:bg-[#F1F5F9] transition-colors group">
+                  <td className="py-4 px-6 font-semibold">{course.code}</td>
+                  <td className="py-4 px-6">{course.name}</td>
+                  <td className="py-4 px-6 text-secondary">{course.department}</td>
+                  <td className="py-4 px-6 text-center">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-container-high text-primary font-semibold text-xs">{course.sections}</span>
+                  </td>
+                  <td className="py-4 px-6 flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-tertiary/20 flex items-center justify-center text-xs text-tertiary font-bold">
+                      {course.leadInstructor ? course.leadInstructor.name.substring(0, 2).toUpperCase() : 'U'}
+                    </div>
+                    {course.leadInstructor ? course.leadInstructor.name : 'Unassigned'}
+                  </td>
+                  <td className="py-4 px-6 text-right">
+                    <button className="text-secondary hover:text-primary p-1 rounded transition-colors"><span className="material-symbols-outlined text-[20px]">edit</span></button>
+                    <button className="text-secondary hover:text-primary p-1 rounded transition-colors"><span className="material-symbols-outlined text-[20px]">settings</span></button>
+                    <button className="text-secondary hover:text-error p-1 rounded transition-colors"><span className="material-symbols-outlined text-[20px]">delete</span></button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
 
         {/* Pagination (Static for Demo) */}
         <div className="p-4 border-t border-outline-variant/30 flex justify-between items-center bg-surface-container-lowest">
-          <span className="font-body-sm text-[14px] text-secondary">Showing 1 to 4 of 105 courses</span>
+          <span className="font-body-sm text-[14px] text-secondary">Showing {courses.length} courses</span>
           <div className="flex gap-1">
             <button className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant/50 text-secondary hover:bg-surface-container-low disabled:opacity-50" disabled>
               <span className="material-symbols-outlined text-[18px]">chevron_left</span>
             </button>
             <button className="w-8 h-8 flex items-center justify-center rounded bg-primary text-on-primary font-body-sm text-[14px] font-semibold">1</button>
-            <button className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant/50 text-secondary hover:bg-surface-container-low font-body-sm text-[14px]">2</button>
-            <button className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant/50 text-secondary hover:bg-surface-container-low font-body-sm text-[14px]">3</button>
-            <span className="w-8 h-8 flex items-center justify-center text-secondary">...</span>
-            <button className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant/50 text-secondary hover:bg-surface-container-low">
+            <button className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant/50 text-secondary hover:bg-surface-container-low disabled:opacity-50" disabled>
               <span className="material-symbols-outlined text-[18px]">chevron_right</span>
             </button>
           </div>
         </div>
       </div>
+
+      {/* Add Course Modal */}
+      <AnimatePresence>
+        {showAddModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-surface-bright rounded-2xl w-full max-w-md shadow-lg overflow-hidden border border-outline-variant/30"
+            >
+              <div className="p-6 border-b border-surface-container flex justify-between items-center">
+                <h3 className="font-title-lg text-[20px] font-bold text-on-surface">Add New Course</h3>
+                <button onClick={() => setShowAddModal(false)} className="text-secondary hover:text-error transition-colors">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <form onSubmit={handleCreateCourse} className="p-6 space-y-4">
+                <div>
+                  <label className="block font-label-md text-secondary mb-1">Course Code</label>
+                  <input type="text" required value={newCourse.code} onChange={e => setNewCourse({...newCourse, code: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none" placeholder="e.g. CS-101" />
+                </div>
+                <div>
+                  <label className="block font-label-md text-secondary mb-1">Course Name</label>
+                  <input type="text" required value={newCourse.name} onChange={e => setNewCourse({...newCourse, name: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none" placeholder="e.g. Intro to Computer Science" />
+                </div>
+                <div>
+                  <label className="block font-label-md text-secondary mb-1">Department</label>
+                  <select value={newCourse.department} onChange={e => setNewCourse({...newCourse, department: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none appearance-none">
+                    <option value="Computer Science">Computer Science</option>
+                    <option value="Electrical Engineering">Electrical Engineering</option>
+                    <option value="Business Admin">Business Admin</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-label-md text-secondary mb-1">Initial Sections</label>
+                  <input type="number" min="1" required value={newCourse.sections} onChange={e => setNewCourse({...newCourse, sections: parseInt(e.target.value)})} className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none" />
+                </div>
+                <div className="pt-4 flex gap-3 justify-end border-t border-surface-container">
+                  <button type="button" onClick={() => setShowAddModal(false)} className="px-5 py-2 rounded-lg font-label-md font-bold text-secondary hover:bg-surface-container transition-colors">Cancel</button>
+                  <button type="submit" className="px-5 py-2 rounded-lg font-label-md font-bold bg-primary text-on-primary hover:bg-primary/90 shadow-sm transition-colors">Create Course</button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

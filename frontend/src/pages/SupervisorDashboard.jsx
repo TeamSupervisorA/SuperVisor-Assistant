@@ -67,24 +67,24 @@ const SupervisorDashboard = () => {
 
       <motion.div variants={containerVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter mb-gutter">
         {[
-          { title: 'Assigned Teams', value: metrics.assignedTeams, icon: 'group', color: 'tertiary', bg: 'surface-container' },
-          { title: 'Pending Reviews', value: metrics.pendingReviews, icon: 'pending_actions', color: 'tertiary', bg: 'surface-container' },
-          { title: 'Plagiarism Alerts', value: metrics.plagiarismAlerts, icon: 'warning', color: 'error', bg: 'error-container' },
-          { title: 'Upcoming Meetings', value: metrics.upcomingMeetings, icon: 'event', color: 'tertiary', bg: 'surface-container' },
+          { title: 'Assigned Teams', value: metrics.assignedTeams, icon: 'group', textClass: 'text-tertiary', bgClass: 'bg-surface-container', borderHoverClass: 'hover:border-tertiary/30' },
+          { title: 'Pending Reviews', value: metrics.pendingReviews, icon: 'pending_actions', textClass: 'text-tertiary', bgClass: 'bg-surface-container', borderHoverClass: 'hover:border-tertiary/30' },
+          { title: 'Plagiarism Alerts', value: metrics.plagiarismAlerts, icon: 'warning', textClass: 'text-error', bgClass: 'bg-error-container', borderHoverClass: 'hover:border-error/40' },
+          { title: 'Upcoming Meetings', value: metrics.upcomingMeetings, icon: 'event', textClass: 'text-tertiary', bgClass: 'bg-surface-container', borderHoverClass: 'hover:border-tertiary/30' },
         ].map((stat, idx) => (
           <motion.div 
             key={idx}
             variants={itemVariants}
-            className={`bg-surface-container-lowest rounded-[24px] p-6 shadow-sm border border-outline-variant/20 flex flex-col justify-between hover:shadow-md transition-all hover:-translate-y-1 ${stat.color === 'error' ? 'hover:border-error/40' : 'hover:border-tertiary/30'}`}
+            className={`bg-surface-container-lowest rounded-[24px] p-6 shadow-sm border border-outline-variant/20 flex flex-col justify-between hover:shadow-md transition-all hover:-translate-y-1 ${stat.borderHoverClass}`}
           >
             <div className="flex justify-between items-start mb-4">
-              <div className={`p-3 rounded-xl bg-${stat.bg}`}>
-                <span className={`material-symbols-outlined text-${stat.color}`}>{stat.icon}</span>
+              <div className={`p-3 rounded-xl ${stat.bgClass}`}>
+                <span className={`material-symbols-outlined ${stat.textClass}`}>{stat.icon}</span>
               </div>
             </div>
             <div>
               <h4 className="font-body-sm text-[14px] font-semibold text-secondary mb-1 uppercase tracking-wider">{stat.title}</h4>
-              <p className={`font-display text-[48px] font-bold ${stat.color === 'error' ? 'text-error' : 'text-on-surface'} leading-none`}>{stat.value}</p>
+              <p className={`font-display text-[48px] font-bold ${stat.textClass === 'text-error' ? 'text-error' : 'text-on-surface'} leading-none`}>{stat.value}</p>
             </div>
           </motion.div>
         ))}
