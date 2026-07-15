@@ -20,6 +20,7 @@ import CourseManagement from './pages/CourseManagement';
 import TemplateManagement from './pages/TemplateManagement';
 import SystemReports from './pages/SystemReports';
 import Settings from './pages/Settings';
+import ExploreProjects from './pages/ExploreProjects';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<StudentDashboard />} />
+            <Route path="/explore" element={<ExploreProjects />} />
             <Route path="/tasks-milestones" element={<TasksMilestones />} />
             <Route path="/team-management" element={<TeamManagement />} />
             <Route path="/project-resource-library" element={<ProjectResourceLibrary />} />

@@ -12,6 +12,8 @@ const router = express.Router();
 
 router.use(protect);
 
+router.get('/explore', require('../controllers/projectController').exploreProjects);
+
 router.route('/')
   .get(getProjects)
   .post(authorize('supervisor', 'admin'), createProject);

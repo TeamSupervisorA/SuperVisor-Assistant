@@ -1,6 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const TopNavbar = ({ onMenuClick }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/explore?search=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
   return (
     <header className="flex justify-between items-center h-16 px-margin_mobile md:px-margin_desktop bg-surface-bright/80 backdrop-blur-md shrink-0 z-40 sticky top-0">
       <button 
@@ -15,14 +26,16 @@ const TopNavbar = ({ onMenuClick }) => {
       </div>
       
       <div className="flex items-center gap-2">
-        <div className="relative hidden sm:flex items-center">
+        <form onSubmit={handleSearch} className="relative hidden sm:flex items-center">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none" style={{ fontSize: '20px' }}>search</span>
           <input 
             className="h-10 pl-10 pr-4 rounded-full bg-surface-container-low border border-outline-variant text-body-sm font-body-sm focus:outline-none focus-within:ring-2 focus-within:ring-primary w-64 transition-all" 
-            placeholder="Search..." 
+            placeholder="Search projects..." 
             type="text" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
-        </div>
+        </form>
         
         <button className="p-2 rounded-full text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed-dim hover:bg-surface-container-low transition-colors duration-200 relative">
           <span className="material-symbols-outlined">notifications</span>

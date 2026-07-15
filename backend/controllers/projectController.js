@@ -22,6 +22,35 @@ exports.getProjects = async (req, res) => {
   }
 };
 
+// @desc    Explore all projects (Global Search)
+// @route   GET /api/projects/explore
+// @access  Private
+exports.exploreProjects = async (req, res) => {
+  try {
+    const { search } = req.query;
+    let query = {};
+    
+    if (search) {
+      query = {
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } }
+        ]
+      };
+    }
+
+    const projects = await Project.find(query)
+      .populate('supervisor', 'name email')
+      .populate('students', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(50); // Limit results for performance
+
+    res.status(200).json({ success: true, count: projects.length, data: projects });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
 // @desc    Get single project
 // @route   GET /api/projects/:id
 // @access  Private
