@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { apiFetch } from '../lib/api';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -15,6 +16,25 @@ const itemVariants = {
 };
 
 const SupervisorDashboard = () => {
+  const [metrics, setMetrics] = useState({
+    assignedTeams: 0,
+    pendingReviews: 0,
+    plagiarismAlerts: 0,
+    upcomingMeetings: 0
+  });
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const data = await apiFetch('/api/dashboard/supervisor');
+        setMetrics(data.data);
+      } catch (err) {
+        console.error("Failed to fetch supervisor metrics", err);
+      }
+    };
+    fetchMetrics();
+  }, []);
+
   return (
     <motion.div 
       initial="hidden"
@@ -47,10 +67,10 @@ const SupervisorDashboard = () => {
 
       <motion.div variants={containerVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter mb-gutter">
         {[
-          { title: 'Assigned Teams', value: '12', icon: 'group', color: 'tertiary', bg: 'surface-container' },
-          { title: 'Pending Reviews', value: '8', icon: 'pending_actions', color: 'tertiary', bg: 'surface-container' },
-          { title: 'Plagiarism Alerts', value: '3', icon: 'warning', color: 'error', bg: 'error-container' },
-          { title: 'Upcoming Meetings', value: '2', icon: 'event', color: 'tertiary', bg: 'surface-container' },
+          { title: 'Assigned Teams', value: metrics.assignedTeams, icon: 'group', color: 'tertiary', bg: 'surface-container' },
+          { title: 'Pending Reviews', value: metrics.pendingReviews, icon: 'pending_actions', color: 'tertiary', bg: 'surface-container' },
+          { title: 'Plagiarism Alerts', value: metrics.plagiarismAlerts, icon: 'warning', color: 'error', bg: 'error-container' },
+          { title: 'Upcoming Meetings', value: metrics.upcomingMeetings, icon: 'event', color: 'tertiary', bg: 'surface-container' },
         ].map((stat, idx) => (
           <motion.div 
             key={idx}

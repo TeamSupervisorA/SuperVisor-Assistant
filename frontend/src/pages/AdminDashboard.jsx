@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { apiFetch } from '../lib/api';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -15,6 +16,26 @@ const itemVariants = {
 };
 
 const AdminDashboard = () => {
+  const [metrics, setMetrics] = useState({
+    totalStudents: 0,
+    totalTeachers: 0,
+    activeProjects: 0,
+    assignmentsSubmitted: 0,
+    plagiarismAlerts: 0
+  });
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const data = await apiFetch('/api/dashboard/admin');
+        setMetrics(data.data);
+      } catch (err) {
+        console.error("Failed to fetch admin metrics", err);
+      }
+    };
+    fetchMetrics();
+  }, []);
+
   return (
     <motion.div 
       initial="hidden"
@@ -37,10 +58,10 @@ const AdminDashboard = () => {
 
       <motion.div variants={containerVariants} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6 mb-8">
         {[
-          { title: 'Total Students', value: '1,240', icon: 'groups', color: 'primary', bg: 'surface-container' },
-          { title: 'Total Teachers', value: '85', icon: 'badge', color: 'on-tertiary-container', bg: 'tertiary-container' },
-          { title: 'Active SDP Projects', value: '42', icon: 'folder_open', color: 'primary', bg: 'surface-container-high', special: true },
-          { title: 'Assignments Submitted', value: '312', icon: 'task', color: 'on-secondary-container', bg: 'secondary-container' },
+          { title: 'Total Students', value: metrics.totalStudents, icon: 'groups', color: 'primary', bg: 'surface-container' },
+          { title: 'Total Teachers', value: metrics.totalTeachers, icon: 'badge', color: 'on-tertiary-container', bg: 'tertiary-container' },
+          { title: 'Active SDP Projects', value: metrics.activeProjects, icon: 'folder_open', color: 'primary', bg: 'surface-container-high', special: true },
+          { title: 'Assignments Submitted', value: metrics.assignmentsSubmitted, icon: 'task', color: 'on-secondary-container', bg: 'secondary-container' },
         ].map((stat, idx) => (
           <motion.div key={idx} variants={itemVariants} className={`bg-surface-bright rounded-[24px] p-6 shadow-sm border border-outline-variant/20 hover:border-${stat.color}/30 hover:shadow-md transition-all hover:-translate-y-1 ${stat.special ? 'shadow-[inset_1px_0px_0px_0px_#4f46e5] relative overflow-hidden' : 'flex flex-col justify-between'}`}>
             {stat.special && (
@@ -69,7 +90,7 @@ const AdminDashboard = () => {
           <div>
             <p className="font-body-md text-[16px] text-on-error-container font-medium">Plagiarism Alerts</p>
             <div className="flex items-baseline gap-2 mt-1">
-              <h3 className="font-headline-lg text-[32px] font-bold text-on-error-container">5</h3>
+              <h3 className="font-headline-lg text-[32px] font-bold text-on-error-container">{metrics.plagiarismAlerts}</h3>
               <span className="font-label-md text-[12px] font-bold text-error bg-error/10 px-2 py-1 rounded-full uppercase tracking-wider animate-pulse">High Priority</span>
             </div>
           </div>
