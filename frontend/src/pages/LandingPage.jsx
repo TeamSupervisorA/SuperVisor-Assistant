@@ -5,7 +5,39 @@ import { useTheme } from '../components/ThemeContext';
 
 // --- Reusable Advanced Components ---
 
-// Text Reveal Component (Staggered Characters)
+// Spotlight Card Component for Bento Grid
+const SpotlightCard = ({ children, className = "" }) => {
+  const ref = useRef(null);
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  const handleMouseMove = ({ currentTarget, clientX, clientY }) => {
+    const { left, top } = currentTarget.getBoundingClientRect();
+    mouseX.set(clientX - left);
+    mouseY.set(clientY - top);
+  };
+
+  return (
+    <div
+      className={`group relative overflow-hidden rounded-[32px] bg-surface/80 backdrop-blur-xl border border-outline-variant/30 shadow-[0_8px_30px_rgba(0,0,0,0.04)] ${className}`}
+      onMouseMove={handleMouseMove}
+      ref={ref}
+    >
+      <motion.div
+        className="pointer-events-none absolute -inset-px rounded-[32px] opacity-0 transition duration-300 group-hover:opacity-100"
+        style={{
+          background: useTransform(
+            [mouseX, mouseY],
+            ([x, y]) => `radial-gradient(600px circle at ${x}px ${y}px, rgba(var(--color-primary-rgb), 0.1), transparent 40%)`
+          ),
+        }}
+      />
+      <div className="relative h-full w-full">{children}</div>
+    </div>
+  );
+};
+
+// Text Reveal Component (Staggered Characters/Words)
 const TextReveal = ({ text, className, delay = 0 }) => {
   const words = text.split(" ");
   return (
@@ -15,8 +47,8 @@ const TextReveal = ({ text, className, delay = 0 }) => {
           key={i}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: delay + i * 0.1, ease: [0.2, 0.65, 0.3, 0.9] }}
-          className="mr-2 md:mr-3"
+          transition={{ duration: 0.7, delay: delay + i * 0.1, ease: [0.2, 0.65, 0.3, 0.9] }}
+          className="mr-3"
         >
           {word}
         </motion.span>
@@ -25,85 +57,40 @@ const TextReveal = ({ text, className, delay = 0 }) => {
   );
 };
 
-// 3D Tilt Card Component
-const TiltCard = ({ children, className }) => {
-  const ref = useRef(null);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-
-  const mouseXSpring = useSpring(x, { stiffness: 300, damping: 20 });
-  const mouseYSpring = useSpring(y, { stiffness: 300, damping: 20 });
-
-  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["10deg", "-10deg"]);
-  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-10deg", "10deg"]);
-
-  const handleMouseMove = (e) => {
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    const xPct = mouseX / width - 0.5;
-    const yPct = mouseY / height - 0.5;
-    x.set(xPct);
-    y.set(yPct);
-  };
-
-  const handleMouseLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
-
-  return (
-    <motion.div
-      ref={ref}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        rotateY,
-        rotateX,
-        transformStyle: "preserve-3d",
-      }}
-      className={`relative z-10 ${className}`}
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
-    >
-      <div style={{ transform: "translateZ(30px)" }} className="h-full">
-        {children}
-      </div>
-    </motion.div>
-  );
-};
-
-// Background Floating Orbs
-const FloatingOrbs = () => {
+// Advanced Mesh Gradient Background
+const MeshGradient = () => {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      <div className="absolute inset-0 bg-background mix-blend-multiply opacity-50 dark:opacity-0"></div>
       <motion.div 
         animate={{ 
-          x: [0, 100, -50, 0],
-          y: [0, -100, 50, 0],
-          scale: [1, 1.2, 0.8, 1]
+          rotate: 360,
+          scale: [1, 1.2, 1],
         }}
-        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-        className="absolute top-[10%] left-[20%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[100px]"
+        transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+        className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full bg-primary/10 blur-[120px] origin-center"
       />
       <motion.div 
         animate={{ 
-          x: [0, -120, 80, 0],
-          y: [0, 80, -120, 0],
-          scale: [1, 0.9, 1.1, 1]
+          rotate: -360,
+          scale: [1, 1.3, 1],
         }}
-        transition={{ duration: 25, repeat: Infinity, ease: "linear", delay: 2 }}
-        className="absolute top-[40%] right-[10%] w-[600px] h-[600px] bg-tertiary-container/20 rounded-full blur-[120px]"
+        transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+        className="absolute top-[20%] -right-[20%] w-[60vw] h-[60vw] rounded-full bg-tertiary-container/15 blur-[120px] origin-center"
       />
+      <motion.div 
+        animate={{ 
+          y: [0, -50, 0],
+          x: [0, 50, 0],
+        }}
+        transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute -bottom-[20%] left-[20%] w-[50vw] h-[50vw] rounded-full bg-primary-fixed/20 blur-[100px] origin-center"
+      />
+      {/* Noise overlay for texture */}
+      <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMSIvPjxwYXRoIGQ9Ik0wIDBoNHYxSDB6bTAgMmg0djFIMHoiIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')]"></div>
     </div>
   );
 };
-
 
 // --- Main Page ---
 const LandingPage = () => {
@@ -111,286 +98,461 @@ const LandingPage = () => {
   const { scrollY } = useScroll();
   const heroY = useTransform(scrollY, [0, 500], [0, 150]);
   const heroOpacity = useTransform(scrollY, [0, 300], [1, 0]);
+  
+  // Interactive Role Toggle State
+  const [activeRole, setActiveRole] = useState('supervisor');
 
   return (
     <div className="bg-background text-on-background font-body-md min-h-screen flex flex-col overflow-hidden relative selection:bg-primary/20 selection:text-primary">
-      <FloatingOrbs />
+      <MeshGradient />
 
-      <header className="bg-surface/50 backdrop-blur-xl sticky top-0 z-50 px-margin_desktop h-20 flex justify-between items-center border-b border-outline-variant/20 transition-all">
+      {/* Modern Header */}
+      <header className="bg-surface/60 backdrop-blur-2xl sticky top-0 z-50 px-margin_desktop h-20 flex justify-between items-center border-b border-outline-variant/10 transition-all">
         <motion.div 
-          initial={{ opacity: 0, x: -30 }}
+          initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-          className="flex items-center gap-2"
+          className="flex items-center gap-3 group cursor-pointer"
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-fixed-variant flex items-center justify-center shadow-lg shadow-primary/20">
-            <span aria-hidden="true" className="material-symbols-outlined text-on-primary icon-fill">school</span>
+          <div className="w-10 h-10 rounded-[14px] bg-gradient-to-br from-primary to-primary-fixed-variant flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
+            <span aria-hidden="true" className="material-symbols-outlined text-on-primary icon-fill text-[20px]">school</span>
           </div>
-          <span className="font-headline-md text-[24px] font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-on-surface to-on-surface-variant">Academic AI</span>
+          <span className="font-headline-md text-[22px] font-black tracking-tight text-on-surface">SuperVisor<span className="text-primary">.ai</span></span>
         </motion.div>
         
         <motion.div 
-          initial={{ opacity: 0, x: 30 }}
+          initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           className="flex items-center gap-4 sm:gap-6"
         >
           <button
             onClick={toggleDark}
-            className="p-2.5 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all duration-300 group relative"
+            className="w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-all duration-300 relative"
             aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           >
-            <motion.span
-              key={isDark ? 'light' : 'dark'}
-              initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
-              animate={{ rotate: 0, opacity: 1, scale: 1 }}
-              exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-              className="material-symbols-outlined text-[22px] block group-hover:scale-110 transition-transform"
-            >
-              {isDark ? 'light_mode' : 'dark_mode'}
-            </motion.span>
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={isDark ? 'light' : 'dark'}
+                initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
+                animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
+                transition={{ duration: 0.2 }}
+                className="material-symbols-outlined text-[20px]"
+              >
+                {isDark ? 'light_mode' : 'dark_mode'}
+              </motion.span>
+            </AnimatePresence>
           </button>
           
-          <div className="w-px h-5 bg-outline-variant/40 hidden sm:block"></div>
+          <div className="w-px h-5 bg-outline-variant/30 hidden sm:block"></div>
 
-          <div className="flex items-center gap-4 sm:gap-5">
-            <Link to="/login" className="font-label-md text-[15px] font-medium text-on-surface hover:text-primary transition-colors duration-200">Sign In</Link>
-            <Link to="/register" className="font-label-md text-[14px] font-semibold bg-on-surface text-surface px-6 py-2.5 rounded-full hover:bg-primary hover:text-on-primary transition-all duration-300 shadow-md hover:shadow-lg hover:shadow-primary/30 transform hover:-translate-y-0.5">Get Started</Link>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Link to="/login" className="font-label-md text-[14px] font-semibold text-on-surface-variant hover:text-on-surface transition-colors px-4 py-2 rounded-full hover:bg-surface-variant/30 hidden sm:block">Sign In</Link>
+            <Link to="/register" className="font-label-md text-[14px] font-semibold bg-on-surface text-surface px-6 py-2.5 rounded-full hover:scale-105 transition-transform duration-300 shadow-[0_4px_20px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_20px_rgba(255,255,255,0.1)] relative overflow-hidden group">
+              <span className="relative z-10">Get Started</span>
+              <div className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <span className="relative z-10 hidden group-hover:inline ml-2 text-on-primary">→</span>
+            </Link>
           </div>
         </motion.div>
       </header>
       
       <main className="flex-grow flex flex-col items-center z-10 relative">
-        <div className="w-full max-w-container_max px-margin_desktop">
+        <div className="w-full max-w-container_max px-4 sm:px-8 lg:px-margin_desktop">
           
+          {/* Hero Section */}
           <motion.section 
             style={{ y: heroY, opacity: heroOpacity }}
-            className="pt-40 pb-32 flex flex-col items-center text-center relative"
+            className="pt-32 lg:pt-48 pb-20 flex flex-col items-center text-center relative"
           >
             <motion.div 
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, ease: "easeOut" }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container border border-outline-variant/30 mb-8 backdrop-blur-md"
+              className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-surface/40 border border-outline-variant/30 mb-10 backdrop-blur-xl shadow-sm"
             >
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
-              </span>
-              <span className="font-label-md font-semibold text-primary text-[13px]">Gemini 2.5 Flash Integrated</span>
+              <div className="flex -space-x-2">
+                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center border-2 border-surface"><span className="material-symbols-outlined text-[12px] text-primary">auto_awesome</span></div>
+                <div className="w-6 h-6 rounded-full bg-tertiary-container/30 flex items-center justify-center border-2 border-surface"><span className="material-symbols-outlined text-[12px] text-tertiary">speed</span></div>
+              </div>
+              <span className="font-label-md font-semibold text-on-surface text-[13px] tracking-wide uppercase">Introducing Gemini 2.5 Flash Integration</span>
             </motion.div>
 
             <TextReveal 
               text="Elevate Academic"
-              className="font-display text-[64px] md:text-[88px] leading-[1.1] font-black text-on-surface" 
+              className="font-display text-[56px] sm:text-[72px] lg:text-[100px] leading-[1.05] font-black text-on-surface tracking-tighter" 
             />
             <TextReveal 
               text="Supervision & Research"
               delay={0.2}
-              className="font-display text-[64px] md:text-[88px] leading-[1.1] font-black text-transparent bg-clip-text bg-gradient-to-r from-primary via-tertiary to-primary bg-[length:200%_auto] animate-gradient" 
+              className="font-display text-[56px] sm:text-[72px] lg:text-[100px] leading-[1.05] font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-primary via-tertiary to-primary bg-[length:200%_auto] animate-gradient pb-2" 
             />
             
             <motion.p 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-              className="font-body-lg text-[22px] text-on-surface-variant max-w-2xl mb-12 mt-8 leading-relaxed"
+              className="font-body-lg text-[20px] lg:text-[24px] text-on-surface-variant max-w-3xl mb-12 mt-8 leading-relaxed font-light"
             >
-              Smart supervision for SDP projects, assignments, and thesis papers. Ensure academic integrity and accelerate breakthroughs with AI.
+              The intelligent OS for academic projects. Streamline workflows, ensure integrity, and provide actionable feedback with institutional-grade AI.
             </motion.p>
             
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.7, ease: [0.16, 1, 0.3, 1] }}
-              className="flex flex-col sm:flex-row gap-4"
+              className="flex flex-col sm:flex-row gap-5"
             >
-              <Link to="/register" className="font-title-lg text-[18px] font-bold bg-primary text-on-primary px-10 py-4 rounded-full hover:bg-primary-fixed-variant transition-all duration-300 shadow-[0_8px_30px_rgba(53,37,205,0.3)] hover:shadow-[0_12px_40px_rgba(53,37,205,0.4)] hover:-translate-y-1 flex items-center justify-center gap-2">
-                Start for Free
-                <span className="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
+              <Link to="/register" className="group font-label-lg text-[16px] font-bold bg-on-surface text-surface px-8 py-4 rounded-full transition-all duration-300 hover:shadow-[0_0_40px_rgba(53,37,205,0.4)] hover:scale-105 flex items-center justify-center gap-3 relative overflow-hidden">
+                <span className="relative z-10">Start Building the Future</span>
+                <span className="material-symbols-outlined relative z-10 transition-transform group-hover:translate-x-1 text-[20px]">arrow_forward</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-primary to-tertiary opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               </Link>
-              <button className="font-title-lg text-[18px] font-bold text-on-surface bg-surface-container border border-outline-variant/40 px-10 py-4 rounded-full hover:bg-surface-container-high transition-all duration-300 flex items-center justify-center gap-2">
-                <span className="material-symbols-outlined icon-fill">play_circle</span>
-                Watch Demo
+              <button className="group font-label-lg text-[16px] font-bold text-on-surface bg-surface/50 backdrop-blur-md border border-outline-variant/40 px-8 py-4 rounded-full hover:bg-surface-variant/50 transition-all duration-300 flex items-center justify-center gap-3">
+                <span className="material-symbols-outlined icon-fill text-on-surface-variant group-hover:text-primary transition-colors">play_circle</span>
+                Watch Platform Demo
               </button>
             </motion.div>
           </motion.section>
 
-          <section className="py-32 relative z-20">
+          {/* Hero Dashboard Preview Image (Placeholder abstract visualization) */}
+          <motion.div
+            initial={{ opacity: 0, y: 100 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.8, ease: "easeOut" }}
+            className="w-full max-w-5xl mx-auto mb-40 perspective-[2000px]"
+          >
+            <div className="rounded-[24px] overflow-hidden border border-outline-variant/20 shadow-[0_30px_100px_-20px_rgba(53,37,205,0.25)] bg-surface-container/50 backdrop-blur-xl aspect-video relative rotate-x-[5deg] scale-95 hover:rotate-x-0 hover:scale-100 transition-all duration-700 ease-out flex flex-col">
+              {/* Fake Mac Header */}
+              <div className="h-12 border-b border-outline-variant/20 flex items-center px-4 gap-2 bg-surface/50">
+                <div className="w-3 h-3 rounded-full bg-error/80"></div>
+                <div className="w-3 h-3 rounded-full bg-secondary-fixed-dim/80"></div>
+                <div className="w-3 h-3 rounded-full bg-tertiary-fixed-dim/80"></div>
+              </div>
+              <div className="flex-1 p-8 grid grid-cols-3 gap-6 opacity-80">
+                <div className="col-span-1 space-y-4">
+                  <div className="h-32 rounded-2xl bg-surface-variant/30 border border-outline-variant/10"></div>
+                  <div className="h-64 rounded-2xl bg-surface-variant/30 border border-outline-variant/10"></div>
+                </div>
+                <div className="col-span-2 space-y-4">
+                  <div className="h-16 rounded-2xl bg-primary/10 border border-primary/20"></div>
+                  <div className="h-80 rounded-2xl bg-surface-variant/30 border border-outline-variant/10 flex items-center justify-center">
+                    <span className="font-display text-4xl text-on-surface-variant/30 font-black tracking-widest uppercase">SuperVisor Dashboard</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Bento Grid Feature Section */}
+          <section className="py-24 relative z-20">
             <motion.div 
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               className="text-center mb-16"
             >
-              <h2 className="font-headline-lg text-[48px] font-black text-on-surface mb-6 tracking-tight">
-                Supervision, <span className="text-primary">Evolved.</span>
+              <h2 className="font-display text-[40px] md:text-[56px] font-black text-on-surface mb-6 tracking-tight leading-tight">
+                Supervision, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-tertiary">Evolved.</span>
               </h2>
-              <p className="font-body-lg text-[20px] text-secondary max-w-2xl mx-auto">Everything you need to guide students from proposal to final defense, powered by intelligent automation.</p>
+              <p className="font-body-lg text-[20px] text-on-surface-variant max-w-2xl mx-auto font-light">Everything you need to guide students from proposal to final defense, unified in one intelligent platform.</p>
             </motion.div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 perspective-[2000px]">
-              <TiltCard className="lg:col-span-2">
-                <div className="bg-surface/80 backdrop-blur-xl rounded-[32px] p-10 h-full border border-outline-variant/20 shadow-[0_8px_30px_rgba(0,0,0,0.04)] relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-bl-full -mr-10 -mt-10 transition-transform duration-700 group-hover:scale-110"></div>
-                  <span aria-hidden="true" className="material-symbols-outlined text-primary absolute top-10 right-10 text-4xl opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:rotate-12">auto_awesome</span>
-                  
-                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-                    <span aria-hidden="true" className="material-symbols-outlined text-primary text-3xl">psychology</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 auto-rows-[300px]">
+              
+              {/* Feature 1: Large Span */}
+              <SpotlightCard className="md:col-span-2 lg:col-span-2 row-span-2 p-10 flex flex-col justify-between">
+                <div>
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 border border-primary/20">
+                    <span aria-hidden="true" className="material-symbols-outlined text-primary text-2xl">psychology</span>
                   </div>
-                  <h3 className="font-title-lg text-[28px] font-bold text-on-surface mb-4">AI-Powered Supervisor Insight</h3>
-                  <p className="font-body-md text-[18px] text-on-surface-variant mb-8 max-w-lg leading-relaxed">
-                    Intelligent guidance tailored to individual student research paths. The AI analyzes proposals, suggests methodologies, and highlights potential academic gaps in real-time.
+                  <h3 className="font-headline-md text-[28px] font-bold text-on-surface mb-4 tracking-tight">AI-Powered Insights</h3>
+                  <p className="font-body-md text-[16px] text-on-surface-variant max-w-md leading-relaxed">
+                    Intelligent guidance tailored to individual research paths. The AI analyzes proposals, suggests methodologies, and highlights academic gaps in real-time.
                   </p>
-                  
-                  <div className="bg-surface-container-low p-5 rounded-2xl border border-outline-variant/30 flex items-start gap-4">
-                    <span aria-hidden="true" className="material-symbols-outlined text-primary text-xl mt-0.5">lightbulb</span>
-                    <p className="font-body-sm text-[15px] text-on-surface">
-                      "The literature review lacks recent sources on machine learning applied to fluid dynamics. Consider referencing papers published after 2022 to strengthen the foundation."
-                    </p>
-                  </div>
                 </div>
-              </TiltCard>
-
-              <TiltCard>
-                <div className="bg-surface/80 backdrop-blur-xl rounded-[32px] p-10 h-full border border-outline-variant/20 shadow-[0_8px_30px_rgba(0,0,0,0.04)] group hover:border-tertiary/30 transition-colors">
-                  <div className="w-16 h-16 rounded-2xl bg-tertiary-container/20 flex items-center justify-center mb-6">
-                    <span aria-hidden="true" className="material-symbols-outlined text-tertiary-container text-3xl">timeline</span>
-                  </div>
-                  <h3 className="font-title-lg text-[24px] font-bold text-on-surface mb-4">Milestone Tracking</h3>
-                  <p className="font-body-md text-[16px] text-on-surface-variant mb-8 leading-relaxed">Real-time monitoring of deliverables to ensure projects stay on schedule.</p>
-                  <div className="w-full bg-secondary-container h-3 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }} 
-                      whileInView={{ width: "65%" }} 
-                      viewport={{ once: true }}
-                      transition={{ duration: 1.5, ease: "easeOut" }}
-                      className="bg-tertiary h-full rounded-full relative overflow-hidden"
-                    >
-                      <motion.div 
-                        animate={{ x: ["-100%", "100%"] }}
-                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                        className="absolute inset-0 bg-white/30 skew-x-12"
-                      />
-                    </motion.div>
-                  </div>
-                  <div className="flex justify-between mt-4 font-label-md text-[14px] font-bold text-secondary">
-                    <span>Draft Review</span>
-                    <span className="text-tertiary">65%</span>
-                  </div>
-                </div>
-              </TiltCard>
-
-              <TiltCard>
-                <div className="bg-surface/80 backdrop-blur-xl rounded-[32px] p-10 h-full border border-outline-variant/20 shadow-[0_8px_30px_rgba(0,0,0,0.04)] group hover:border-error/30 transition-colors">
-                  <div className="w-16 h-16 rounded-2xl bg-error/10 flex items-center justify-center mb-6">
-                    <span aria-hidden="true" className="material-symbols-outlined text-error text-3xl">policy</span>
-                  </div>
-                  <h3 className="font-title-lg text-[24px] font-bold text-on-surface mb-4">Plagiarism Checker</h3>
-                  <p className="font-body-md text-[16px] text-on-surface-variant leading-relaxed">Deep semantic analysis against institutional databases to ensure original thought and academic integrity.</p>
-                </div>
-              </TiltCard>
-
-              <TiltCard className="lg:col-span-2">
-                <div className="bg-surface/80 backdrop-blur-xl rounded-[32px] p-10 h-full border border-outline-variant/20 shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col md:flex-row gap-8 group hover:border-primary/30 transition-colors">
-                  <div className="flex-1">
-                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-                      <span aria-hidden="true" className="material-symbols-outlined text-primary text-3xl">rate_review</span>
+                
+                <div className="mt-8 bg-surface-container-lowest/80 p-6 rounded-2xl border border-outline-variant/20 shadow-inner relative overflow-hidden group">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+                  <div className="flex items-start gap-4">
+                    <span aria-hidden="true" className="material-symbols-outlined text-primary text-xl mt-0.5 animate-pulse">auto_awesome</span>
+                    <div>
+                      <p className="font-label-sm text-on-surface-variant uppercase tracking-wider mb-2 text-[11px] font-bold">AI Suggestion</p>
+                      <p className="font-body-sm text-[15px] text-on-surface">
+                        "The literature review lacks recent sources on machine learning applied to fluid dynamics. Consider referencing [Author, 2024]."
+                      </p>
                     </div>
-                    <h3 className="font-title-lg text-[24px] font-bold text-on-surface mb-4">Structured Feedback</h3>
-                    <p className="font-body-md text-[16px] text-on-surface-variant leading-relaxed">Evaluation rubrics combined with AI-assisted drafting allow supervisors to provide comprehensive, actionable critiques up to 3x faster.</p>
-                  </div>
-                  <div className="flex-1 bg-surface-variant/20 rounded-2xl p-6 border border-outline-variant/20 shadow-inner flex flex-col justify-center">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                        <span aria-hidden="true" className="material-symbols-outlined text-primary icon-fill">person</span>
-                      </div>
-                      <div>
-                        <span className="font-label-md text-[15px] font-bold text-on-surface block">Dr. Smith</span>
-                        <span className="font-body-sm text-[12px] text-secondary">Supervisor</span>
-                      </div>
-                    </div>
-                    <p className="font-body-sm text-[16px] text-on-surface-variant italic">"Excellent derivation in section 4.2. However, consider clarifying the initial assumptions regarding non-linear constraints."</p>
                   </div>
                 </div>
-              </TiltCard>
+              </SpotlightCard>
+
+              {/* Feature 2: Square */}
+              <SpotlightCard className="md:col-span-1 lg:col-span-2 p-8">
+                <div className="w-14 h-14 rounded-2xl bg-tertiary-container/20 flex items-center justify-center mb-6 border border-tertiary-container/30">
+                  <span aria-hidden="true" className="material-symbols-outlined text-tertiary-container text-2xl">timeline</span>
+                </div>
+                <h3 className="font-title-lg text-[22px] font-bold text-on-surface mb-3 tracking-tight">Milestone Tracking</h3>
+                <p className="font-body-sm text-[15px] text-on-surface-variant leading-relaxed mb-6">Real-time monitoring of deliverables to ensure projects stay exactly on schedule.</p>
+                <div className="w-full bg-secondary-container h-2 rounded-full overflow-hidden mt-auto">
+                  <motion.div 
+                    initial={{ width: 0 }} 
+                    whileInView={{ width: "75%" }} 
+                    viewport={{ once: true }}
+                    transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
+                    className="bg-tertiary h-full rounded-full relative"
+                  />
+                </div>
+              </SpotlightCard>
+
+              {/* Feature 3: Square */}
+              <SpotlightCard className="md:col-span-1 lg:col-span-1 p-8 bg-surface-container-low/50">
+                <div className="w-14 h-14 rounded-2xl bg-error/10 flex items-center justify-center mb-6 border border-error/20">
+                  <span aria-hidden="true" className="material-symbols-outlined text-error text-2xl">policy</span>
+                </div>
+                <h3 className="font-title-lg text-[22px] font-bold text-on-surface mb-3 tracking-tight">Integrity Check</h3>
+                <p className="font-body-sm text-[15px] text-on-surface-variant leading-relaxed">Deep semantic analysis against institutional databases for original thought.</p>
+              </SpotlightCard>
+
+              {/* Feature 4: Square */}
+              <SpotlightCard className="md:col-span-2 lg:col-span-1 p-8">
+                <div className="w-14 h-14 rounded-2xl bg-secondary/10 flex items-center justify-center mb-6 border border-secondary/20">
+                  <span aria-hidden="true" className="material-symbols-outlined text-secondary text-2xl">forum</span>
+                </div>
+                <h3 className="font-title-lg text-[22px] font-bold text-on-surface mb-3 tracking-tight">Contextual Chat</h3>
+                <p className="font-body-sm text-[15px] text-on-surface-variant leading-relaxed">Project-specific communication channels linked directly to deliverables.</p>
+              </SpotlightCard>
+
+              {/* Feature 5: Wide Bottom Span */}
+              <SpotlightCard className="md:col-span-3 lg:col-span-4 p-10 flex flex-col md:flex-row gap-10 items-center overflow-hidden">
+                <div className="flex-1 z-10">
+                  <div className="w-14 h-14 rounded-2xl bg-primary-container/20 flex items-center justify-center mb-6 border border-primary-container/30">
+                    <span aria-hidden="true" className="material-symbols-outlined text-primary text-2xl">rate_review</span>
+                  </div>
+                  <h3 className="font-headline-md text-[28px] font-bold text-on-surface mb-4 tracking-tight">Structured Feedback Loop</h3>
+                  <p className="font-body-md text-[16px] text-on-surface-variant leading-relaxed max-w-xl">
+                    Evaluation rubrics combined with AI-assisted drafting allow supervisors to provide comprehensive, actionable critiques up to 3x faster, without sacrificing quality.
+                  </p>
+                </div>
+                
+                {/* Abstract visualization of feedback */}
+                <div className="flex-1 w-full relative h-[150px] md:h-full min-h-[150px]">
+                  <motion.div 
+                    initial={{ x: 50, opacity: 0 }}
+                    whileInView={{ x: 0, opacity: 1 }}
+                    transition={{ duration: 0.8 }}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 w-full max-w-md bg-surface-lowest rounded-2xl p-5 shadow-xl border border-outline-variant/20 z-10"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-[12px] font-bold">DR</div>
+                      <div className="flex-1 h-2 bg-surface-variant rounded-full"></div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="h-2 bg-outline-variant/30 rounded-full w-full"></div>
+                      <div className="h-2 bg-outline-variant/30 rounded-full w-4/5"></div>
+                      <div className="h-2 bg-primary/20 rounded-full w-3/5"></div>
+                    </div>
+                  </motion.div>
+                </div>
+              </SpotlightCard>
             </div>
           </section>
 
-          <section className="py-32 border-t border-outline-variant/20 relative z-20">
+          {/* Interactive "Built for Everyone" Section */}
+          <section className="py-32 relative z-20">
             <motion.div 
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="text-center mb-20"
+              className="text-center mb-16"
             >
-              <h2 className="font-headline-lg text-[48px] font-black text-on-surface mb-6 tracking-tight">Built for <span className="text-tertiary">Everyone.</span></h2>
-              <p className="font-body-md text-[20px] text-on-surface-variant max-w-2xl mx-auto">Tailored interfaces designed specifically for the unique workflows of administrators, educators, and researchers.</p>
+              <h2 className="font-display text-[40px] md:text-[56px] font-black text-on-surface mb-6 tracking-tight">
+                Designed for <span className="text-primary">Impact.</span>
+              </h2>
+              <p className="font-body-md text-[20px] text-on-surface-variant max-w-2xl mx-auto font-light mb-12">
+                Tailored interfaces designed specifically for the unique workflows of educators and researchers.
+              </p>
+              
+              {/* Custom Toggle */}
+              <div className="inline-flex bg-surface-variant/30 p-1.5 rounded-full backdrop-blur-md border border-outline-variant/20 relative">
+                <div 
+                  className="absolute inset-y-1.5 left-1.5 bg-surface rounded-full shadow-sm transition-all duration-300 ease-out z-0"
+                  style={{ 
+                    width: 'calc(50% - 6px)',
+                    transform: activeRole === 'student' ? 'translateX(calc(100% + 12px))' : 'translateX(0)'
+                  }}
+                ></div>
+                <button 
+                  onClick={() => setActiveRole('supervisor')}
+                  className={`relative z-10 px-8 py-3 rounded-full font-label-lg text-[15px] font-bold transition-colors duration-300 ${activeRole === 'supervisor' ? 'text-on-surface' : 'text-on-surface-variant hover:text-on-surface'}`}
+                >
+                  For Supervisors
+                </button>
+                <button 
+                  onClick={() => setActiveRole('student')}
+                  className={`relative z-10 px-8 py-3 rounded-full font-label-lg text-[15px] font-bold transition-colors duration-300 ${activeRole === 'student' ? 'text-on-surface' : 'text-on-surface-variant hover:text-on-surface'}`}
+                >
+                  For Students
+                </button>
+              </div>
             </motion.div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              <TiltCard>
-                <div className="bg-surface-container-lowest rounded-[32px] p-12 text-center flex flex-col items-center border-[2px] border-primary/20 shadow-[0_20px_50px_rgba(53,37,205,0.15)] h-full relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  <div className="w-24 h-24 rounded-full bg-primary flex items-center justify-center mb-8 text-on-primary shadow-lg shadow-primary/30 group-hover:scale-110 transition-transform duration-500">
-                    <span aria-hidden="true" className="material-symbols-outlined text-5xl icon-fill">supervisor_account</span>
-                  </div>
-                  <h3 className="font-headline-md text-[28px] font-bold text-on-surface mb-4">Supervisor</h3>
-                  <p className="font-body-sm text-[16px] text-on-surface-variant leading-relaxed">Manage multiple student projects seamlessly. Utilize AI to draft initial feedback and identify at-risk projects early.</p>
-                </div>
-              </TiltCard>
+            <div className="max-w-5xl mx-auto min-h-[400px]">
+              <AnimatePresence mode="wait">
+                {activeRole === 'supervisor' ? (
+                  <motion.div
+                    key="supervisor"
+                    initial={{ opacity: 0, y: 20, filter: 'blur(10px)' }}
+                    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                    exit={{ opacity: 0, y: -20, filter: 'blur(10px)' }}
+                    transition={{ duration: 0.4 }}
+                    className="bg-surface-container-lowest rounded-[40px] p-12 border border-outline-variant/20 shadow-2xl flex flex-col md:flex-row gap-12 items-center"
+                  >
+                    <div className="flex-1">
+                      <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center mb-8 text-on-primary shadow-lg shadow-primary/30">
+                        <span aria-hidden="true" className="material-symbols-outlined text-3xl icon-fill">supervisor_account</span>
+                      </div>
+                      <h3 className="font-headline-lg text-[36px] font-black text-on-surface mb-6 tracking-tight">Scale your mentorship.</h3>
+                      <p className="font-body-lg text-[18px] text-on-surface-variant leading-relaxed mb-8">
+                        Manage dozens of projects simultaneously without dropping the ball. The dashboard highlights projects requiring attention, while AI assists in drafting comprehensive, rubric-aligned feedback.
+                      </p>
+                      <ul className="space-y-4">
+                        {['Centralized project tracking', 'AI-assisted rubric grading', 'Automated milestone reminders'].map((item, i) => (
+                          <li key={i} className="flex items-center gap-3 text-on-surface font-medium">
+                            <span className="material-symbols-outlined text-primary text-xl">check_circle</span>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="flex-1 w-full bg-surface-variant/20 rounded-[24px] h-[350px] border border-outline-variant/10 flex items-center justify-center overflow-hidden relative">
+                       {/* Placeholder for UI graphic */}
+                       <div className="absolute inset-8 border border-primary/20 rounded-xl bg-surface/50 backdrop-blur-sm p-4">
+                          <div className="h-4 w-1/3 bg-primary/20 rounded mb-6"></div>
+                          <div className="space-y-3">
+                            <div className="h-12 w-full bg-surface rounded flex items-center px-4 border border-outline-variant/10"><div className="h-2 w-1/4 bg-error/40 rounded"></div></div>
+                            <div className="h-12 w-full bg-surface rounded flex items-center px-4 border border-outline-variant/10"><div className="h-2 w-1/2 bg-tertiary/40 rounded"></div></div>
+                            <div className="h-12 w-full bg-surface rounded flex items-center px-4 border border-outline-variant/10"><div className="h-2 w-1/3 bg-secondary/40 rounded"></div></div>
+                          </div>
+                       </div>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="student"
+                    initial={{ opacity: 0, y: 20, filter: 'blur(10px)' }}
+                    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                    exit={{ opacity: 0, y: -20, filter: 'blur(10px)' }}
+                    transition={{ duration: 0.4 }}
+                    className="bg-surface-container-lowest rounded-[40px] p-12 border border-outline-variant/20 shadow-2xl flex flex-col md:flex-row gap-12 items-center"
+                  >
+                     <div className="flex-1 w-full bg-surface-variant/20 rounded-[24px] h-[350px] border border-outline-variant/10 flex items-center justify-center overflow-hidden relative order-2 md:order-1">
+                        {/* Placeholder for UI graphic */}
+                       <div className="absolute inset-8 border border-tertiary/20 rounded-xl bg-surface/50 backdrop-blur-sm p-6 flex flex-col">
+                          <div className="h-8 w-1/2 bg-tertiary/20 rounded-full mb-auto"></div>
+                          <div className="h-32 w-full bg-surface rounded-xl border border-outline-variant/20 p-4 mt-6">
+                             <div className="flex gap-2 mb-4"><div className="w-8 h-8 rounded-full bg-primary/20"></div><div className="h-2 w-20 bg-surface-variant mt-2 rounded"></div></div>
+                             <div className="h-2 w-full bg-outline-variant/20 rounded mb-2"></div>
+                             <div className="h-2 w-4/5 bg-outline-variant/20 rounded"></div>
+                          </div>
+                       </div>
+                     </div>
+                    <div className="flex-1 order-1 md:order-2">
+                      <div className="w-16 h-16 rounded-full bg-tertiary flex items-center justify-center mb-8 text-on-primary shadow-lg shadow-tertiary/30">
+                        <span aria-hidden="true" className="material-symbols-outlined text-3xl icon-fill">school</span>
+                      </div>
+                      <h3 className="font-headline-lg text-[36px] font-black text-on-surface mb-6 tracking-tight">Focus on research.</h3>
+                      <p className="font-body-lg text-[18px] text-on-surface-variant leading-relaxed mb-8">
+                        Receive structured guidance, organize citations, manage versions, and submit deliverables through a stress-free, beautiful portal designed to reduce cognitive load.
+                      </p>
+                      <ul className="space-y-4">
+                        {['Clear milestone expectations', 'Direct contextual communication', 'Automated formatting checks'].map((item, i) => (
+                          <li key={i} className="flex items-center gap-3 text-on-surface font-medium">
+                            <span className="material-symbols-outlined text-tertiary text-xl">check_circle</span>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </section>
 
-              <TiltCard>
-                <div className="bg-surface-container-lowest rounded-[32px] p-12 text-center flex flex-col items-center border border-outline-variant/10 shadow-lg group hover:shadow-xl transition-all h-full">
-                  <div className="w-24 h-24 rounded-full bg-surface-variant/30 flex items-center justify-center mb-8 text-on-surface group-hover:bg-on-surface group-hover:text-surface transition-colors duration-500">
-                    <span aria-hidden="true" className="material-symbols-outlined text-5xl icon-fill">school</span>
-                  </div>
-                  <h3 className="font-headline-md text-[28px] font-bold text-on-surface mb-4">Student</h3>
-                  <p className="font-body-sm text-[16px] text-on-surface-variant leading-relaxed">Receive structured guidance, organize citations, manage versions, and submit deliverables through a stress-free portal.</p>
-                </div>
-              </TiltCard>
+          {/* Final CTA Section */}
+          <section className="py-32 mb-20 relative z-20">
+            <div className="bg-gradient-to-br from-primary to-tertiary-container rounded-[40px] p-12 md:p-20 text-center relative overflow-hidden shadow-2xl">
+              {/* Decorative elements */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-[50px]"></div>
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/10 rounded-full blur-[50px]"></div>
+              
+              <div className="relative z-10 max-w-3xl mx-auto">
+                <h2 className="font-display text-[40px] md:text-[56px] font-black text-white mb-6 tracking-tight leading-tight">
+                  Ready to transform your academic workflow?
+                </h2>
+                <p className="font-body-lg text-[20px] text-white/80 mb-10 font-light">
+                  Join hundreds of institutions already using SuperVisor.ai to elevate their research output.
+                </p>
+                <Link to="/register" className="inline-flex font-label-lg text-[18px] font-bold bg-white text-primary px-10 py-5 rounded-full hover:scale-105 transition-all duration-300 shadow-xl shadow-black/20 hover:shadow-2xl hover:shadow-black/30 items-center justify-center gap-2">
+                  Get Started for Free
+                  <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
+                </Link>
+              </div>
             </div>
           </section>
         </div>
       </main>
 
-      <footer className="bg-on-surface text-surface pt-24 pb-12 relative z-20">
+      {/* Modern Footer */}
+      <footer className="bg-surface-container-lowest border-t border-outline-variant/10 pt-20 pb-10 relative z-20">
         <div className="w-full max-w-container_max px-margin_desktop mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-16 mb-20">
-            <div className="col-span-1 md:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-4 mb-20">
+            <div className="col-span-1 md:col-span-4 lg:col-span-5">
               <div className="flex items-center gap-3 mb-6">
-                <span aria-hidden="true" className="material-symbols-outlined text-primary text-4xl icon-fill">school</span>
-                <span className="font-headline-md text-[32px] font-black tracking-tight">Academic AI</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-primary text-3xl icon-fill">school</span>
+                <span className="font-headline-md text-[24px] font-black tracking-tight text-on-surface">SuperVisor<span className="text-primary">.ai</span></span>
               </div>
-              <p className="font-body-md text-[18px] text-surface-variant max-w-md leading-relaxed">
+              <p className="font-body-md text-[16px] text-on-surface-variant max-w-sm leading-relaxed mb-8 font-light">
                 Elevating academic research and supervision through intelligent, institutional-grade technology.
               </p>
             </div>
-            <div>
-              <h4 className="font-title-lg text-[20px] font-bold text-white mb-6">Platform</h4>
-              <ul className="space-y-4 font-body-sm text-[16px] text-surface-variant">
-                <li><a className="hover:text-primary transition-colors" href="#">Features</a></li>
-                <li><a className="hover:text-primary transition-colors" href="#">Pricing</a></li>
-                <li><a className="hover:text-primary transition-colors" href="#">Security</a></li>
-                <li><a className="hover:text-primary transition-colors" href="#">Integration</a></li>
+            
+            <div className="col-span-1 md:col-span-2 lg:col-span-2 md:col-start-7 lg:col-start-7">
+              <h4 className="font-label-lg text-[14px] font-bold text-on-surface uppercase tracking-wider mb-6">Product</h4>
+              <ul className="space-y-4 font-body-sm text-[15px] text-on-surface-variant">
+                <li><a className="hover:text-primary transition-colors block" href="#">Features</a></li>
+                <li><a className="hover:text-primary transition-colors block" href="#">Integrations</a></li>
+                <li><a className="hover:text-primary transition-colors block" href="#">Pricing</a></li>
+                <li><a className="hover:text-primary transition-colors block" href="#">Changelog</a></li>
               </ul>
             </div>
-            <div>
-              <h4 className="font-title-lg text-[20px] font-bold text-white mb-6">Institution</h4>
-              <ul className="space-y-4 font-body-sm text-[16px] text-surface-variant">
-                <li><a className="hover:text-primary transition-colors" href="#">About Us</a></li>
-                <li><a className="hover:text-primary transition-colors" href="#">Research Ethics</a></li>
-                <li><a className="hover:text-primary transition-colors" href="#">Privacy Policy</a></li>
-                <li><a className="hover:text-primary transition-colors" href="#">Contact Support</a></li>
+            
+            <div className="col-span-1 md:col-span-2 lg:col-span-2">
+              <h4 className="font-label-lg text-[14px] font-bold text-on-surface uppercase tracking-wider mb-6">Company</h4>
+              <ul className="space-y-4 font-body-sm text-[15px] text-on-surface-variant">
+                <li><a className="hover:text-primary transition-colors block" href="#">About Us</a></li>
+                <li><a className="hover:text-primary transition-colors block" href="#">Careers</a></li>
+                <li><a className="hover:text-primary transition-colors block" href="#">Blog</a></li>
+                <li><a className="hover:text-primary transition-colors block" href="#">Contact</a></li>
+              </ul>
+            </div>
+
+            <div className="col-span-1 md:col-span-2 lg:col-span-2">
+              <h4 className="font-label-lg text-[14px] font-bold text-on-surface uppercase tracking-wider mb-6">Legal</h4>
+              <ul className="space-y-4 font-body-sm text-[15px] text-on-surface-variant">
+                <li><a className="hover:text-primary transition-colors block" href="#">Privacy Policy</a></li>
+                <li><a className="hover:text-primary transition-colors block" href="#">Terms of Service</a></li>
+                <li><a className="hover:text-primary transition-colors block" href="#">Data Processing</a></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center font-body-sm text-[14px] text-surface-variant">
-            <p>© 2026 Academic AI Systems. All rights reserved.</p>
-            <div className="flex gap-8 mt-6 md:mt-0">
-              <a className="hover:text-white transition-colors" href="#">Terms of Service</a>
-              <a className="hover:text-white transition-colors" href="#">Accessibility</a>
+          
+          <div className="border-t border-outline-variant/20 pt-8 flex flex-col md:flex-row justify-between items-center font-body-sm text-[14px] text-on-surface-variant">
+            <p>© 2026 SuperVisor.ai. All rights reserved.</p>
+            <div className="flex gap-6 mt-4 md:mt-0">
+              <a href="#" className="hover:text-primary transition-colors"><span className="material-symbols-outlined text-[20px]">public</span></a>
+              <a href="#" className="hover:text-primary transition-colors"><span className="material-symbols-outlined text-[20px]">mail</span></a>
             </div>
           </div>
         </div>
