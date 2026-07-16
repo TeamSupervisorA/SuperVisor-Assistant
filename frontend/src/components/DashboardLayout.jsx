@@ -1,31 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopNavbar from './TopNavbar';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from './ThemeContext';
 
 const DashboardLayout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
-  const [isDark, setIsDark] = useState(() => {
-    // Hydrate from localStorage or system preference
-    const stored = localStorage.getItem('theme');
-    if (stored) return stored === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (isDark) {
-      root.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      root.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDark]);
-
-  const toggleDark = () => setIsDark(prev => !prev);
+  const { isDark, toggleDark } = useTheme();
 
   return (
     <div className="bg-background text-on-surface font-body-md antialiased min-h-screen flex overflow-hidden">

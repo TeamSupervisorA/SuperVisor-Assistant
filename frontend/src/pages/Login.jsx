@@ -139,7 +139,7 @@ const Login = () => {
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">mail</span>
                 <input
-                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-4 py-3.5 font-body-md text-[15px] text-on-surface dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-on-surface-variant/70"
+                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-4 py-3.5 font-body-md text-[15px] text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-on-surface-variant/70"
                   id="email"
                   name="email"
                   placeholder="you@university.edu"
@@ -159,7 +159,7 @@ const Login = () => {
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">lock</span>
                 <input
-                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-12 py-3.5 font-body-md text-[15px] text-on-surface dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-on-surface-variant/70"
+                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-12 py-3.5 font-body-md text-[15px] text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-on-surface-variant/70"
                   id="password"
                   name="password"
                   placeholder="••••••••"

@@ -36,7 +36,7 @@ const InputField = ({ id, label, type = 'text', placeholder, required = false, i
     <div className="relative">
       {icon && <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">{icon}</span>}
       <input 
-        className={`w-full bg-surface-container-lowest border border-outline-variant rounded-xl ${icon ? 'pl-11' : 'pl-4'} pr-4 py-3 font-body-md text-[15px] text-on-surface dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-on-surface-variant/70`}
+        className={`w-full bg-surface-container-lowest border border-outline-variant rounded-xl ${icon ? 'pl-11' : 'pl-4'} pr-4 py-3 font-body-md text-[15px] text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-on-surface-variant/70`}
         id={id} 
         placeholder={placeholder} 
         type={type} 
@@ -207,7 +207,7 @@ const Register = () => {
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">badge</span>
                   <select 
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-10 py-3 font-body-md text-[15px] text-on-surface dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none transition-all" 
+                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-10 py-3 font-body-md text-[15px] text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none transition-all" 
                     id="role" 
                     required 
                     value={form.role} 
@@ -236,7 +236,7 @@ const Register = () => {
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">lock</span>
                   <input 
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-12 py-3 font-body-md text-[15px] text-on-surface dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-on-surface-variant/70" 
+                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-12 py-3 font-body-md text-[15px] text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-on-surface-variant/70" 
                     id="password" 
                     placeholder="••••••••" 
                     type={showPassword ? 'text' : 'password'} 
@@ -270,7 +270,7 @@ const Register = () => {
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">lock</span>
                   <input 
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-12 py-3 font-body-md text-[15px] text-on-surface dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-on-surface-variant/70" 
+                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-12 py-3 font-body-md text-[15px] text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-on-surface-variant/70" 
                     id="confirmPassword" 
                     placeholder="••••••••" 
                     type={showConfirmPassword ? 'text' : 'password'} 

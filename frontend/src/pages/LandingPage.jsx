@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useScroll, useTransform, useMotionValue, useSpring, AnimatePresence } from 'framer-motion';
+import { useTheme } from '../components/ThemeContext';
 
 // --- Reusable Advanced Components ---
 
@@ -106,6 +107,7 @@ const FloatingOrbs = () => {
 
 // --- Main Page ---
 const LandingPage = () => {
+  const { isDark, toggleDark } = useTheme();
   const { scrollY } = useScroll();
   const heroY = useTransform(scrollY, [0, 500], [0, 150]);
   const heroOpacity = useTransform(scrollY, [0, 300], [1, 0]);
@@ -131,8 +133,24 @@ const LandingPage = () => {
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-          className="flex gap-4 items-center"
+          className="flex gap-3 items-center"
         >
+          <button
+            onClick={toggleDark}
+            className="p-2.5 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all duration-300 group relative"
+            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <motion.span
+              key={isDark ? 'light' : 'dark'}
+              initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
+              animate={{ rotate: 0, opacity: 1, scale: 1 }}
+              exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="material-symbols-outlined text-[22px] block group-hover:scale-110 transition-transform"
+            >
+              {isDark ? 'light_mode' : 'dark_mode'}
+            </motion.span>
+          </button>
           <Link to="/login" className="font-label-md text-[14px] font-semibold text-secondary hover:text-primary transition-colors duration-200">Sign In</Link>
           <Link to="/register" className="font-label-md text-[14px] font-semibold bg-on-surface text-surface px-5 py-2.5 rounded-full hover:bg-primary hover:text-on-primary transition-all duration-300 shadow-md hover:shadow-lg hover:shadow-primary/30 transform hover:-translate-y-0.5">Get Started</Link>
         </motion.div>

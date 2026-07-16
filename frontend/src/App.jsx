@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './components/AuthContext';
+import { ThemeProvider } from './components/ThemeContext';
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import AdminLogin from './pages/AdminLogin';
@@ -27,6 +28,7 @@ import NotFound from './pages/NotFound';
 function App() {
   return (
     <BrowserRouter>
+      <ThemeProvider>
       <AuthProvider>
         <Routes>
           <Route path="/" element={<LandingPage />} />
@@ -69,6 +71,7 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }
