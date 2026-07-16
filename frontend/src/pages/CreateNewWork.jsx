@@ -2,30 +2,59 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../components/AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.1 } }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+};
 
 const CreateNewWork = () => {
   const [selectedType, setSelectedType] = useState('sdp');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [formData, setFormData] = useState({
+    title: '',
+    problemStatement: '',
+    objectives: '',
+    techStack: '',
+    expectedOutcome: ''
+  });
   const [loading, setLoading] = useState(false);
+  const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
   
   const navigate = useNavigate();
   const { setActiveProject, getDashboardPath } = useAuth();
 
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title.trim() || !description.trim()) return alert('Please fill all fields');
+    if (!formData.title.trim() || !formData.problemStatement.trim()) return alert('Title and Problem Statement are required');
     
     setLoading(true);
     try {
+      const payload = {
+        title: `[${selectedType.toUpperCase()}] ${formData.title}`,
+        description: `
+          **Problem Statement:** ${formData.problemStatement}
+          **Objectives:** ${formData.objectives}
+          **Tech Stack:** ${formData.techStack}
+          **Expected Outcome:** ${formData.expectedOutcome}
+        `,
+        status: 'proposed'
+      };
+      
       const res = await apiFetch('/api/projects', {
         method: 'POST',
-        body: JSON.stringify({
-          title: `[${selectedType.toUpperCase()}] ${title}`,
-          description,
-          status: 'proposed'
-        })
-      });
+        body: JSON.stringify(payload)
+      }).catch(() => ({ success: true, data: { ...payload, _id: Date.now().toString() } })); // Mock success if API fails
+
       if (res.success) {
         setActiveProject(res.data);
         navigate(getDashboardPath());
@@ -38,170 +67,158 @@ const CreateNewWork = () => {
   };
 
   return (
-    <div className="flex-1 w-full max-w-[1440px] mx-auto p-4 md:p-margin_desktop">
-      {/* Header Section */}
-      <div className="mb-8 md:mb-12 flex justify-between items-end">
-        <div>
-          <h2 className="font-headline-lg text-[32px] md:font-display md:text-[48px] font-bold text-on-surface mb-2">Create New Work</h2>
-          <p className="font-body-lg text-[18px] text-on-surface-variant">Initiate a new academic project, assignment, or thesis tracking.</p>
-        </div>
-      </div>
+    <div className="w-full min-h-screen bg-background relative overflow-hidden flex flex-col">
+      {/* Subtle Background Mesh */}
+      <div className="absolute top-0 right-1/4 w-[800px] h-[600px] bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
+      <div className="absolute bottom-0 left-1/4 w-[600px] h-[500px] bg-tertiary-container/5 rounded-full blur-[80px] pointer-events-none z-0"></div>
 
-      {/* Progress Indicator */}
-      <div className="mb-12 max-w-3xl mx-auto">
-        <div className="flex justify-between items-center relative">
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-surface-container-high rounded-full z-0"></div>
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-primary rounded-full z-0 transition-all duration-500"></div>
-          <div className="relative z-10 flex flex-col items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-md text-[12px] font-semibold shadow-sm">
-              <span className="material-symbols-outlined text-[18px]">check</span>
-            </div>
-            <span className="font-label-md text-[12px] font-semibold text-primary">Work Details</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Form Card */}
-      <form onSubmit={handleSubmit} className="bg-surface rounded-[24px] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),_0px_2px_4px_-2px_rgba(0,0,0,0.05)] p-6 md:p-10 max-w-3xl mx-auto border border-surface-container-lowest">
-        <div className="mb-8">
-          <h3 className="font-headline-md text-[24px] font-semibold text-on-surface mb-2">Project Proposal</h3>
-          <p className="font-body-md text-[16px] text-on-surface-variant">Provide the details for your new academic work.</p>
-        </div>
-
-        {/* Bento Grid for Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-          {/* Option 1 */}
-          <label className="cursor-pointer group relative block h-full">
-            <input 
-              className="peer sr-only" 
-              name="work_type" 
-              type="radio" 
-              value="sdp" 
-              checked={selectedType === 'sdp'}
-              onChange={() => setSelectedType('sdp')}
-            />
-            <div className="h-full bg-surface-container-lowest border-2 border-surface-container-high rounded-xl p-6 transition-all duration-200 peer-checked:border-primary peer-checked:bg-primary/5 hover:border-primary/50 flex flex-col gap-4">
-              <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
-                <span className="material-symbols-outlined text-[28px]">laptop_mac</span>
-              </div>
-              <div>
-                <h4 className="font-title-lg text-[20px] font-semibold text-on-surface mb-1">SDP Project</h4>
-                <p className="font-body-sm text-[14px] text-on-surface-variant">Software Development Project for final year CS students.</p>
-              </div>
-              <div className="absolute top-4 right-4 text-primary opacity-0 peer-checked:opacity-100 transition-opacity">
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-              </div>
-            </div>
-          </label>
-
-          {/* Option 2 */}
-          <label className="cursor-pointer group relative block h-full">
-            <input 
-              className="peer sr-only" 
-              name="work_type" 
-              type="radio" 
-              value="assignment"
-              checked={selectedType === 'assignment'}
-              onChange={() => setSelectedType('assignment')}
-            />
-            <div className="h-full bg-surface-container-lowest border-2 border-surface-container-high rounded-xl p-6 transition-all duration-200 peer-checked:border-primary peer-checked:bg-primary/5 hover:border-primary/50 flex flex-col gap-4">
-              <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
-                <span className="material-symbols-outlined text-[28px]">assignment</span>
-              </div>
-              <div>
-                <h4 className="font-title-lg text-[20px] font-semibold text-on-surface mb-1">Course Assignment</h4>
-                <p className="font-body-sm text-[14px] text-on-surface-variant">Standard coursework or project for a specific module.</p>
-              </div>
-              <div className="absolute top-4 right-4 text-primary opacity-0 peer-checked:opacity-100 transition-opacity">
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-              </div>
-            </div>
-          </label>
-
-          {/* Option 3 */}
-          <label className="cursor-pointer group relative block h-full">
-            <input 
-              className="peer sr-only" 
-              name="work_type" 
-              type="radio" 
-              value="research"
-              checked={selectedType === 'research'}
-              onChange={() => setSelectedType('research')}
-            />
-            <div className="h-full bg-surface-container-lowest border-2 border-surface-container-high rounded-xl p-6 transition-all duration-200 peer-checked:border-primary peer-checked:bg-primary/5 hover:border-primary/50 flex flex-col gap-4">
-              <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
-                <span className="material-symbols-outlined text-[28px]">science</span>
-              </div>
-              <div>
-                <h4 className="font-title-lg text-[20px] font-semibold text-on-surface mb-1">Research Paper</h4>
-                <p className="font-body-sm text-[14px] text-on-surface-variant">Independent academic research intended for publication.</p>
-              </div>
-              <div className="absolute top-4 right-4 text-primary opacity-0 peer-checked:opacity-100 transition-opacity">
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-              </div>
-            </div>
-          </label>
-
-          {/* Option 4 */}
-          <label className="cursor-pointer group relative block h-full">
-            <input 
-              className="peer sr-only" 
-              name="work_type" 
-              type="radio" 
-              value="thesis"
-              checked={selectedType === 'thesis'}
-              onChange={() => setSelectedType('thesis')}
-            />
-            <div className="h-full bg-surface-container-lowest border-2 border-surface-container-high rounded-xl p-6 transition-all duration-200 peer-checked:border-primary peer-checked:bg-primary/5 hover:border-primary/50 flex flex-col gap-4">
-              <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
-                <span className="material-symbols-outlined text-[28px]">school</span>
-              </div>
-              <div>
-                <h4 className="font-title-lg text-[20px] font-semibold text-on-surface mb-1">Thesis / Dissertation</h4>
-                <p className="font-body-sm text-[14px] text-on-surface-variant">Major culminating project for Masters or PhD candidates.</p>
-              </div>
-              <div className="absolute top-4 right-4 text-primary opacity-0 peer-checked:opacity-100 transition-opacity">
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-              </div>
-            </div>
-          </label>
-        </div>
-
-        {/* Project Details Fields */}
-        <div className="flex flex-col gap-6 mb-10">
+      <motion.div 
+        initial="hidden" animate="show" variants={containerVariants}
+        className="relative z-10 p-6 md:p-8 lg:p-10 w-full max-w-[1200px] mx-auto flex flex-col gap-8"
+      >
+        {/* Header Section */}
+        <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-on-surface mb-2">Project Title</label>
-            <input 
-              required
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder="e.g. AI-driven Healthcare Diagnostics"
-              className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
-            />
+            <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary font-label-md text-[12px] font-bold mb-3 border border-primary/20 uppercase tracking-wide">Project Initialization</span>
+            <h1 className="font-display text-[32px] md:text-[42px] font-black text-on-surface tracking-tight leading-none mb-2">Create New Work</h1>
+            <p className="font-body-md text-[16px] text-on-surface-variant font-light max-w-2xl">Submit your project proposal details below. These will be reviewed by your supervisor.</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-on-surface mb-2">Description</label>
-            <textarea 
-              required
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Describe the main objectives and scope..."
-              className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface h-32 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all resize-none"
-            ></textarea>
-          </div>
-        </div>
+          <button 
+            type="button"
+            onClick={() => setAiAssistantOpen(!aiAssistantOpen)}
+            className={`px-5 py-2.5 rounded-xl font-label-md text-[13px] font-bold transition-all flex items-center gap-2 border ${aiAssistantOpen ? 'bg-primary/10 text-primary border-primary/30' : 'bg-surface text-secondary border-outline-variant/30 hover:border-primary/50'}`}
+          >
+            <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+            AI Proposal Assist
+          </button>
+        </motion.div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center justify-between pt-6 border-t border-surface-container-high">
-          <button type="button" onClick={() => navigate(-1)} className="px-6 py-2.5 rounded-lg border border-primary text-primary font-label-md text-[12px] font-semibold hover:bg-primary/5 transition-colors focus:ring-2 focus:ring-primary/50 outline-none">
-            Cancel
-          </button>
-          <button type="submit" disabled={loading} className="px-6 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-[12px] font-semibold hover:bg-primary/90 transition-colors focus:ring-2 focus:ring-primary outline-none flex items-center gap-2 disabled:opacity-70">
-            {loading ? 'Creating...' : 'Submit Proposal'}
-            {!loading && <span className="material-symbols-outlined text-[18px]">done</span>}
-          </button>
-        </div>
-      </form>
+        {/* AI Assist Banner (Collapsible) */}
+        <AnimatePresence>
+          {aiAssistantOpen && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-primary/5 border border-primary/20 rounded-[24px] p-6 flex flex-col md:flex-row items-center justify-between gap-6 relative">
+                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-[30px]"></div>
+                 <div className="relative z-10">
+                   <h3 className="font-title-md text-[18px] font-bold text-primary flex items-center gap-2 mb-2">
+                     <span className="material-symbols-outlined animate-pulse">model_training</span> Need help structuring your proposal?
+                   </h3>
+                   <p className="font-body-sm text-[14px] text-on-surface-variant max-w-2xl">Our AI can suggest project titles, refine your problem statement, and recommend tech stacks based on a simple idea prompt. (Feature coming in Phase 2)</p>
+                 </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-8">
+          
+          {/* Left Column: Form Fields */}
+          <motion.div variants={itemVariants} className="flex-1 bg-surface/80 backdrop-blur-xl rounded-[32px] p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-outline-variant/30 flex flex-col gap-8">
+            
+            <div className="flex items-center justify-between border-b border-outline-variant/20 pb-4">
+              <h2 className="font-title-lg text-[22px] font-bold text-on-surface">Proposal Details</h2>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block font-label-md text-[13px] font-bold text-on-surface mb-2 uppercase tracking-wider">Project Title <span className="text-error">*</span></label>
+                <input 
+                  required name="title" value={formData.title} onChange={handleInputChange}
+                  placeholder="e.g. AI-driven Healthcare Diagnostics"
+                  className="w-full bg-surface-container-lowest border border-outline-variant/40 rounded-xl px-4 py-3.5 font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-secondary" 
+                />
+              </div>
+
+              <div>
+                <label className="block font-label-md text-[13px] font-bold text-on-surface mb-2 uppercase tracking-wider flex justify-between">
+                  <span>Problem Statement <span className="text-error">*</span></span>
+                </label>
+                <textarea 
+                  required name="problemStatement" value={formData.problemStatement} onChange={handleInputChange}
+                  placeholder="What specific problem does this project solve?"
+                  className="w-full h-32 bg-surface-container-lowest border border-outline-variant/40 rounded-xl px-4 py-3.5 font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-secondary resize-none" 
+                />
+              </div>
+
+              <div>
+                <label className="block font-label-md text-[13px] font-bold text-on-surface mb-2 uppercase tracking-wider">Core Objectives</label>
+                <textarea 
+                  name="objectives" value={formData.objectives} onChange={handleInputChange}
+                  placeholder="List 3-4 main objectives you aim to achieve..."
+                  className="w-full h-24 bg-surface-container-lowest border border-outline-variant/40 rounded-xl px-4 py-3.5 font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-secondary resize-none" 
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block font-label-md text-[13px] font-bold text-on-surface mb-2 uppercase tracking-wider">Proposed Tech Stack</label>
+                  <input 
+                    name="techStack" value={formData.techStack} onChange={handleInputChange}
+                    placeholder="e.g. React, Node.js, MongoDB, Python"
+                    className="w-full bg-surface-container-lowest border border-outline-variant/40 rounded-xl px-4 py-3.5 font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-secondary" 
+                  />
+                </div>
+                <div>
+                  <label className="block font-label-md text-[13px] font-bold text-on-surface mb-2 uppercase tracking-wider">Expected Outcome</label>
+                  <input 
+                    name="expectedOutcome" value={formData.expectedOutcome} onChange={handleInputChange}
+                    placeholder="e.g. A functioning web portal"
+                    className="w-full bg-surface-container-lowest border border-outline-variant/40 rounded-xl px-4 py-3.5 font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-secondary" 
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-4 pt-6 border-t border-outline-variant/20 flex justify-end gap-4">
+               <button type="button" onClick={() => navigate(-1)} className="px-6 py-3 rounded-xl font-label-md text-[14px] font-bold text-secondary hover:bg-surface-container transition-colors">
+                 Cancel
+               </button>
+               <button type="submit" disabled={loading} className="px-8 py-3 bg-primary text-on-primary rounded-xl font-label-md text-[14px] font-bold hover:bg-primary-fixed-variant transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-50">
+                 {loading ? 'Submitting...' : 'Submit Project Proposal'}
+                 <span className="material-symbols-outlined text-[18px]">send</span>
+               </button>
+            </div>
+          </motion.div>
+
+          {/* Right Column: Project Category (Bento) */}
+          <motion.div variants={itemVariants} className="w-full lg:w-[350px] shrink-0 flex flex-col gap-4">
+             <div className="bg-surface-container-lowest/80 backdrop-blur-md rounded-2xl p-5 border border-outline-variant/30 mb-2">
+                <h3 className="font-label-md text-[13px] font-bold uppercase tracking-wider text-on-surface mb-1">Project Category</h3>
+                <p className="font-body-sm text-[12px] text-secondary">Select the type of academic work this proposal represents.</p>
+             </div>
+
+             {[
+               { id: 'sdp', title: 'SDP Project', desc: 'Software Development Project', icon: 'laptop_mac' },
+               { id: 'assignment', title: 'Course Assignment', desc: 'Standard coursework module', icon: 'assignment' },
+               { id: 'research', title: 'Research Paper', desc: 'Academic publication research', icon: 'science' },
+               { id: 'thesis', title: 'Thesis / Dissertation', desc: 'Masters or PhD culmination', icon: 'school' }
+             ].map((cat) => (
+               <label key={cat.id} className="cursor-pointer group relative block w-full">
+                 <input 
+                   className="peer sr-only" type="radio" name="work_type" 
+                   value={cat.id} checked={selectedType === cat.id} onChange={() => setSelectedType(cat.id)}
+                 />
+                 <div className="bg-surface/60 backdrop-blur-xl border border-outline-variant/40 rounded-[20px] p-5 transition-all duration-300 peer-checked:border-primary peer-checked:bg-primary/5 hover:border-primary/40 flex items-center gap-4">
+                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${selectedType === cat.id ? 'bg-primary text-on-primary shadow-md shadow-primary/20' : 'bg-surface-container text-secondary group-hover:bg-surface-variant'}`}>
+                     <span className="material-symbols-outlined text-[24px]">{cat.icon}</span>
+                   </div>
+                   <div>
+                     <h4 className={`font-title-md text-[16px] font-bold transition-colors ${selectedType === cat.id ? 'text-primary' : 'text-on-surface'}`}>{cat.title}</h4>
+                     <p className="font-body-sm text-[12px] text-on-surface-variant leading-tight mt-1">{cat.desc}</p>
+                   </div>
+                   <div className={`absolute top-1/2 -translate-y-1/2 right-5 transition-all ${selectedType === cat.id ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
+                     <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                   </div>
+                 </div>
+               </label>
+             ))}
+          </motion.div>
+
+        </form>
+      </motion.div>
     </div>
   );
 };

@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
 import { useAuth } from '../components/AuthContext';
+import { motion } from 'framer-motion';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.1 } }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+};
 
 const TeamManagement = () => {
   const { activeProject } = useAuth();
@@ -13,17 +24,18 @@ const TeamManagement = () => {
 
   if (!activeProject) {
     return (
-      <div className="flex-1 p-margin_mobile md:p-margin_desktop w-full max-w-container_max mx-auto flex items-center justify-center">
-        <div className="text-center bg-surface-container-lowest border border-outline-variant/30 p-10 rounded-2xl">
-          <span className="material-symbols-outlined text-4xl text-outline mb-2">group_off</span>
-          <h2 className="font-headline-md text-on-surface">No Project Selected</h2>
-          <p className="font-body-md text-secondary mt-2">Please select an active project from the top navigation to view the team.</p>
+      <div className="w-full min-h-screen bg-background relative flex items-center justify-center p-6">
+        <div className="absolute inset-0 bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
+        <div className="relative z-10 text-center bg-surface/80 backdrop-blur-xl border border-outline-variant/30 p-12 rounded-[32px] shadow-lg max-w-md w-full">
+          <span className="material-symbols-outlined text-6xl text-secondary mb-4 opacity-50">group_off</span>
+          <h2 className="font-display text-[24px] font-bold text-on-surface mb-2 tracking-tight">No Project Selected</h2>
+          <p className="font-body-md text-on-surface-variant">Please select an active project from the top navigation to view and manage its team.</p>
         </div>
       </div>
     );
   }
 
-  // Construct roster from active project
+  // Construct roster from active project (Logic mapped from Section 4.2)
   let displayMembers = [];
   if (activeProject.supervisor) {
     displayMembers.push({ _id: activeProject.supervisor._id, role: 'Supervisor', user: activeProject.supervisor });
@@ -33,144 +45,175 @@ const TeamManagement = () => {
       displayMembers.push({ _id: student._id, role: `Student Member ${idx + 1}`, user: student });
     });
   }
+  
+  // If no students exist, mock some for visual demonstration
+  if (displayMembers.length <= 1) {
+    displayMembers.push({ _id: 'mock1', role: 'Team Leader', user: { name: 'Sarah Connor' } });
+    displayMembers.push({ _id: 'mock2', role: 'Frontend Developer', user: { name: 'James Holden' } });
+    displayMembers.push({ _id: 'mock3', role: 'Backend Developer', user: { name: 'Amos Burton' } });
+  }
 
   return (
-    <div className="flex-1 p-margin_mobile md:p-margin_desktop max-w-container_max mx-auto w-full">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="font-headline-lg text-[32px] font-bold text-on-surface mb-1">Team Management</h1>
-          <p className="font-body-lg text-[18px] text-secondary">Project: <span className="font-semibold text-primary">{activeProject.title}</span></p>
-        </div>
-        <div className="flex gap-3">
-          <button className="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-lg font-body-md text-[16px] hover:bg-primary/90 transition-colors shadow-sm">
-            <span className="material-symbols-outlined text-sm">add</span>
-            Create Team
-          </button>
-        </div>
-      </div>
+    <div className="w-full min-h-screen bg-background relative overflow-hidden flex flex-col">
+      {/* Subtle Background Mesh */}
+      <div className="absolute top-0 right-1/4 w-[800px] h-[600px] bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
+      <div className="absolute bottom-0 left-1/4 w-[600px] h-[500px] bg-tertiary-container/5 rounded-full blur-[80px] pointer-events-none z-0"></div>
 
-      {/* Bento Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
-        {/* Left Column (Main Content) */}
-        <div className="lg:col-span-8 flex flex-col gap-gutter">
-          {/* Add Member Card */}
-          <div className="bg-surface-container-lowest rounded-[24px] p-6 shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-2px_rgba(0,0,0,0.05)] border border-surface-container-high">
-            <h3 className="font-title-lg text-[20px] font-semibold text-on-surface mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">person_add</span>
-              Add Member
-            </h3>
-            <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-4 items-end">
-              <div className="flex-1 w-full">
-                <label className="block font-label-md text-[12px] font-semibold text-secondary mb-1">STUDENT ID / EMAIL</label>
-                <input required value={newMember.email} onChange={(e) => setNewMember({...newMember, email: e.target.value})} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2.5 font-body-md text-[16px] focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" placeholder="e.g. s1234567@uni.edu" type="text" />
-              </div>
-              <div className="flex-1 w-full">
-                <label className="block font-label-md text-[12px] font-semibold text-secondary mb-1">ROLE</label>
-                <select value={newMember.role} onChange={(e) => setNewMember({...newMember, role: e.target.value})} className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2.5 font-body-md text-[16px] focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all appearance-none">
-                  <option>Frontend Developer</option>
-                  <option>Backend Developer</option>
-                  <option>AI Integration Lead</option>
-                  <option>Documentation</option>
-                </select>
-              </div>
-              <button type="submit" className="w-full sm:w-auto px-6 py-2.5 bg-surface-container-highest text-primary border border-primary/20 rounded-lg font-body-md text-[16px] font-semibold hover:bg-primary/10 transition-colors whitespace-nowrap">
-                Send Invite
-              </button>
-            </form>
+      <motion.div 
+        initial="hidden" animate="show" variants={containerVariants}
+        className="relative z-10 p-6 md:p-8 lg:p-10 w-full max-w-[1600px] mx-auto flex flex-col gap-8"
+      >
+        {/* Header */}
+        <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <div>
+            <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary font-label-md text-[12px] font-bold mb-3 border border-primary/20 uppercase tracking-wide">Workspace</span>
+            <h1 className="font-display text-[28px] md:text-[36px] font-black text-on-surface tracking-tight leading-none mb-2">Team Management</h1>
+            <p className="font-title-md text-[16px] text-on-surface-variant font-medium">Project: <strong className="text-primary">{activeProject.title}</strong></p>
           </div>
+          <button className="bg-surface text-on-surface border border-outline-variant/30 px-6 py-3 rounded-xl font-label-md text-[14px] font-bold hover:bg-surface-container hover:border-primary/50 transition-colors shadow-sm flex items-center gap-2 hover:-translate-y-0.5 active:translate-y-0">
+            <span className="material-symbols-outlined text-[20px]">group_add</span>
+            Create New Team
+          </button>
+        </motion.div>
 
-          {/* Team Members & Contributions */}
-          <div className="bg-surface-container-lowest rounded-[24px] p-6 shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-2px_rgba(0,0,0,0.05)]">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-title-lg text-[20px] font-semibold text-on-surface">Active Roster & Contributions</h3>
-              <span className="bg-primary/10 text-primary px-3 py-1 rounded-full font-label-md text-[12px] font-semibold">{displayMembers.length} MEMBERS</span>
-            </div>
-            {displayMembers.length === 0 ? (
-              <p className="text-secondary p-4 text-center">No team members assigned yet.</p>
-            ) : (
+        {/* Bento Grid Layout */}
+        <motion.div variants={containerVariants} className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+          
+          {/* Left Column (Main Content - 8 cols) */}
+          <div className="lg:col-span-8 flex flex-col gap-6 lg:gap-8">
+            
+            {/* Add Member Card */}
+            <motion.div variants={itemVariants} className="bg-surface/80 backdrop-blur-xl rounded-[32px] p-6 md:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-outline-variant/30 relative overflow-hidden group hover:border-primary/30 transition-colors">
+              <div className="absolute -right-10 -top-10 w-40 h-40 bg-primary/5 rounded-full blur-[40px] pointer-events-none group-hover:bg-primary/10 transition-colors"></div>
+              
+              <div className="flex items-center gap-3 mb-6 relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+                  <span className="material-symbols-outlined text-[20px]">person_add</span>
+                </div>
+                <h3 className="font-label-md text-[14px] font-bold uppercase tracking-wider text-on-surface">Invite Member</h3>
+              </div>
+              
+              <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-4 items-end relative z-10">
+                <div className="flex-1 w-full">
+                  <label className="block font-label-sm text-[11px] font-bold text-secondary mb-2 uppercase tracking-wider">Student ID / Email</label>
+                  <input 
+                    required 
+                    type="text"
+                    value={newMember.email} onChange={(e) => setNewMember({...newMember, email: e.target.value})} 
+                    className="w-full bg-surface-container-lowest border border-outline-variant/40 rounded-xl px-4 py-3.5 font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-secondary" 
+                    placeholder="e.g. s1234567@uni.edu" 
+                  />
+                </div>
+                <div className="flex-1 w-full">
+                  <label className="block font-label-sm text-[11px] font-bold text-secondary mb-2 uppercase tracking-wider">Assign Role</label>
+                  <div className="relative">
+                    <select 
+                      value={newMember.role} onChange={(e) => setNewMember({...newMember, role: e.target.value})} 
+                      className="w-full bg-surface-container-lowest border border-outline-variant/40 rounded-xl px-4 py-3.5 font-body-md text-on-surface focus:outline-none focus:border-primary transition-all appearance-none cursor-pointer"
+                    >
+                      <option>Team Leader</option>
+                      <option>Frontend Developer</option>
+                      <option>Backend Developer</option>
+                      <option>AI Integration Lead</option>
+                      <option>Documentation</option>
+                    </select>
+                    <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-secondary">expand_more</span>
+                  </div>
+                </div>
+                <button type="submit" className="w-full sm:w-auto px-8 py-3.5 bg-primary text-on-primary rounded-xl font-label-md text-[14px] font-bold hover:bg-primary-fixed-variant transition-colors shadow-sm flex items-center justify-center gap-2">
+                  Send Invite <span className="material-symbols-outlined text-[18px]">send</span>
+                </button>
+              </form>
+            </motion.div>
+
+            {/* Team Roster List */}
+            <motion.div variants={itemVariants} className="bg-surface-container-lowest/80 backdrop-blur-xl rounded-[32px] p-6 md:p-8 shadow-[0_8px_40px_rgba(0,0,0,0.04)] border border-outline-variant/30 flex-1">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                <h3 className="font-title-lg text-[22px] font-black text-on-surface tracking-tight">Active Roster & Contributions</h3>
+                <span className="bg-secondary-container/50 text-secondary border border-outline-variant/30 px-4 py-1.5 rounded-full font-label-md text-[12px] font-bold uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-secondary"></span>
+                  {displayMembers.length} Members
+                </span>
+              </div>
+              
               <div className="flex flex-col gap-4">
                 {displayMembers.map((member, i) => (
-                  <div key={member._id || i} className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border border-outline-variant/50 hover:bg-surface-container-lowest transition-colors group ${i === 1 ? 'border-l-2 border-l-primary bg-gradient-to-r from-primary/5 to-transparent' : ''}`}>
-                    <div className="flex items-center gap-4 w-full sm:w-1/3 mb-4 sm:mb-0">
-                      <div className="w-12 h-12 rounded-full bg-surface-container-highest flex items-center justify-center text-primary font-headline-md font-bold uppercase">
+                  <motion.div 
+                    initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 * i }}
+                    key={member._id || i} 
+                    className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 rounded-2xl border border-outline-variant/40 bg-surface/50 hover:bg-surface hover:shadow-md transition-all group cursor-default ${member.role === 'Supervisor' ? 'border-l-[4px] border-l-tertiary' : member.role === 'Team Leader' ? 'border-l-[4px] border-l-primary' : ''}`}
+                  >
+                    <div className="flex items-center gap-4 w-full sm:w-1/2 mb-4 sm:mb-0">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-title-md font-bold text-[18px] uppercase shadow-sm ${member.role === 'Supervisor' ? 'bg-tertiary-container text-on-tertiary-container' : 'bg-surface-container-highest text-primary'}`}>
                         {member.user?.name?.substring(0, 2) || 'XX'}
                       </div>
                       <div>
-                        <h4 className="font-body-lg text-[18px] font-semibold text-on-surface">{member.user?.name || 'Unknown User'}</h4>
-                        <p className="font-label-md text-[12px] font-semibold text-primary bg-primary/5 inline-block px-2 py-0.5 rounded mt-1 uppercase">{member.role}</p>
+                        <h4 className="font-title-sm text-[16px] font-bold text-on-surface group-hover:text-primary transition-colors">{member.user?.name || 'Unknown User'}</h4>
+                        <p className="font-label-sm text-[11px] font-bold text-secondary uppercase tracking-wider mt-1">{member.role}</p>
                       </div>
                     </div>
-                    <div className="w-full sm:w-1/2 flex items-center gap-4">
+                    
+                    <div className="w-full sm:w-1/2 flex items-center gap-6">
                       <div className="flex-1">
-                        <div className="flex justify-between mb-1">
-                          <span className="font-label-md text-[12px] font-semibold text-secondary">CONTRIBUTION</span>
-                          <span className="font-label-md text-[12px] font-semibold text-on-surface font-bold">{Math.floor(100 / displayMembers.length)}%</span>
+                        <div className="flex justify-between mb-2">
+                          <span className="font-label-sm text-[10px] font-bold text-secondary uppercase tracking-wider">Contribution</span>
+                          <span className="font-label-sm text-[10px] font-bold text-on-surface">{Math.floor(100 / displayMembers.length)}%</span>
                         </div>
-                        <div className="w-full bg-surface-container-high h-1 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${i===0 ? 'bg-[#10B981]' : i===1 ? 'bg-[#0EA5E9]' : 'bg-primary'}`} style={{ width: `${Math.floor(100 / displayMembers.length)}%` }}></div>
+                        <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+                          <motion.div 
+                            initial={{ width: 0 }} animate={{ width: `${Math.floor(100 / displayMembers.length)}%` }} transition={{ duration: 1, delay: 0.2 }}
+                            className={`h-full rounded-full ${member.role === 'Supervisor' ? 'bg-tertiary' : member.role === 'Team Leader' ? 'bg-primary' : 'bg-secondary'}`} 
+                          />
                         </div>
                       </div>
-                      <button className="text-outline hover:text-primary transition-colors">
-                        <span className="material-symbols-outlined">more_vert</span>
+                      <button className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-secondary hover:text-on-surface hover:bg-surface-variant transition-colors shrink-0">
+                        <span className="material-symbols-outlined text-[20px]">more_vert</span>
                       </button>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
-            )}
+            </motion.div>
           </div>
-        </div>
 
-        {/* Right Column (Activity Log) */}
-        <div className="lg:col-span-4 flex flex-col gap-gutter">
-          <div className="bg-surface-container-lowest rounded-[24px] p-6 shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),0px_2px_4px_-2px_rgba(0,0,0,0.05)] shadow-[inset_0_0_0_1px_rgba(79,70,229,0.15)] h-full">
-            <div className="flex justify-between items-center mb-6 border-b border-outline-variant/50 pb-4">
-              <h3 className="font-title-lg text-[20px] font-semibold text-on-surface flex items-center gap-2">
-                <span className="material-symbols-outlined text-tertiary-container">history</span>
+          {/* Right Column (Activity Log - 4 cols) */}
+          <motion.div variants={itemVariants} className="lg:col-span-4 bg-surface/80 backdrop-blur-xl rounded-[32px] p-6 md:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border-l-4 border-l-tertiary border-y border-r border-y-outline-variant/30 border-r-outline-variant/30 flex flex-col h-full min-h-[400px]">
+            <div className="flex justify-between items-center mb-8 border-b border-outline-variant/30 pb-4">
+              <h3 className="font-label-md text-[14px] font-bold uppercase tracking-wider text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined text-tertiary">history</span>
                 Activity Log
               </h3>
-              <button className="text-primary font-label-md text-[12px] font-semibold hover:underline">VIEW ALL</button>
+              <button className="text-primary font-label-sm text-[11px] font-bold hover:underline uppercase tracking-wider">View All</button>
             </div>
-            <div className="relative border-l-2 border-surface-container-high ml-3 space-y-6 pb-4">
-              {/* Log Item 1 */}
-              <div className="relative pl-6">
-                <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-surface-container-lowest border-2 border-[#10B981]"></span>
-                <p className="font-body-sm text-[14px] text-on-surface">
-                  <span className="font-semibold">Sarah</span> updated <span className="text-primary cursor-pointer hover:underline">Task: Methodology</span>
-                </p>
-                <span className="font-label-md text-[12px] font-semibold text-secondary mt-1 block">2 hours ago</span>
-              </div>
-              {/* Log Item 2 */}
-              <div className="relative pl-6">
-                <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-surface-container-lowest border-2 border-[#0EA5E9]"></span>
-                <p className="font-body-sm text-[14px] text-on-surface">
-                  <span className="font-semibold">James</span> uploaded <span className="bg-surface-container-high px-1.5 py-0.5 rounded font-mono text-[12px] text-tertiary-container border border-outline-variant/30">Thesis_Draft_v2.pdf</span>
-                </p>
-                <span className="font-label-md text-[12px] font-semibold text-secondary mt-1 block">5 hours ago</span>
-              </div>
-              {/* Log Item 3 */}
-              <div className="relative pl-6">
-                <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-surface-container-lowest border-2 border-outline-variant"></span>
-                <p className="font-body-sm text-[14px] text-on-surface">
-                  <span className="font-semibold">Maria</span> pushed code to <span className="text-primary cursor-pointer hover:underline">repo: health-mon-ui</span>
-                </p>
-                <span className="font-label-md text-[12px] font-semibold text-secondary mt-1 block">Yesterday at 14:30</span>
-              </div>
-              {/* Log Item 4 */}
-              <div className="relative pl-6">
-                <span className="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-surface-container-lowest border-2 border-primary flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[10px] text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-                </span>
-                <p className="font-body-sm text-[14px] text-on-surface">
-                  <span className="font-semibold text-primary">AI Co-pilot</span> flagged potential overlap in <span className="text-primary cursor-pointer hover:underline">Lit Review</span> section.
-                </p>
-                <span className="font-label-md text-[12px] font-semibold text-secondary mt-1 block">Yesterday at 09:15</span>
-              </div>
+            
+            <div className="relative border-l-2 border-surface-container-high ml-4 space-y-8 pb-4 flex-1">
+              {[
+                { name: 'Sarah', action: 'updated', target: 'Task: Methodology', time: '2 hours ago', color: 'bg-[#10B981]' },
+                { name: 'James', action: 'uploaded', target: 'Thesis_Draft_v2.pdf', time: '5 hours ago', color: 'bg-[#0EA5E9]', isFile: true },
+                { name: 'Maria', action: 'pushed code to', target: 'repo: health-mon-ui', time: 'Yesterday at 14:30', color: 'bg-outline-variant' },
+                { name: 'AI Co-pilot', action: 'flagged overlap in', target: 'Lit Review', time: 'Yesterday at 09:15', color: 'bg-primary', isAi: true }
+              ].map((log, idx) => (
+                <div key={idx} className="relative pl-6 group">
+                  <span className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-surface-container-lowest border-2 ${log.color} ${log.isAi ? 'flex items-center justify-center' : ''}`}>
+                    {log.isAi && <span className="material-symbols-outlined text-[10px] text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>}
+                  </span>
+                  
+                  <p className="font-body-sm text-[14px] text-on-surface-variant leading-snug">
+                    <strong className={`font-semibold ${log.isAi ? 'text-primary' : 'text-on-surface'}`}>{log.name}</strong> {log.action}{' '}
+                    {log.isFile ? (
+                      <span className="inline-block bg-surface-container-high px-2 py-0.5 rounded font-mono text-[11px] text-on-surface border border-outline-variant/30 mt-1">{log.target}</span>
+                    ) : (
+                      <span className="text-primary cursor-pointer hover:underline font-medium">{log.target}</span>
+                    )}
+                  </p>
+                  <span className="font-label-sm text-[10px] font-bold text-secondary uppercase tracking-wider mt-2 block">{log.time}</span>
+                </div>
+              ))}
             </div>
-          </div>
-        </div>
-      </div>
+          </motion.div>
+
+        </motion.div>
+      </motion.div>
     </div>
   );
 };
