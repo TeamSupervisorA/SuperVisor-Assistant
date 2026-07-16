@@ -5,35 +5,69 @@ import { useTheme } from '../components/ThemeContext';
 
 // --- Reusable Advanced Components ---
 
-// Spotlight Card Component for Bento Grid
 const SpotlightCard = ({ children, className = "" }) => {
   const ref = useRef(null);
+  
+  // Spotlight
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
+  
+  // Tilt
+  const xPct = useMotionValue(0);
+  const yPct = useMotionValue(0);
+  const mouseXSpring = useSpring(xPct, { stiffness: 300, damping: 20 });
+  const mouseYSpring = useSpring(yPct, { stiffness: 300, damping: 20 });
+  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["5deg", "-5deg"]);
+  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-5deg", "5deg"]);
 
-  const handleMouseMove = ({ currentTarget, clientX, clientY }) => {
-    const { left, top } = currentTarget.getBoundingClientRect();
-    mouseX.set(clientX - left);
-    mouseY.set(clientY - top);
+  const handleMouseMove = (e) => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    
+    const mX = e.clientX - rect.left;
+    const mY = e.clientY - rect.top;
+    
+    mouseX.set(mX);
+    mouseY.set(mY);
+    
+    xPct.set(mX / width - 0.5);
+    yPct.set(mY / height - 0.5);
+  };
+
+  const handleMouseLeave = () => {
+    xPct.set(0);
+    yPct.set(0);
   };
 
   return (
-    <div
-      className={`group relative overflow-hidden rounded-[32px] bg-surface/80 backdrop-blur-xl border border-outline-variant/30 shadow-[0_8px_30px_rgba(0,0,0,0.04)] ${className}`}
-      onMouseMove={handleMouseMove}
+    <motion.div
       ref={ref}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        rotateX,
+        rotateY,
+        transformStyle: "preserve-3d",
+      }}
+      className={`group relative rounded-[32px] bg-surface/80 backdrop-blur-xl border border-outline-variant/30 shadow-[0_8px_30px_rgba(0,0,0,0.04)] ${className}`}
     >
-      <motion.div
-        className="pointer-events-none absolute -inset-px rounded-[32px] opacity-0 transition duration-300 group-hover:opacity-100"
-        style={{
-          background: useTransform(
-            [mouseX, mouseY],
-            ([x, y]) => `radial-gradient(600px circle at ${x}px ${y}px, rgba(var(--color-primary-rgb), 0.1), transparent 40%)`
-          ),
-        }}
-      />
-      <div className="relative h-full w-full">{children}</div>
-    </div>
+      {/* 3D Content Container */}
+      <div style={{ transform: "translateZ(30px)" }} className="relative h-full w-full rounded-[32px] overflow-hidden">
+        {/* Spotlight Effect */}
+        <motion.div
+          className="pointer-events-none absolute -inset-px rounded-[32px] opacity-0 transition duration-300 group-hover:opacity-100"
+          style={{
+            background: useTransform(
+              [mouseX, mouseY],
+              ([x, y]) => `radial-gradient(600px circle at ${x}px ${y}px, rgba(var(--color-primary-rgb), 0.1), transparent 40%)`
+            ),
+          }}
+        />
+        <div className="relative h-full w-full">{children}</div>
+      </div>
+    </motion.div>
   );
 };
 
