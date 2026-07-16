@@ -27,6 +27,8 @@ const StudentDashboard = () => {
     nextMilestone: null
   });
   const [loading, setLoading] = useState(true);
+  const [aiInsight, setAiInsight] = useState(null);
+  const [loadingInsight, setLoadingInsight] = useState(false);
 
   useEffect(() => {
     const fetchMetrics = async () => {
@@ -41,6 +43,29 @@ const StudentDashboard = () => {
     };
     fetchMetrics();
   }, []);
+
+  useEffect(() => {
+    if (metrics.activeProjects > 0) {
+      const fetchInsight = async () => {
+        setLoadingInsight(true);
+        try {
+          const res = await apiFetch('/api/ai/recommend-task', {
+            method: 'POST',
+            body: JSON.stringify({
+              currentStatus: metrics.nextMilestone || 'In Progress',
+              pastTasks: ['Initial Setup', 'Literature Review Draft']
+            })
+          });
+          if (res.data) setAiInsight(res.data);
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setLoadingInsight(false);
+        }
+      };
+      fetchInsight();
+    }
+  }, [metrics.activeProjects, metrics.nextMilestone]);
 
   const progress = metrics.totalTasks > 0
     ? Math.round((metrics.completedTasks / metrics.totalTasks) * 100)
@@ -187,21 +212,34 @@ const StudentDashboard = () => {
           </div>
           
           <div className="flex-1 relative z-10 mb-6">
-            <p className="font-body-md text-[15px] md:text-[16px] text-on-surface-variant leading-relaxed">
-              <strong className="text-on-surface font-semibold">Next Step:</strong> Your <span className="bg-surface-container px-1.5 py-0.5 rounded text-primary">Literature Review</span> section appears to be missing 3 key foundational references regarding federated learning architectures.
-            </p>
-            <div className="mt-5 p-4 rounded-xl border border-outline-variant/40 bg-surface/50 backdrop-blur-sm">
-              <div className="flex items-start gap-3">
-                <span className="material-symbols-outlined text-secondary shrink-0" style={{ fontSize: '20px', marginTop: '2px' }}>find_in_page</span>
-                <div>
-                  <p className="font-body-sm text-[14px] text-secondary leading-relaxed">Identified gaps in: <br/>• Privacy-preserving techniques<br/>• Edge node synchronization</p>
-                </div>
+            {loadingInsight ? (
+              <div className="flex items-center gap-2 text-primary">
+                <span className="material-symbols-outlined animate-spin">sync</span>
+                <span className="font-body-md font-semibold">Generating AI insight...</span>
               </div>
-            </div>
+            ) : aiInsight ? (
+              <>
+                <p className="font-body-md text-[15px] md:text-[16px] text-on-surface-variant leading-relaxed">
+                  <strong className="text-on-surface font-semibold">Next Step:</strong> {aiInsight.taskTitle}
+                </p>
+                <div className="mt-5 p-4 rounded-xl border border-outline-variant/40 bg-surface/50 backdrop-blur-sm">
+                  <div className="flex items-start gap-3">
+                    <span className="material-symbols-outlined text-secondary shrink-0" style={{ fontSize: '20px', marginTop: '2px' }}>lightbulb</span>
+                    <div>
+                      <p className="font-body-sm text-[14px] text-secondary leading-relaxed">{aiInsight.explanation}</p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <p className="font-body-md text-[15px] md:text-[16px] text-on-surface-variant leading-relaxed">
+                <strong className="text-on-surface font-semibold">Ready to begin!</strong> Start creating tasks and setting milestones for your project to receive AI guidance.
+              </p>
+            )}
           </div>
           
-          <button className="w-full py-3 rounded-lg border-2 border-primary/20 text-primary bg-primary/5 font-label-md text-[14px] font-semibold hover:bg-primary/10 hover:border-primary/40 transition-colors flex items-center justify-center gap-2 relative z-10">
-            View AI Suggestions
+          <button className="w-full py-3 rounded-lg border-2 border-primary/20 text-primary bg-primary/5 font-label-md text-[14px] font-semibold hover:bg-primary/10 hover:border-primary/40 transition-colors flex items-center justify-center gap-2 relative z-10 disabled:opacity-50" disabled={loadingInsight}>
+            {aiInsight ? 'Apply Suggestion' : 'View AI Suggestions'}
             <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>lightbulb</span>
           </button>
         </motion.div>

@@ -170,7 +170,7 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className={`font-label-md text-[13px] font-semibold truncate ${activeProject?._id === proj._id ? 'text-primary' : 'text-on-surface'}`}>{proj.title}</p>
-                        <p className="font-label-md text-[11px] text-secondary capitalize">{proj.status.replace('_', ' ')}</p>
+                        <p className="font-label-md text-[11px] text-secondary capitalize">{proj.status?.replace('_', ' ') || 'active'}</p>
                       </div>
                     </button>
                   ))

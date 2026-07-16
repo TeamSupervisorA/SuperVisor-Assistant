@@ -2,7 +2,10 @@ const Meeting = require('../models/Meeting');
 
 exports.getAllMeetings = async (req, res) => {
   try {
-    const meetings = await Meeting.find().populate('project', 'title').sort({ date: 1 });
+    const filter = {};
+    if (req.query.project) filter.project = req.query.project;
+
+    const meetings = await Meeting.find(filter).populate('project', 'title').sort({ date: 1 });
     res.status(200).json({ success: true, count: meetings.length, data: meetings });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -11,7 +14,7 @@ exports.getAllMeetings = async (req, res) => {
 
 exports.createMeeting = async (req, res) => {
   try {
-    const meeting = await Meeting.create(req.body);
+    const meeting = await Meeting.create({ ...req.body, organizer: req.user.id });
     res.status(201).json({ success: true, data: meeting });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });

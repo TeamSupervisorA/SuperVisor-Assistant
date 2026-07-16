@@ -24,6 +24,11 @@ exports.protect = async (req, res, next) => {
 
     req.user = await User.findById(decoded.id);
 
+    // Token may be valid but the user could have been deleted
+    if (!req.user) {
+      return res.status(401).json({ success: false, error: 'Not authorized to access this route' });
+    }
+
     next();
   } catch (err) {
     return res.status(401).json({ success: false, error: 'Not authorized to access this route' });

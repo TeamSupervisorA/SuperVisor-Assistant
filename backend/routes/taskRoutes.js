@@ -13,7 +13,7 @@ router.use(protect);
 
 router.route('/')
   .get(getTasks)
-  .post(authorize('supervisor', 'admin'), createTask);
+  .post(createTask); // controller verifies the user can access the target project
 
 router.route('/:id')
   .put(updateTask) // students may update status of their own tasks

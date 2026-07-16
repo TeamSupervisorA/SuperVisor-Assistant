@@ -80,7 +80,7 @@ exports.createProject = async (req, res) => {
     let projectData = {
       title,
       description,
-      status: status || 'pending'
+      status: status || 'proposed'
     };
 
     if (req.user.role === 'student') {
@@ -110,7 +110,7 @@ exports.updateProject = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
-    if (req.user.role !== 'admin' && project.supervisor.toString() !== req.user.id) {
+    if (req.user.role !== 'admin' && project.supervisor?.toString() !== req.user.id) {
       return res.status(403).json({ success: false, error: 'Not authorized to update this project' });
     }
 
@@ -136,7 +136,7 @@ exports.deleteProject = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
-    if (req.user.role !== 'admin' && project.supervisor.toString() !== req.user.id) {
+    if (req.user.role !== 'admin' && project.supervisor?.toString() !== req.user.id) {
       return res.status(403).json({ success: false, error: 'Not authorized to delete this project' });
     }
 

@@ -53,7 +53,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
       initial={false}
       animate={{ width: isCollapsed ? 80 : 280 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="bg-surface dark:bg-inverse-surface h-full flex flex-col border-r border-outline-variant/30 z-50 overflow-hidden"
+      className="bg-surface h-full flex flex-col border-r border-outline-variant/30 z-50 overflow-hidden"
     >
       {/* Header */}
       <div className="p-4 flex items-center justify-between border-b border-outline-variant/20 h-20 shrink-0">
@@ -68,7 +68,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <h1 className="font-headline-md text-[18px] font-bold text-primary dark:text-primary-fixed leading-tight tracking-tight">Academic AI</h1>
+              <h1 className="font-headline-md text-[18px] font-bold text-primary leading-tight tracking-tight">Academic AI</h1>
               <p className="font-label-md text-[11px] text-secondary capitalize">{role} portal</p>
             </motion.div>
           )}
@@ -117,7 +117,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200 active:scale-[0.97] group
                 ${isActive 
                   ? 'bg-primary/10 text-primary font-bold' 
-                  : 'text-secondary dark:text-secondary-fixed-dim hover:bg-surface-container-low hover:text-on-surface'
+                  : 'text-secondary hover:bg-surface-container-low hover:text-on-surface'
                 }`}
             >
               <span className={`material-symbols-outlined text-[22px] ${isActive ? 'icon-fill' : 'group-hover:scale-110 transition-transform'}`}>{item.icon}</span>
@@ -146,7 +146,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
         <button 
           onClick={handleLogout}
           title={isCollapsed ? 'Logout' : ''}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-secondary dark:text-secondary-fixed-dim hover:bg-error-container hover:text-error transition-colors duration-200 active:scale-[0.97]"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-secondary hover:bg-error-container hover:text-error transition-colors duration-200 active:scale-[0.97]"
         >
           <span className="material-symbols-outlined text-[22px]">logout</span>
           {!isCollapsed && <span className="whitespace-nowrap text-[14px] font-medium">Logout</span>}

@@ -34,7 +34,7 @@ ${text}
 exports.checkPlagiarism = async (text) => {
   const ai = getClient();
 
-  const prompt = `Analyze the following text and indicate if there are highly suspicious patterns that resemble AI-generated text or widely plagiarized common phrases. Return a JSON object with 'similarityScore' (number 0-100), 'risk' (low, medium, high), and an array of 'flaggedPhrases'. Do not return markdown, just pure JSON.
+  const prompt = `Analyze the following text and indicate if there are highly suspicious patterns that resemble AI-generated text or widely plagiarized common phrases. Return a JSON object with 'overallSimilarity' (number 0-100) and an array of 'matchedSources' (each with 'sourceName', 'sourceUrl' and 'matchPercentage'). If none, return empty array. Do not return markdown, just pure JSON.
 
 Text:
 ${text}

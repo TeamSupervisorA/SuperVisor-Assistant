@@ -44,7 +44,7 @@ const Login = () => {
     <div className="bg-background text-on-background font-body-md antialiased min-h-screen flex flex-col lg:flex-row">
       {/* Left — Animated Illustration Panel */}
       <div className="hidden lg:flex w-1/2 relative items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary-container to-tertiary-container animate-gradient bg-[length:400%_400%]"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary-container dark:via-[#3a30b8] to-tertiary-container animate-gradient bg-[length:400%_400%]"></div>
         
         {/* Floating geometric shapes */}
         <motion.div 
@@ -137,9 +137,9 @@ const Login = () => {
             <div className="space-y-2">
               <label className="block font-label-md text-[13px] font-semibold text-on-surface-variant" htmlFor="email">Email Address</label>
               <div className="relative">
-                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[20px]">mail</span>
+                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">mail</span>
                 <input
-                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-4 py-3.5 font-body-md text-[15px] text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-outline"
+                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-4 py-3.5 font-body-md text-[15px] text-on-surface dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-on-surface-variant/70"
                   id="email"
                   name="email"
                   placeholder="you@university.edu"
@@ -157,9 +157,9 @@ const Login = () => {
                 <a className="font-label-md text-[12px] font-semibold text-primary hover:text-surface-tint transition-colors" href="#">Forgot password?</a>
               </div>
               <div className="relative">
-                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[20px]">lock</span>
+                <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">lock</span>
                 <input
-                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-12 py-3.5 font-body-md text-[15px] text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-outline"
+                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-12 py-3.5 font-body-md text-[15px] text-on-surface dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-on-surface-variant/70"
                   id="password"
                   name="password"
                   placeholder="••••••••"
@@ -171,7 +171,7 @@ const Login = () => {
                 <button 
                   type="button" 
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface transition-colors p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors p-1"
                 >
                   <span className="material-symbols-outlined text-[20px]">{showPassword ? 'visibility_off' : 'visibility'}</span>
                 </button>

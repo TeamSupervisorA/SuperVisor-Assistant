@@ -3,16 +3,20 @@ const Project = require('../models/Project');
 const Task = require('../models/Task');
 const Submission = require('../models/Submission');
 const Meeting = require('../models/Meeting');
+const PlagiarismReport = require('../models/PlagiarismReport');
 
 exports.getAdminMetrics = async (req, res) => {
   try {
     const totalStudents = await User.countDocuments({ role: 'student' });
     const totalTeachers = await User.countDocuments({ role: 'supervisor' });
-    const activeProjects = await Project.countDocuments({ status: { $in: ['pending', 'in_progress'] } });
+    const activeProjects = await Project.countDocuments({ status: { $in: ['proposed', 'active'] } });
     
-    // In a real app we'd query for submissions, we'll mock these for now
-    const assignmentsSubmitted = 312;
-    const plagiarismAlerts = 5;
+    // Real counts from submissions and plagiarism reports
+    const assignmentsSubmitted = await Submission.countDocuments();
+    const plagiarismAlerts = await PlagiarismReport.countDocuments({
+      status: 'Completed',
+      overallSimilarity: { $gte: 20 }
+    });
 
     res.status(200).json({
       success: true,
@@ -32,14 +36,32 @@ exports.getAdminMetrics = async (req, res) => {
 exports.getSupervisorMetrics = async (req, res) => {
   try {
     const supervisorId = req.user._id;
-    
+
     // Count projects where this user is the supervisor
     const assignedTeams = await Project.countDocuments({ supervisor: supervisorId });
-    
-    // Just mock others for now since we don't have full meeting/submission schemas yet
-    const pendingReviews = 8;
-    const plagiarismAlerts = 3;
-    const upcomingMeetings = 2;
+
+    const supervisedProjects = await Project.find({ supervisor: supervisorId }).select('_id');
+    const projectIds = supervisedProjects.map(p => p._id);
+
+    // Submissions awaiting review on supervised projects
+    const pendingReviews = await Submission.countDocuments({
+      project: { $in: projectIds },
+      status: { $in: ['Submitted', 'Under Review'] }
+    });
+
+    // Upcoming meetings for supervised projects
+    const upcomingMeetings = await Meeting.countDocuments({
+      project: { $in: projectIds },
+      status: 'Upcoming',
+      date: { $gte: new Date() }
+    });
+
+    // Plagiarism alerts: completed reports above a similarity threshold
+    const plagiarismAlerts = await PlagiarismReport.countDocuments({
+      project: { $in: projectIds },
+      status: 'Completed',
+      overallSimilarity: { $gte: 20 }
+    });
 
     res.status(200).json({
       success: true,
@@ -62,22 +84,22 @@ exports.getStudentMetrics = async (req, res) => {
     // Count projects the student is part of
     const activeProjects = await Project.countDocuments({
       students: studentId,
-      status: { $in: ['pending', 'in_progress'] }
+      status: { $in: ['proposed', 'active'] }
     });
 
     // Count tasks
-    const totalTasks = await Task.countDocuments({ assignee: studentId });
-    const completedTasks = await Task.countDocuments({ assignee: studentId, status: 'completed' });
+    const totalTasks = await Task.countDocuments({ assignedTo: studentId });
+    const completedTasks = await Task.countDocuments({ assignedTo: studentId, status: 'completed' });
 
     // Pending feedback (submitted but not graded)
     const pendingFeedback = await Submission.countDocuments({
       student: studentId,
-      status: { $in: ['Pending', 'In Review'] }
+      status: { $in: ['Submitted', 'Under Review'] }
     });
 
     // Next deadline — find nearest future task due date
     const nextTask = await Task.findOne({
-      assignee: studentId,
+      assignedTo: studentId,
       status: { $ne: 'completed' },
       dueDate: { $gte: new Date() }
     }).sort({ dueDate: 1 }).lean();

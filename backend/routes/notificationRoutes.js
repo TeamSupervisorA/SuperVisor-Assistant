@@ -16,11 +16,15 @@ router.get('/', protect, async (req, res) => {
 
 router.put('/:id/read', protect, async (req, res) => {
   try {
-    const notification = await Notification.findByIdAndUpdate(
-      req.params.id,
+    // Only allow marking your own notifications as read
+    const notification = await Notification.findOneAndUpdate(
+      { _id: req.params.id, user: req.user._id },
       { isRead: true },
       { new: true }
     );
+    if (!notification) {
+      return res.status(404).json({ success: false, error: 'Notification not found' });
+    }
     res.json({ success: true, data: notification });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

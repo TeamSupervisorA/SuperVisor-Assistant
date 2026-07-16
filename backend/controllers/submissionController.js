@@ -2,7 +2,12 @@ const Submission = require('../models/Submission');
 
 exports.getAllSubmissions = async (req, res) => {
   try {
-    const submissions = await Submission.find().populate('student', 'name email').populate('project', 'title').sort({ submittedAt: -1 });
+    const filter = {};
+    if (req.query.project) filter.project = req.query.project;
+    // Students only see their own submissions
+    if (req.user.role === 'student') filter.student = req.user.id;
+
+    const submissions = await Submission.find(filter).populate('student', 'name email').populate('project', 'title').sort({ submittedAt: -1 });
     res.status(200).json({ success: true, count: submissions.length, data: submissions });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

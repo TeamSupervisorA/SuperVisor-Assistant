@@ -36,9 +36,11 @@ const TasksMilestones = () => {
     e.preventDefault();
     if (!activeProject) return;
     try {
+      const payload = { ...newTask, project: activeProject._id };
+      if (!payload.dueDate) delete payload.dueDate; // empty string fails Date cast on the server
       const res = await apiFetch('/api/tasks', {
         method: 'POST',
-        body: JSON.stringify({ ...newTask, project: activeProject._id })
+        body: JSON.stringify(payload)
       });
       if (res.success) {
         setShowModal(false);

@@ -23,7 +23,7 @@ const CreateNewWork = () => {
         body: JSON.stringify({
           title: `[${selectedType.toUpperCase()}] ${title}`,
           description,
-          status: 'pending'
+          status: 'proposed'
         })
       });
       if (res.success) {

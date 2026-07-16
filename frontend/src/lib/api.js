@@ -10,10 +10,16 @@ export const apiFetch = async (path, options = {}) => {
   };
 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
-  const data = await response.json();
 
-  if (!response.ok || data.success === false) {
-    throw new Error(data.error || 'Request failed');
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    // Non-JSON response (e.g. proxy/server error page)
+  }
+
+  if (!response.ok || data?.success === false) {
+    throw new Error(data?.error || `Request failed (${response.status})`);
   }
 
   return data;

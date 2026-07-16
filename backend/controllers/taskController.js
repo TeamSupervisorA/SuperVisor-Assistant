@@ -4,7 +4,7 @@ const Project = require('../models/Project');
 // Check the user can access the task's project
 const canAccessProject = (project, user) => {
   if (user.role === 'admin') return true;
-  if (project.supervisor.toString() === user.id) return true;
+  if (project.supervisor && project.supervisor.toString() === user.id) return true;
   return project.students.some(s => s.toString() === user.id);
 };
 
@@ -49,6 +49,12 @@ exports.createTask = async (req, res) => {
 
     if (!canAccessProject(project, req.user)) {
       return res.status(403).json({ success: false, error: 'Not authorized to add tasks to this project' });
+    }
+
+    // Tasks created by students default to being assigned to themselves,
+    // otherwise the student list view (filtered by assignedTo) would never show them
+    if (req.user.role === 'student' && !req.body.assignedTo) {
+      req.body.assignedTo = req.user.id;
     }
 
     const task = await Task.create(req.body);

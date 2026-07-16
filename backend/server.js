@@ -66,4 +66,10 @@ app.use('/api/plagiarism', require('./routes/plagiarismRoutes'));
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Don't bind a port on Vercel — serverless functions handle requests directly
+if (!process.env.VERCEL) {
+  server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
+// Export for Vercel Serverless Functions
+module.exports = app;

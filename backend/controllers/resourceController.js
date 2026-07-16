@@ -2,7 +2,10 @@ const Resource = require('../models/Resource');
 
 exports.getAllResources = async (req, res) => {
   try {
-    const resources = await Resource.find().populate('project', 'title').sort({ createdAt: -1 });
+    const filter = {};
+    if (req.query.project) filter.project = req.query.project;
+
+    const resources = await Resource.find(filter).populate('project', 'title').sort({ createdAt: -1 });
     res.status(200).json({ success: true, count: resources.length, data: resources });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -11,7 +14,7 @@ exports.getAllResources = async (req, res) => {
 
 exports.createResource = async (req, res) => {
   try {
-    const resource = await Resource.create(req.body);
+    const resource = await Resource.create({ ...req.body, uploadedBy: req.user.id });
     res.status(201).json({ success: true, data: resource });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });

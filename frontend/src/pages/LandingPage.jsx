@@ -306,17 +306,7 @@ const LandingPage = () => {
               <p className="font-body-md text-[20px] text-on-surface-variant max-w-2xl mx-auto">Tailored interfaces designed specifically for the unique workflows of administrators, educators, and researchers.</p>
             </motion.div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-              <TiltCard>
-                <div className="bg-surface-container-lowest rounded-[32px] p-12 text-center flex flex-col items-center border border-outline-variant/10 shadow-lg group hover:shadow-xl transition-all h-full">
-                  <div className="w-24 h-24 rounded-full bg-surface-variant/30 flex items-center justify-center mb-8 text-on-surface group-hover:bg-on-surface group-hover:text-surface transition-colors duration-500">
-                    <span aria-hidden="true" className="material-symbols-outlined text-5xl icon-fill">admin_panel_settings</span>
-                  </div>
-                  <h3 className="font-headline-md text-[28px] font-bold text-on-surface mb-4">Admin</h3>
-                  <p className="font-body-sm text-[16px] text-on-surface-variant leading-relaxed">Oversee departmental progress, allocate resources efficiently, and generate comprehensive institutional analytics.</p>
-                </div>
-              </TiltCard>
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <TiltCard>
                 <div className="bg-surface-container-lowest rounded-[32px] p-12 text-center flex flex-col items-center border-[2px] border-primary/20 shadow-[0_20px_50px_rgba(53,37,205,0.15)] h-full relative overflow-hidden group">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>

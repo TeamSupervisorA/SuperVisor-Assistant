@@ -11,7 +11,7 @@ const projectSchema = new mongoose.Schema({
   supervisor: {
     type: mongoose.Schema.ObjectId,
     ref: 'User',
-    required: true
+    default: null // Student proposals start without a supervisor; assigned later
   },
   students: [{
     type: mongoose.Schema.ObjectId,

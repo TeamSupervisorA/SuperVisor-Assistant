@@ -30,6 +30,24 @@ const getPasswordStrength = (password) => {
   return { score, ...levels[score] };
 };
 
+const InputField = ({ id, label, type = 'text', placeholder, required = false, icon, value, onChange }) => (
+  <div className="space-y-2">
+    <label className="block font-label-md text-[13px] font-semibold text-on-surface-variant" htmlFor={id}>{label}</label>
+    <div className="relative">
+      {icon && <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">{icon}</span>}
+      <input 
+        className={`w-full bg-surface-container-lowest border border-outline-variant rounded-xl ${icon ? 'pl-11' : 'pl-4'} pr-4 py-3 font-body-md text-[15px] text-on-surface dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-on-surface-variant/70`}
+        id={id} 
+        placeholder={placeholder} 
+        type={type} 
+        required={required} 
+        value={value} 
+        onChange={onChange} 
+      />
+    </div>
+  </div>
+);
+
 const Register = () => {
   const [form, setForm] = useState({
     fullName: '',
@@ -95,29 +113,13 @@ const Register = () => {
     }
   };
 
-  const InputField = ({ id, label, type = 'text', placeholder, required = false, icon }) => (
-    <div className="space-y-2">
-      <label className="block font-label-md text-[13px] font-semibold text-on-surface-variant" htmlFor={id}>{label}</label>
-      <div className="relative">
-        {icon && <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[20px]">{icon}</span>}
-        <input 
-          className={`w-full bg-surface-container-lowest border border-outline-variant rounded-xl ${icon ? 'pl-11' : 'pl-4'} pr-4 py-3 font-body-md text-[15px] text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-outline`}
-          id={id} 
-          placeholder={placeholder} 
-          type={type} 
-          required={required} 
-          value={form[id]} 
-          onChange={handleChange} 
-        />
-      </div>
-    </div>
-  );
+
 
   return (
     <div className="bg-background text-on-background font-body-md antialiased min-h-screen flex flex-col lg:flex-row">
       {/* Left — Animated Illustration Panel */}
       <div className="hidden lg:flex w-1/2 relative items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-tertiary-container via-primary to-primary-container animate-gradient bg-[length:400%_400%]"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-tertiary-container via-primary dark:via-primary-container to-primary-container animate-gradient bg-[length:400%_400%]"></div>
         
         <motion.div 
           animate={{ y: [0, -15, 0], rotate: [0, 3, 0] }}
@@ -199,13 +201,13 @@ const Register = () => {
 
           <form className="space-y-5" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <InputField id="fullName" label="Full Name" placeholder="Dr. Jane Doe" required icon="person" />
+              <InputField id="fullName" label="Full Name" placeholder="Dr. Jane Doe" required icon="person" value={form.fullName} onChange={handleChange} />
               <div className="space-y-2">
                 <label className="block font-label-md text-[13px] font-semibold text-on-surface-variant" htmlFor="role">Role</label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[20px]">badge</span>
+                  <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">badge</span>
                   <select 
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-10 py-3 font-body-md text-[15px] text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none transition-all" 
+                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-10 py-3 font-body-md text-[15px] text-on-surface dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none transition-all" 
                     id="role" 
                     required 
                     value={form.role} 
@@ -215,26 +217,26 @@ const Register = () => {
                     <option value="student">Student</option>
                     <option value="supervisor">Teacher / Supervisor</option>
                   </select>
-                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline text-[20px] pointer-events-none">expand_more</span>
+                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] pointer-events-none">expand_more</span>
                 </div>
               </div>
             </div>
 
-            <InputField id="email" label="University Email" type="email" placeholder="you@university.edu" required icon="mail" />
+            <InputField id="email" label="University Email" type="email" placeholder="you@university.edu" required icon="mail" value={form.email} onChange={handleChange} />
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-              <InputField id="studentId" label="Student / Staff ID" placeholder="2024-001" icon="id_card" />
-              <InputField id="department" label="Department" placeholder="Computer Science" icon="domain" />
-              <InputField id="batch" label="Batch / Year" placeholder="Fall '24" icon="calendar_month" />
+              <InputField id="studentId" label="Student / Staff ID" placeholder="2024-001" icon="id_card" value={form.studentId} onChange={handleChange} />
+              <InputField id="department" label="Department" placeholder="Computer Science" icon="domain" value={form.department} onChange={handleChange} />
+              <InputField id="batch" label="Batch / Year" placeholder="Fall '24" icon="calendar_month" value={form.batch} onChange={handleChange} />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div className="space-y-2">
                 <label className="block font-label-md text-[13px] font-semibold text-on-surface-variant" htmlFor="password">Password</label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[20px]">lock</span>
+                  <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">lock</span>
                   <input 
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-12 py-3 font-body-md text-[15px] text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-outline" 
+                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-12 py-3 font-body-md text-[15px] text-on-surface dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-on-surface-variant/70" 
                     id="password" 
                     placeholder="••••••••" 
                     type={showPassword ? 'text' : 'password'} 
@@ -245,7 +247,7 @@ const Register = () => {
                   <button 
                     type="button" 
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface transition-colors p-1"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors p-1"
                   >
                     <span className="material-symbols-outlined text-[20px]">{showPassword ? 'visibility_off' : 'visibility'}</span>
                   </button>
@@ -266,9 +268,9 @@ const Register = () => {
               <div className="space-y-2">
                 <label className="block font-label-md text-[13px] font-semibold text-on-surface-variant" htmlFor="confirmPassword">Confirm Password</label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-outline text-[20px]">lock</span>
+                  <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">lock</span>
                   <input 
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-12 py-3 font-body-md text-[15px] text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-outline" 
+                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-12 py-3 font-body-md text-[15px] text-on-surface dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-on-surface-variant/70" 
                     id="confirmPassword" 
                     placeholder="••••••••" 
                     type={showConfirmPassword ? 'text' : 'password'} 
@@ -279,7 +281,7 @@ const Register = () => {
                   <button 
                     type="button" 
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface transition-colors p-1"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors p-1"
                   >
                     <span className="material-symbols-outlined text-[20px]">{showConfirmPassword ? 'visibility_off' : 'visibility'}</span>
                   </button>
