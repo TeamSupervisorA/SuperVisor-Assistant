@@ -26,8 +26,20 @@ exports.createSubmission = async (req, res) => {
 
 exports.updateSubmission = async (req, res) => {
   try {
-    const submission = await Submission.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    let submission = await Submission.findById(req.params.id);
     if (!submission) return res.status(404).json({ success: false, error: 'Submission not found' });
+
+    let updates = req.body;
+    if (req.user.role === 'student') {
+      // Students may only edit their own submission, and never grading fields
+      if (submission.student.toString() !== req.user.id) {
+        return res.status(403).json({ success: false, error: 'Not authorized to update this submission' });
+      }
+      const { grade, feedback, status, student, ...allowed } = updates;
+      updates = allowed;
+    }
+
+    submission = await Submission.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
     res.status(200).json({ success: true, data: submission });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
@@ -36,8 +48,14 @@ exports.updateSubmission = async (req, res) => {
 
 exports.deleteSubmission = async (req, res) => {
   try {
-    const submission = await Submission.findByIdAndDelete(req.params.id);
+    const submission = await Submission.findById(req.params.id);
     if (!submission) return res.status(404).json({ success: false, error: 'Submission not found' });
+
+    if (req.user.role === 'student' && submission.student.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, error: 'Not authorized to delete this submission' });
+    }
+
+    await submission.deleteOne();
     res.status(200).json({ success: true, data: {} });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });

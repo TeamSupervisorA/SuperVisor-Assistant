@@ -30,6 +30,7 @@ const ProjectChat = () => {
   }, [projectId]);
 
   useEffect(() => {
+    if (!projectId) return; // no active project selected yet
     // Fetch historical messages
     const fetchMessages = async () => {
       try {

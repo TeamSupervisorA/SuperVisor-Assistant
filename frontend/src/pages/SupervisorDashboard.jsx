@@ -133,7 +133,7 @@ const SupervisorDashboard = () => {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2 + idx * 0.1 }}
-                  className="hover:bg-[#F1F5F9] transition-colors group cursor-pointer"
+                  className="hover:bg-surface-container-low transition-colors group cursor-pointer"
                   onClick={() => handleProjectClick(project)}
                 >
                   <td className="p-4 px-6 flex items-center gap-4">
@@ -147,7 +147,7 @@ const SupervisorDashboard = () => {
                   </td>
                   <td className="p-4 px-6 text-secondary">{new Date(project.createdAt || Date.now()).toLocaleDateString()}</td>
                   <td className="p-4 px-6">
-                    <span className={`px-3 py-1.5 rounded-full font-label-md text-[12px] font-bold uppercase tracking-wide ${project.status === 'completed' ? 'bg-[#D1FAE5] text-[#065F46]' : project.status === 'pending' ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#E0E7FF] text-[#3730A3]'}`}>
+                    <span className={`px-3 py-1.5 rounded-full font-label-md text-[12px] font-bold uppercase tracking-wide ${project.status === 'completed' ? 'bg-[#D1FAE5] text-[#065F46]' : (project.status === 'proposed' || project.status === 'on_hold') ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#E0E7FF] text-[#3730A3]'}`}>
                       {project.status?.replace('_', ' ') || 'Active'}
                     </span>
                   </td>

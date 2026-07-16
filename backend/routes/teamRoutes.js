@@ -1,5 +1,5 @@
 const express = require('express');
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 const teamController = require('../controllers/teamController');
 
 const router = express.Router();
@@ -9,12 +9,12 @@ router.use(protect);
 router
   .route('/')
   .get(teamController.getAllTeams)
-  .post(teamController.createTeam);
+  .post(authorize('supervisor', 'admin'), teamController.createTeam);
 
 router
   .route('/:id')
   .get(teamController.getTeam)
-  .put(teamController.updateTeam)
-  .delete(teamController.deleteTeam);
+  .put(authorize('supervisor', 'admin'), teamController.updateTeam)
+  .delete(authorize('supervisor', 'admin'), teamController.deleteTeam);
 
 module.exports = router;

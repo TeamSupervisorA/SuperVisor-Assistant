@@ -94,8 +94,8 @@ const DetailedFeedback = () => {
           <h3 className="font-title-lg text-[20px] font-semibold text-on-surface-variant mb-2">Overall Score</h3>
           <div className="relative w-32 h-32 flex items-center justify-center mb-4">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" fill="none" r="45" stroke="#e7eeff" strokeWidth="8"></circle>
-              <circle cx="50" cy="50" fill="none" r="45" stroke={totalScore >= 80 ? '#3525cd' : totalScore >= 50 ? '#ffb4ab' : '#ba1a1a'} strokeDasharray="283" strokeDashoffset={283 - (283 * totalScore) / 100} strokeLinecap="round" strokeWidth="8"></circle>
+              <circle cx="50" cy="50" fill="none" r="45" stroke="var(--color-surface-container-high)" strokeWidth="8"></circle>
+              <circle cx="50" cy="50" fill="none" r="45" stroke={totalScore >= 80 ? 'var(--color-primary)' : totalScore >= 50 ? 'var(--color-tertiary)' : 'var(--color-error)'} strokeDasharray="283" strokeDashoffset={283 - (283 * totalScore) / 100} strokeLinecap="round" strokeWidth="8"></circle>
             </svg>
             <div className="absolute flex flex-col items-center">
               <span className="font-display text-[48px] font-bold text-on-surface leading-[56px] tracking-[-0.02em]">{totalScore}</span>
@@ -110,7 +110,7 @@ const DetailedFeedback = () => {
         </div>
 
         {/* General Feedback & AI Insights (Col 8) */}
-        <div className="lg:col-span-8 bg-surface-container-lowest rounded-[24px] p-6 shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05),_0px_2px_4px_-2px_rgba(0,0,0,0.05)] relative border-l-2 border-primary" style={{boxShadow: "inset 1px 0 0 0 #c3c0ff, inset 0 1px 0 0 #c3c0ff", ...{boxShadow: "0px 4px 6px -1px rgba(0, 0, 0, 0.05), 0px 2px 4px -2px rgba(0, 0, 0, 0.05)"}}}>
+        <div className="lg:col-span-8 bg-surface-container-lowest rounded-[24px] p-6 relative border-l-2 border-primary" style={{boxShadow: "0px 4px 6px -1px rgba(0, 0, 0, 0.05), 0px 2px 4px -2px rgba(0, 0, 0, 0.05)"}}>
           <div className="absolute top-6 right-6 text-primary">
             <span className="material-symbols-outlined">rate_review</span>
           </div>
