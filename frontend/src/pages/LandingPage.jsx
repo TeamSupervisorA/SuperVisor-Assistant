@@ -200,18 +200,7 @@ const LandingPage = () => {
             style={{ y: heroY, opacity: heroOpacity }}
             className="pt-32 lg:pt-48 pb-20 flex flex-col items-center text-center relative"
           >
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-surface/40 border border-outline-variant/30 mb-10 backdrop-blur-xl shadow-sm"
-            >
-              <div className="flex -space-x-2">
-                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center border-2 border-surface"><span className="material-symbols-outlined text-[12px] text-primary">auto_awesome</span></div>
-                <div className="w-6 h-6 rounded-full bg-tertiary-container/30 flex items-center justify-center border-2 border-surface"><span className="material-symbols-outlined text-[12px] text-tertiary">speed</span></div>
-              </div>
-              <span className="font-label-md font-semibold text-on-surface text-[13px] tracking-wide uppercase">Introducing Gemini 2.5 Flash Integration</span>
-            </motion.div>
+
 
             <TextReveal 
               text="Elevate Academic"
