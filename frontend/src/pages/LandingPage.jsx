@@ -133,7 +133,7 @@ const LandingPage = () => {
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-          className="flex gap-3 items-center"
+          className="flex items-center gap-4 sm:gap-6"
         >
           <button
             onClick={toggleDark}
@@ -151,8 +151,13 @@ const LandingPage = () => {
               {isDark ? 'light_mode' : 'dark_mode'}
             </motion.span>
           </button>
-          <Link to="/login" className="font-label-md text-[14px] font-semibold text-secondary hover:text-primary transition-colors duration-200">Sign In</Link>
-          <Link to="/register" className="font-label-md text-[14px] font-semibold bg-on-surface text-surface px-5 py-2.5 rounded-full hover:bg-primary hover:text-on-primary transition-all duration-300 shadow-md hover:shadow-lg hover:shadow-primary/30 transform hover:-translate-y-0.5">Get Started</Link>
+          
+          <div className="w-px h-5 bg-outline-variant/40 hidden sm:block"></div>
+
+          <div className="flex items-center gap-4 sm:gap-5">
+            <Link to="/login" className="font-label-md text-[15px] font-medium text-on-surface hover:text-primary transition-colors duration-200">Sign In</Link>
+            <Link to="/register" className="font-label-md text-[14px] font-semibold bg-on-surface text-surface px-6 py-2.5 rounded-full hover:bg-primary hover:text-on-primary transition-all duration-300 shadow-md hover:shadow-lg hover:shadow-primary/30 transform hover:-translate-y-0.5">Get Started</Link>
+          </div>
         </motion.div>
       </header>
       
