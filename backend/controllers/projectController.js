@@ -1,4 +1,6 @@
 const Project = require('../models/Project');
+const Task = require('../models/Task');
+const Submission = require('../models/Submission');
 
 // @desc    Get projects (students/supervisors see their own, admins see all)
 // @route   GET /api/projects
@@ -143,6 +145,56 @@ exports.deleteProject = async (req, res) => {
     await project.deleteOne();
 
     res.status(200).json({ success: true, data: {} });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Generate Project Report
+// @route   GET /api/projects/:id/report
+// @access  Private
+exports.getProjectReport = async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id)
+      .populate('students', 'name email')
+      .populate('supervisor', 'name email');
+
+    if (!project) {
+      return res.status(404).json({ success: false, error: 'Project not found' });
+    }
+
+    const tasks = await Task.find({ project: req.params.id });
+    const submissions = await Submission.find({ project: req.params.id }).sort({ submittedAt: -1 });
+
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(t => t.status === 'completed').length;
+    const pendingTasks = tasks.filter(t => ['todo', 'in_progress', 'review'].includes(t.status)).length;
+    const delayedTasks = tasks.filter(t => t.status === 'delayed').length;
+
+    const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    const report = {
+      projectTitle: project.title,
+      description: project.description,
+      status: project.status,
+      teamMembers: project.students,
+      supervisor: project.supervisor,
+      progressPercentage,
+      taskSummary: {
+        total: totalTasks,
+        completed: completedTasks,
+        pending: pendingTasks,
+        delayed: delayedTasks,
+      },
+      recentFeedback: submissions.map(sub => ({
+        submissionTitle: sub.title,
+        feedback: sub.feedback,
+        grade: sub.grade,
+        date: sub.submittedAt
+      })).filter(sub => sub.feedback)
+    };
+
+    res.status(200).json({ success: true, data: report });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
   }

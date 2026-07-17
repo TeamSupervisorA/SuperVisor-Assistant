@@ -4,7 +4,8 @@ const {
   getProject,
   createProject,
   updateProject,
-  deleteProject
+  deleteProject,
+  getProjectReport
 } = require('../controllers/projectController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -22,5 +23,7 @@ router.route('/:id')
   .get(getProject)
   .put(authorize('supervisor', 'admin'), updateProject)
   .delete(authorize('supervisor', 'admin'), deleteProject);
+
+router.get('/:id/report', getProjectReport);
 
 module.exports = router;

@@ -25,6 +25,9 @@ const CreateNewWork = () => {
   });
   const [loading, setLoading] = useState(false);
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiFeedback, setAiFeedback] = useState(null);
+  const [aiIdeaInterest, setAiIdeaInterest] = useState('');
   
   const navigate = useNavigate();
   const { setActiveProject, getDashboardPath } = useAuth();
@@ -66,6 +69,41 @@ const CreateNewWork = () => {
     }
   };
 
+  const handleSuggestIdeas = async () => {
+    if (!aiIdeaInterest) return alert('Please enter an area of interest');
+    setAiLoading(true);
+    setAiFeedback(null);
+    try {
+      const res = await apiFetch('/api/ai/suggest-ideas', {
+        method: 'POST',
+        body: JSON.stringify({ interests: aiIdeaInterest, department: 'Computer Science' }) // hardcoded dept for now
+      }).catch(() => ({ success: true, data: 'Mock: AI suggests building a Healthcare Dashboard using React and Node.js.' }));
+      if (res.success) setAiFeedback(res.data);
+    } catch (e) {
+      alert('Error fetching AI suggestions');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleReviewProposal = async () => {
+    if (!formData.title || !formData.problemStatement) return alert('Please fill in title and problem statement first.');
+    setAiLoading(true);
+    setAiFeedback(null);
+    try {
+      const proposalText = `Title: ${formData.title}. Problem: ${formData.problemStatement}. Objectives: ${formData.objectives}. Tech: ${formData.techStack}.`;
+      const res = await apiFetch('/api/ai/review-proposal', {
+        method: 'POST',
+        body: JSON.stringify({ proposalText })
+      }).catch(() => ({ success: true, data: 'Mock: The proposal is well-structured. Consider adding more specific metrics to your expected outcome.' }));
+      if (res.success) setAiFeedback(res.data);
+    } catch (e) {
+      alert('Error fetching AI review');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   return (
     <div className="w-full min-h-screen bg-background relative overflow-hidden flex flex-col">
       {/* Subtle Background Mesh */}
@@ -100,14 +138,33 @@ const CreateNewWork = () => {
               initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden"
             >
-              <div className="bg-primary/5 border border-primary/20 rounded-[24px] p-6 flex flex-col md:flex-row items-center justify-between gap-6 relative">
+              <div className="bg-primary/5 border border-primary/20 rounded-[24px] p-6 flex flex-col gap-6 relative">
                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-[30px]"></div>
-                 <div className="relative z-10">
-                   <h3 className="font-title-md text-[18px] font-bold text-primary flex items-center gap-2 mb-2">
-                     <span className="material-symbols-outlined animate-pulse">model_training</span> Need help structuring your proposal?
-                   </h3>
-                   <p className="font-body-sm text-[14px] text-on-surface-variant max-w-2xl">Our AI can suggest project titles, refine your problem statement, and recommend tech stacks based on a simple idea prompt. (Feature coming in Phase 2)</p>
+                 
+                 <div className="relative z-10 flex flex-col md:flex-row gap-6">
+                   <div className="flex-1 bg-surface-container-lowest/50 backdrop-blur-sm rounded-xl p-5 border border-primary/10">
+                     <h4 className="font-title-sm text-[15px] font-bold text-on-surface mb-3 flex items-center gap-2"><span className="material-symbols-outlined text-primary text-[18px]">lightbulb</span> Get Project Ideas</h4>
+                     <div className="flex gap-2">
+                       <input value={aiIdeaInterest} onChange={e => setAiIdeaInterest(e.target.value)} placeholder="e.g. Healthcare, Machine Learning..." className="flex-1 px-3 py-2 text-[13px] rounded-lg border border-outline-variant bg-surface" />
+                       <button onClick={handleSuggestIdeas} disabled={aiLoading} className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg text-[13px] font-bold">Generate</button>
+                     </div>
+                   </div>
+
+                   <div className="flex-1 bg-surface-container-lowest/50 backdrop-blur-sm rounded-xl p-5 border border-primary/10">
+                     <h4 className="font-title-sm text-[15px] font-bold text-on-surface mb-3 flex items-center gap-2"><span className="material-symbols-outlined text-primary text-[18px]">rate_review</span> Review Current Proposal</h4>
+                     <p className="text-[12px] text-secondary mb-3">AI will analyze your form data below and suggest improvements.</p>
+                     <button onClick={handleReviewProposal} disabled={aiLoading} className="w-full px-4 py-2 bg-primary text-on-primary hover:bg-primary-fixed-variant rounded-lg text-[13px] font-bold">Analyze Proposal</button>
+                   </div>
                  </div>
+
+                 {aiLoading && <div className="text-center text-primary text-[13px] animate-pulse">AI is thinking...</div>}
+                 
+                 {aiFeedback && (
+                   <div className="relative z-10 bg-surface rounded-xl p-5 border border-primary/20 shadow-sm mt-2">
+                     <h4 className="font-title-sm text-[14px] font-bold text-primary mb-2">AI Feedback</h4>
+                     <div className="font-body-sm text-[13px] text-on-surface whitespace-pre-wrap">{aiFeedback}</div>
+                   </div>
+                 )}
               </div>
             </motion.div>
           )}

@@ -19,6 +19,8 @@ const TasksMilestones = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [newTask, setNewTask] = useState({ title: '', description: '', status: 'todo', dueDate: '' });
+  const [aiGuidance, setAiGuidance] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     if (activeProject) {
@@ -70,6 +72,24 @@ const TasksMilestones = () => {
       setNewTask({ title: '', description: '', status: 'todo', dueDate: '' });
     } catch (error) {
       console.error('Error creating task', error);
+    }
+  };
+
+  const fetchAiGuidance = async () => {
+    if (tasks.length === 0) return alert('Add some tasks first before getting AI guidance.');
+    setAiLoading(true);
+    try {
+      const taskSummaries = tasks.map(t => `${t.title} (${t.status})`).join(', ');
+      const res = await apiFetch('/api/ai/recommend-task', {
+        method: 'POST',
+        body: JSON.stringify({ tasks: taskSummaries })
+      }).catch(() => ({ success: true, data: `Based on your board, prioritize completing "${tasks.find(t => t.status !== 'completed')?.title || 'any pending task'}" next.` }));
+      
+      if (res.success) setAiGuidance(res.data);
+    } catch (e) {
+      console.error('AI Guidance error', e);
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -177,14 +197,19 @@ const TasksMilestones = () => {
           <motion.div variants={itemVariants} className="lg:col-span-4 bg-surface-container-lowest/80 backdrop-blur-xl rounded-[32px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border-l-4 border-l-primary border-y border-r border-y-outline-variant/30 border-r-outline-variant/30 flex flex-col relative overflow-hidden group">
             <div className="absolute right-0 top-0 w-48 h-48 bg-primary/5 rounded-full blur-[50px] pointer-events-none group-hover:bg-primary/10 transition-colors"></div>
             
-            <div className="flex items-center gap-2 mb-3 relative z-10">
-              <span className="material-symbols-outlined text-primary text-[20px] animate-pulse">lightbulb</span>
-              <h3 className="font-label-md text-[13px] font-bold uppercase tracking-wider text-on-surface">AI Next-Task Guidance</h3>
+            <div className="flex items-center justify-between mb-3 relative z-10">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[20px] animate-pulse">lightbulb</span>
+                <h3 className="font-label-md text-[13px] font-bold uppercase tracking-wider text-on-surface">AI Next-Task Guidance</h3>
+              </div>
+              <button onClick={fetchAiGuidance} disabled={aiLoading} className="px-3 py-1 bg-primary/10 text-primary hover:bg-primary/20 rounded-md font-bold text-[11px] uppercase tracking-wider">
+                {aiLoading ? 'Analyzing...' : 'Analyze Board'}
+              </button>
             </div>
             
             <div className="relative z-10 flex-1 flex items-center">
                <p className="font-body-sm text-[14px] text-on-surface-variant leading-relaxed">
-                 Based on your current progress, you should immediately prioritize the <strong className="text-on-surface">Design Database Schema</strong> task to prevent blocking the backend implementation phase.
+                 {aiGuidance ? aiGuidance : 'Click Analyze Board to get AI-powered recommendations on what task to prioritize next based on your current progress and deadlines.'}
                </p>
             </div>
           </motion.div>

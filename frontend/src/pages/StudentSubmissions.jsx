@@ -18,7 +18,7 @@ const StudentSubmissions = () => {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [newSub, setNewSub] = useState({ title: '', fileUrl: '' });
+  const [newSub, setNewSub] = useState({ title: '', file: null });
 
   useEffect(() => {
     if (activeProject) {
@@ -44,16 +44,36 @@ const StudentSubmissions = () => {
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!activeProject) return;
+    if (!activeProject || !newSub.file) return alert('Please select a file to upload.');
     try {
+      // 1. Upload file
+      const formData = new FormData();
+      formData.append('file', newSub.file);
+      
+      const uploadRes = await fetch('http://localhost:5000/api/upload', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        body: formData
+      });
+      const uploadData = await uploadRes.json();
+      
+      if (!uploadData.success) {
+        throw new Error(uploadData.error || 'Failed to upload file');
+      }
+
+      // 2. Create submission with the returned URL
       const res = await apiFetch('/api/submissions', {
         method: 'POST',
-        body: JSON.stringify({ ...newSub, project: activeProject._id })
-      }).catch(() => ({ success: true, data: { ...newSub, _id: Date.now().toString(), status: 'Submitted', submittedAt: new Date().toISOString() } }));
+        body: JSON.stringify({ 
+          title: newSub.title, 
+          fileUrl: uploadData.data.fileUrl, 
+          project: activeProject._id 
+        })
+      }).catch(() => ({ success: true, data: { title: newSub.title, fileUrl: uploadData.data.fileUrl, _id: Date.now().toString(), status: 'Submitted', submittedAt: new Date().toISOString() } }));
       
       if (res.success) {
         setShowModal(false);
-        setNewSub({ title: '', fileUrl: '' });
+        setNewSub({ title: '', file: null });
         if (res.data) {
           setSubmissions([res.data, ...submissions]);
         } else {
@@ -143,7 +163,7 @@ const StudentSubmissions = () => {
                         {sub.grade ? `Grade: ${sub.grade}` : 'Under Review'}
                       </span>
                     </div>
-                    <a href={sub.fileUrl} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors shadow-sm">
+                    <a href={`http://localhost:5000${sub.fileUrl}`} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors shadow-sm">
                       <span className="material-symbols-outlined text-[20px]">open_in_new</span>
                     </a>
                   </div>
@@ -181,8 +201,8 @@ const StudentSubmissions = () => {
                     <input required value={newSub.title} onChange={e => setNewSub({...newSub, title: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-on-surface-variant/50" placeholder="e.g. Chapter 1 Draft" />
                   </div>
                   <div className="space-y-2">
-                    <label className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">File URL / Link</label>
-                    <input required type="url" value={newSub.fileUrl} onChange={e => setNewSub({...newSub, fileUrl: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-on-surface-variant/50" placeholder="https://" />
+                    <label className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">Select File</label>
+                    <input required type="file" onChange={e => setNewSub({...newSub, file: e.target.files[0]})} className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" />
                   </div>
                   <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-outline-variant/30">
                     <button type="button" onClick={() => setShowModal(false)} className="px-6 py-3 rounded-xl font-title-sm text-[14px] font-bold text-on-surface border border-outline-variant hover:bg-surface-container transition-colors">Cancel</button>

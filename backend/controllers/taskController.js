@@ -13,6 +13,12 @@ const canAccessProject = (project, user) => {
 // @access  Private
 exports.getTasks = async (req, res) => {
   try {
+    // Implement Delay Detection: Update overdue tasks to 'delayed'
+    await Task.updateMany(
+      { status: { $ne: 'completed' }, dueDate: { $lt: new Date() } },
+      { $set: { status: 'delayed' } }
+    );
+
     let query = {};
 
     if (req.query.project) {

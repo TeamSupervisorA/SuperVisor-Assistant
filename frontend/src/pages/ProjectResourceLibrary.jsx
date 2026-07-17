@@ -18,7 +18,7 @@ const ProjectResourceLibrary = () => {
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [newResource, setNewResource] = useState({ title: '', type: 'Document', category: 'General', url: '' });
+  const [newResource, setNewResource] = useState({ title: '', type: 'Document', category: 'General', url: '', file: null });
 
   useEffect(() => {
     if (activeProject) {
@@ -46,14 +46,37 @@ const ProjectResourceLibrary = () => {
     e.preventDefault();
     if (!activeProject) return;
     try {
+      let finalUrl = newResource.url;
+      
+      // If it's not a link and a file is selected, upload it
+      if (newResource.type !== 'Link' && newResource.file) {
+        const formData = new FormData();
+        formData.append('file', newResource.file);
+        
+        const uploadRes = await fetch('http://localhost:5000/api/upload', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+          body: formData
+        });
+        const uploadData = await uploadRes.json();
+        
+        if (!uploadData.success) {
+          throw new Error(uploadData.error || 'Failed to upload file');
+        }
+        finalUrl = uploadData.data.fileUrl;
+      }
+
+      const payload = { ...newResource, url: finalUrl, project: activeProject._id };
+      delete payload.file; // don't send raw file object in JSON payload
+
       const res = await apiFetch('/api/resources', {
         method: 'POST',
-        body: JSON.stringify({ ...newResource, project: activeProject._id })
-      }).catch(() => ({ success: true, data: { ...newResource, _id: Date.now().toString(), createdAt: new Date().toISOString() } }));
+        body: JSON.stringify(payload)
+      }).catch(() => ({ success: true, data: { ...payload, _id: Date.now().toString(), createdAt: new Date().toISOString() } }));
       
       if (res.success) {
         setShowModal(false);
-        setNewResource({ title: '', type: 'Document', category: 'General', url: '' });
+        setNewResource({ title: '', type: 'Document', category: 'General', url: '', file: null });
         if (res.data) {
           setResources([res.data, ...resources]);
         } else {
@@ -159,7 +182,9 @@ const ProjectResourceLibrary = () => {
                         <span className="font-label-md text-[11px] font-bold text-secondary uppercase tracking-widest border border-outline-variant/30 px-2 py-1 rounded-md bg-surface-container-low">{res.category}</span>
                       </div>
                       <h4 className="font-title-md text-[18px] font-bold text-on-surface mb-2 leading-snug group-hover:text-primary transition-colors relative z-10">{res.title}</h4>
-                      <p className="font-body-sm text-[13px] text-secondary line-clamp-1 mb-6 truncate relative z-10 group-hover:text-primary/70">{res.url}</p>
+                      <p className="font-body-sm text-[13px] text-secondary line-clamp-1 mb-6 truncate relative z-10 group-hover:text-primary/70">
+                        {res.url ? (res.url.startsWith('/uploads') ? <a href={`http://localhost:5000${res.url}`} target="_blank" rel="noreferrer" className="hover:underline">{res.url}</a> : <a href={res.url} target="_blank" rel="noreferrer" className="hover:underline">{res.url}</a>) : 'No file attached'}
+                      </p>
                       
                       <div className="mt-auto pt-4 border-t border-outline-variant/30 flex items-center justify-between relative z-10">
                         <span className="font-label-sm text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{res.type}</span>
@@ -204,10 +229,17 @@ const ProjectResourceLibrary = () => {
                     <input type="text" required value={newResource.title} onChange={(e) => setNewResource({...newResource, title: e.target.value})} className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl font-body-md text-[14px] text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-on-surface-variant/50" placeholder="e.g. Survey Dataset v1" />
                   </div>
                   
-                  <div className="space-y-2">
-                    <label className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">URL / File Link</label>
-                    <input type="url" required value={newResource.url} onChange={(e) => setNewResource({...newResource, url: e.target.value})} className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl font-body-md text-[14px] text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-on-surface-variant/50" placeholder="https://..." />
-                  </div>
+                  {newResource.type === 'Link' ? (
+                    <div className="space-y-2">
+                      <label className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">URL / File Link</label>
+                      <input type="url" required value={newResource.url} onChange={(e) => setNewResource({...newResource, url: e.target.value})} className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl font-body-md text-[14px] text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-on-surface-variant/50" placeholder="https://..." />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">Select File</label>
+                      <input type="file" required onChange={(e) => setNewResource({...newResource, file: e.target.files[0]})} className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" />
+                    </div>
+                  )}
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">

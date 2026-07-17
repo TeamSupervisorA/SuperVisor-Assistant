@@ -25,6 +25,11 @@ app.use('/api/teams', require('./routes/teamRoutes'));
 app.use('/api/meetings', require('./routes/meetingRoutes'));
 app.use('/api/resources', require('./routes/resourceRoutes'));
 app.use('/api/submissions', require('./routes/submissionRoutes'));
+app.use('/api/upload', require('./routes/uploadRoutes'));
+
+// Serve uploads folder as static
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const http = require('http');
 const { Server } = require('socket.io');
