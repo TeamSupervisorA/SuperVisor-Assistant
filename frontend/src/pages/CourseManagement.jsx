@@ -189,7 +189,7 @@ const CourseManagement = () => {
                   <td colSpan="6" className="py-8 text-center text-secondary">No courses found. Add your first course.</td>
                 </tr>
               ) : courses.map(course => (
-                <tr key={course._id} className="hover:bg-[#F1F5F9] transition-colors group">
+                <tr key={course._id} className="hover:bg-surface-container-low transition-colors group">
                   <td className="py-4 px-6 font-semibold">{course.code}</td>
                   <td className="py-4 px-6">{course.name}</td>
                   <td className="py-4 px-6 text-secondary">{course.department}</td>

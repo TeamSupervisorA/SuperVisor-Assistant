@@ -37,6 +37,7 @@
   --color-on-tertiary: #ffffff;
   --color-on-error-container: #93000a;
   --color-primary: #3525cd;
+  --color-primary-rgb: 53, 37, 205;
   --color-inverse-surface: #263143;
   --color-primary-fixed-dim: #c3c0ff;
   --color-tertiary: #004d70;
@@ -95,6 +96,7 @@
   --color-on-tertiary: #003350;
   --color-on-error-container: #ffdad6;
   --color-primary: #c3c0ff;
+  --color-primary-rgb: 195, 192, 255;
   --color-inverse-surface: #e5e1ec;
   --color-primary-fixed-dim: #c3c0ff;
   --color-tertiary: #89ceff;
