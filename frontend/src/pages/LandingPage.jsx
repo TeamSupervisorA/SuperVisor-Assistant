@@ -137,7 +137,7 @@ const LandingPage = () => {
   const [activeRole, setActiveRole] = useState('supervisor');
 
   return (
-    <div className="bg-background text-on-background font-body-md min-h-screen flex flex-col overflow-hidden relative selection:bg-primary/20 selection:text-primary">
+    <div className="bg-background text-on-background font-body-md min-h-screen flex flex-col overflow-hidden relative selection:bg-primary/20 selection:text-primary scroll-smooth">
       <MeshGradient />
 
       {/* Modern Header */}
@@ -147,12 +147,25 @@ const LandingPage = () => {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           className="flex items-center gap-3 group cursor-pointer"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         >
           <div className="w-10 h-10 rounded-[14px] bg-gradient-to-br from-primary to-primary-fixed-variant flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
             <span aria-hidden="true" className="material-symbols-outlined text-on-primary icon-fill text-[20px]">school</span>
           </div>
           <span className="font-headline-md text-[22px] font-black tracking-tight text-on-surface">SuperVisor<span className="text-primary">.ai</span></span>
         </motion.div>
+
+        {/* Central Navigation */}
+        <motion.nav 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          className="hidden lg:flex items-center gap-8 absolute left-1/2 -translate-x-1/2 bg-surface-variant/30 px-6 py-2.5 rounded-full backdrop-blur-md border border-outline-variant/20 shadow-sm"
+        >
+          <a href="#features" className="font-label-md text-[14px] font-semibold text-on-surface-variant hover:text-primary transition-colors">Features</a>
+          <a href="#audience" className="font-label-md text-[14px] font-semibold text-on-surface-variant hover:text-primary transition-colors">Audience</a>
+          <a href="#pricing" className="font-label-md text-[14px] font-semibold text-on-surface-variant hover:text-primary transition-colors">Pricing</a>
+        </motion.nav>
         
         <motion.div 
           initial={{ opacity: 0, x: 20 }}
@@ -188,6 +201,9 @@ const LandingPage = () => {
               <div className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <span className="relative z-10 hidden group-hover:inline ml-2 text-on-primary">→</span>
             </Link>
+            <button className="lg:hidden w-10 h-10 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-variant/30 ml-2">
+              <span className="material-symbols-outlined">menu</span>
+            </button>
           </div>
         </motion.div>
       </header>
@@ -227,9 +243,9 @@ const LandingPage = () => {
               transition={{ duration: 0.8, delay: 0.7, ease: [0.16, 1, 0.3, 1] }}
               className="flex flex-col sm:flex-row gap-5"
             >
-              <Link to="/register" className="group font-label-lg text-[16px] font-bold bg-on-surface text-surface px-8 py-4 rounded-full transition-all duration-300 hover:shadow-[0_0_40px_rgba(53,37,205,0.4)] hover:scale-105 flex items-center justify-center gap-3 relative overflow-hidden">
+              <Link to="/register" className="group font-label-lg text-[16px] font-bold bg-on-surface text-surface px-8 py-4 rounded-full transition-all duration-300 hover:shadow-[0_0_40px_rgba(53,37,205,0.4)] hover:-translate-y-1 flex items-center justify-center gap-3 relative overflow-hidden">
                 <span className="relative z-10">Start Building the Future</span>
-                <span className="material-symbols-outlined relative z-10 transition-transform group-hover:translate-x-1 text-[20px]">arrow_forward</span>
+                <span className="material-symbols-outlined relative z-10 transition-transform group-hover:translate-x-2 text-[20px]">arrow_forward</span>
                 <div className="absolute inset-0 bg-gradient-to-r from-primary to-tertiary opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               </Link>
               <button className="group font-label-lg text-[16px] font-bold text-on-surface bg-surface/50 backdrop-blur-md border border-outline-variant/40 px-8 py-4 rounded-full hover:bg-surface-variant/50 transition-all duration-300 flex items-center justify-center gap-3">
@@ -268,8 +284,19 @@ const LandingPage = () => {
             </div>
           </motion.div>
 
+          {/* Trusted By / Social Proof */}
+          <section className="pb-32 relative z-20">
+            <p className="text-center font-label-sm font-bold text-on-surface-variant uppercase tracking-widest mb-8 text-[12px] opacity-80">Trusted by innovative institutions worldwide</p>
+            <div className="flex flex-wrap justify-center items-center gap-10 md:gap-20 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
+              <div className="flex items-center gap-2 font-display font-bold text-xl"><span className="material-symbols-outlined text-3xl">account_balance</span> Oxford Research</div>
+              <div className="flex items-center gap-2 font-display font-bold text-xl"><span className="material-symbols-outlined text-3xl">science</span> MIT Labs</div>
+              <div className="flex items-center gap-2 font-display font-bold text-xl"><span className="material-symbols-outlined text-3xl">biotech</span> Stanford Bio</div>
+              <div className="flex items-center gap-2 font-display font-bold text-xl"><span className="material-symbols-outlined text-3xl">public</span> Global Tech U</div>
+            </div>
+          </section>
+
           {/* Bento Grid Feature Section */}
-          <section className="py-24 relative z-20">
+          <section id="features" className="py-24 relative z-20">
             <motion.div 
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -382,7 +409,7 @@ const LandingPage = () => {
           </section>
 
           {/* Interactive "Built for Everyone" Section */}
-          <section className="py-32 relative z-20">
+          <section id="audience" className="py-32 relative z-20">
             <motion.div 
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -500,6 +527,82 @@ const LandingPage = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
+            </div>
+          </section>
+
+          {/* Pricing Section */}
+          <section id="pricing" className="py-24 relative z-20 mb-20">
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-center mb-16"
+            >
+              <h2 className="font-display text-[40px] md:text-[56px] font-black text-on-surface mb-4 tracking-tight">
+                Simple, transparent <span className="text-primary">pricing.</span>
+              </h2>
+              <p className="font-body-lg text-[20px] text-on-surface-variant max-w-2xl mx-auto font-light">
+                Scale your supervision capabilities without breaking the institution's budget.
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto items-center">
+              {/* Free Tier */}
+              <div className="bg-surface-container-lowest rounded-[32px] p-8 border border-outline-variant/20 shadow-lg">
+                <h3 className="font-title-lg font-bold text-on-surface mb-2">Basic</h3>
+                <div className="flex items-baseline gap-1 mb-6">
+                  <span className="font-display text-[48px] font-black tracking-tight text-on-surface">$0</span>
+                  <span className="text-on-surface-variant font-medium">/ forever</span>
+                </div>
+                <p className="font-body-sm text-on-surface-variant mb-8">For individual students managing their own capstone projects.</p>
+                <Link to="/register" className="block w-full py-3 rounded-full border border-outline-variant/40 text-center font-label-md font-bold text-on-surface hover:bg-surface-variant/30 transition-colors mb-8">Get Started</Link>
+                <ul className="space-y-4">
+                  {['1 Active Project', 'Basic Template Library', 'Manual Milestone Tracking'].map((feature, i) => (
+                    <li key={i} className="flex items-center gap-3 text-[14px] text-on-surface">
+                      <span className="material-symbols-outlined text-on-surface-variant text-[18px]">check</span>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Pro Tier (Highlighted) */}
+              <div className="bg-gradient-to-br from-primary to-primary-fixed-variant rounded-[32px] p-8 shadow-[0_20px_50px_rgba(53,37,205,0.2)] transform scale-105 relative border border-primary-fixed">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface text-primary font-bold text-[11px] uppercase tracking-wider px-3 py-1 rounded-full shadow-md">Most Popular</div>
+                <h3 className="font-title-lg font-bold text-on-primary mb-2">Pro Supervisor</h3>
+                <div className="flex items-baseline gap-1 mb-6">
+                  <span className="font-display text-[48px] font-black tracking-tight text-on-primary">$29</span>
+                  <span className="text-on-primary/70 font-medium">/ month</span>
+                </div>
+                <p className="font-body-sm text-on-primary/80 mb-8">For academic supervisors managing multiple teams and students.</p>
+                <Link to="/register" className="block w-full py-3 rounded-full bg-surface text-primary text-center font-label-md font-bold hover:scale-105 transition-transform mb-8 shadow-lg">Start Free Trial</Link>
+                <ul className="space-y-4">
+                  {['Unlimited Projects', 'AI-Powered Insights & Grading', 'Plagiarism Integrity Checks', 'Priority Email Support'].map((feature, i) => (
+                    <li key={i} className="flex items-center gap-3 text-[14px] text-on-primary">
+                      <span className="material-symbols-outlined text-surface text-[18px]">check_circle</span>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Enterprise Tier */}
+              <div className="bg-surface-container-lowest rounded-[32px] p-8 border border-outline-variant/20 shadow-lg">
+                <h3 className="font-title-lg font-bold text-on-surface mb-2">Institution</h3>
+                <div className="flex items-baseline gap-1 mb-6">
+                  <span className="font-display text-[48px] font-black tracking-tight text-on-surface">Custom</span>
+                </div>
+                <p className="font-body-sm text-on-surface-variant mb-8">For universities and departments requiring full administrative control.</p>
+                <Link to="/register" className="block w-full py-3 rounded-full border border-outline-variant/40 text-center font-label-md font-bold text-on-surface hover:bg-surface-variant/30 transition-colors mb-8">Contact Sales</Link>
+                <ul className="space-y-4">
+                  {['SAML SSO Integration', 'Custom AI Model Training', 'Department-wide Analytics', 'Dedicated Success Manager'].map((feature, i) => (
+                    <li key={i} className="flex items-center gap-3 text-[14px] text-on-surface">
+                      <span className="material-symbols-outlined text-on-surface-variant text-[18px]">check</span>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </section>
 
