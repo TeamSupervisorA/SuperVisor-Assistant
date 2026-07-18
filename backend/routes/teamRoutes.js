@@ -1,20 +1,22 @@
 const express = require('express');
-const { protect, authorize } = require('../middleware/auth');
+const { protect } = require('../middleware/auth');
 const teamController = require('../controllers/teamController');
 
 const router = express.Router();
 
 router.use(protect);
 
+// Ownership rules live in the controller: students create teams for their own
+// projects and become Leader; only leader/supervisor/admin may modify (proposal §4.2)
 router
   .route('/')
   .get(teamController.getAllTeams)
-  .post(authorize('supervisor', 'admin'), teamController.createTeam);
+  .post(teamController.createTeam);
 
 router
   .route('/:id')
   .get(teamController.getTeam)
-  .put(authorize('supervisor', 'admin'), teamController.updateTeam)
-  .delete(authorize('supervisor', 'admin'), teamController.deleteTeam);
+  .put(teamController.updateTeam)
+  .delete(teamController.deleteTeam);
 
 module.exports = router;

@@ -32,17 +32,6 @@ const DashboardLayout = () => {
           toggleCollapse={() => setIsDesktopCollapsed(!isDesktopCollapsed)} 
           closeMobile={() => setIsMobileMenuOpen(false)}
         />
-        
-        {/* Toggle Collapse Button */}
-        <button 
-          onClick={() => setIsDesktopCollapsed(!isDesktopCollapsed)}
-          className="hidden md:flex absolute top-[28px] -right-3 w-6 h-6 rounded-full bg-surface border border-outline-variant/30 text-on-surface-variant hover:text-primary items-center justify-center shadow-sm hover:shadow hover:scale-105 active:scale-95 transition-all z-[60] cursor-pointer"
-          title={isDesktopCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          <span className="material-symbols-outlined text-[16px] font-bold">
-            {isDesktopCollapsed ? 'chevron_right' : 'chevron_left'}
-          </span>
-        </button>
       </div>
 
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
