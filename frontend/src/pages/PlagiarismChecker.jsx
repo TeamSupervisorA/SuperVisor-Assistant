@@ -33,8 +33,8 @@ const PlagiarismChecker = () => {
     setLoading(true);
     try {
       const [repRes, subRes] = await Promise.all([
-        apiFetch(`/api/plagiarism?project=${activeProject._id}`).catch(() => ({ data: [] })),
-        apiFetch(`/api/submissions?project=${activeProject._id}`).catch(() => ({ data: [] }))
+        apiFetch(`/api/plagiarism?project=${activeProject._id}`),
+        apiFetch(`/api/submissions?project=${activeProject._id}`)
       ]);
       if (repRes.data) setReports(repRes.data);
       if (subRes.data) setSubmissions(subRes.data);
@@ -52,18 +52,7 @@ const PlagiarismChecker = () => {
       const res = await apiFetch('/api/plagiarism', {
         method: 'POST',
         body: JSON.stringify({ project: activeProject._id, submission: selectedSub })
-      }).catch(() => ({ 
-        success: true, 
-        data: { 
-          _id: Date.now().toString(), 
-          overallSimilarity: Math.floor(Math.random() * 40), 
-          createdAt: new Date().toISOString(),
-          submission: submissions.find(s => s._id === selectedSub),
-          matchedSources: [
-            { sourceName: 'Wikipedia: Artificial Intelligence', sourceUrl: 'https://en.wikipedia.org', matchPercentage: Math.floor(Math.random() * 20) }
-          ]
-        } 
-      }));
+      });
       
       if (res.success) {
         if (res.data) {

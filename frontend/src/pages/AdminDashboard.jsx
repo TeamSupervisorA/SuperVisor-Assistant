@@ -24,10 +24,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const data = await apiFetch('/api/dashboard/admin').catch(() => ({
-           // Mock data if API fails to ensure UI renders
-           data: { totalStudents: 1250, totalTeachers: 45, activeProjects: 112, assignmentsSubmitted: 342, plagiarismAlerts: 3 }
-        }));
+        const data = await apiFetch('/api/dashboard/admin');
         if (data && data.data) {
           setMetrics(data.data);
         }

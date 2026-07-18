@@ -23,12 +23,21 @@ Please provide a highly structured, constructive, and nuanced feedback report.
 Student Submission:
 ${text}`;
 
+  const styles = [
+    "Be highly structured, direct, and slightly formal.",
+    "Use a very encouraging, mentoring tone, focusing on growth.",
+    "Adopt a rigorous, deeply analytical perspective, probing for weaknesses.",
+    "Be concise, bullet-point heavy, and extremely action-oriented.",
+    "Use an inspiring, visionary tone that challenges the student to think bigger."
+  ];
+  const randomStyle = styles[Math.floor(Math.random() * styles.length)];
+
   const response = await ai.models.generateContent({
     model: MODEL,
     contents: prompt,
     config: {
-      systemInstruction: "You are an expert academic supervisor with a supportive, mentoring, yet rigorous tone. Always format your feedback with clear headings, bullet points for readability, and provide specific, actionable advice rather than generic statements. Vary your vocabulary and phrasing to avoid sounding robotic or repetitive.",
-      temperature: 0.75
+      systemInstruction: `You are an expert academic supervisor. ${randomStyle} Always format your feedback clearly. Provide specific, actionable advice rather than generic statements. Never use the exact same phrasing for different submissions.`,
+      temperature: 0.9
     }
   });
 
@@ -95,12 +104,21 @@ Provide a comprehensive, structured critique that highlights strong points and m
 Proposal:
 ${proposalText}`;
 
+  const styles = [
+    "Focus heavily on methodological soundness and logical flow.",
+    "Focus on the novelty and impact of the proposed ideas.",
+    "Adopt a devil's advocate persona, challenging the core assumptions.",
+    "Be very pragmatic, focusing on the feasibility and timeline of the proposal.",
+    "Use a highly academic, traditional review style, looking for scholarly grounding."
+  ];
+  const randomStyle = styles[Math.floor(Math.random() * styles.length)];
+
   const response = await ai.models.generateContent({
     model: MODEL,
     contents: prompt,
     config: {
-      systemInstruction: "You are a senior academic reviewer. Your tone should be highly analytical, objective, and deeply insightful. Use professional academic language, provide varied and dynamic structural elements (like bolding key terms, using bulleted lists), and never give the exact same generic feedback twice.",
-      temperature: 0.7
+      systemInstruction: `You are a senior academic reviewer. ${randomStyle} Your tone should be highly analytical and objective. Provide varied and dynamic structural elements (like bolding key terms, using bulleted lists), and never give the exact same generic feedback twice.`,
+      temperature: 0.85
     }
   });
 
@@ -114,12 +132,21 @@ exports.recommendNextTask = async (currentStatus, pastTasks) => {
 Provide a brief, action-oriented task title and a concise but highly motivating explanation of why this step is critical right now. 
 Return as a JSON object with 'taskTitle' and 'explanation'. Do not return markdown, just pure JSON.`;
 
+  const styles = [
+    "Be punchy, energetic, and highly motivating.",
+    "Be calm, strategic, and focused on risk mitigation.",
+    "Focus on quick wins to build momentum.",
+    "Emphasize deep work and tackling the hardest problem next.",
+    "Be extremely concise, just stating the facts and the most logical next step."
+  ];
+  const randomStyle = styles[Math.floor(Math.random() * styles.length)];
+
   const response = await ai.models.generateContent({
     model: MODEL,
     contents: prompt,
     config: {
-      systemInstruction: "You are a world-class agile project manager for academic research. You are extremely pragmatic, strategic, and motivating. Your advice should be highly context-aware, fresh, and uniquely tailored to the student's progress to keep their momentum high.",
-      temperature: 0.8,
+      systemInstruction: `You are a world-class agile project manager for academic research. ${randomStyle} Your advice should be highly context-aware, fresh, and uniquely tailored to the student's progress to keep their momentum high. Do not repeat the same advice format.`,
+      temperature: 0.9,
       responseMimeType: 'application/json'
     }
   });

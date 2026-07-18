@@ -29,17 +29,9 @@ const DetailedFeedback = () => {
   const loadEvaluation = async () => {
     setLoading(true);
     try {
-      const res = await apiFetch(`/api/evaluations?project=${activeProject._id}`).catch(() => ({ data: [] }));
+      const res = await apiFetch(`/api/evaluations?project=${activeProject._id}`);
       if (res.data && res.data.length > 0) {
         setEvaluation(res.data[0]);
-      } else {
-        // Mock data for visual demonstration
-        setEvaluation({
-          totalScore: 82,
-          scores: { problemUnderstanding: 8, methodology: 16, implementation: 24, documentation: 34 },
-          feedback: "The project shows great promise. The core architecture is solid, and the AI integration approach is well thought out.\n\nHowever, the documentation regarding the database schema needs to be more comprehensive before we can move to the final build phase. Please revise the 'Schema Details' section.",
-          status: 'revision_requested' // 'approved', 'revision_requested'
-        });
       }
     } catch (e) {
       console.error(e);

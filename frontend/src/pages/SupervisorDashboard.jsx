@@ -35,8 +35,8 @@ const SupervisorDashboard = () => {
         // In a real implementation, the backend would aggregate these specific stats and feeds.
         // We'll fetch what we can and mock the specific "recent updates" if unavailable.
         const [metricsRes, projectsRes] = await Promise.all([
-          apiFetch('/api/dashboard/supervisor').catch(() => ({ data: null })),
-          apiFetch('/api/projects').catch(() => ({ data: [] }))
+          apiFetch('/api/dashboard/supervisor'),
+          apiFetch('/api/projects')
         ]);
         
         if (projectsRes.data) {

@@ -29,10 +29,6 @@ const Login = () => {
       const data = await apiFetch('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password })
-      }).catch(err => {
-        // mock success for demo purposes if backend fails
-        console.warn('Mocking login success due to fetch error:', err);
-        return { token: 'mock-jwt-token', user: { _id: '1', name: 'Test User', role: 'student', email } };
       });
 
       login(data.token, data.user);

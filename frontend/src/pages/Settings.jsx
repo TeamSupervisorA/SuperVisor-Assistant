@@ -27,7 +27,7 @@ const Settings = () => {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const res = await apiFetch('/api/users/settings').catch(() => ({ data: null }));
+        const res = await apiFetch('/api/users/settings');
         if (res && res.data) {
           setSettings(res.data);
         }

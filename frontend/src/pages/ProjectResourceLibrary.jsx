@@ -31,7 +31,7 @@ const ProjectResourceLibrary = () => {
   const loadResources = async () => {
     try {
       setLoading(true);
-      const res = await apiFetch(`/api/resources?project=${activeProject._id}`).catch(() => ({ data: [] }));
+      const res = await apiFetch(`/api/resources?project=${activeProject._id}`);
       if (res && res.data) {
         setResources(res.data);
       }
@@ -72,7 +72,7 @@ const ProjectResourceLibrary = () => {
       const res = await apiFetch('/api/resources', {
         method: 'POST',
         body: JSON.stringify(payload)
-      }).catch(() => ({ success: true, data: { ...payload, _id: Date.now().toString(), createdAt: new Date().toISOString() } }));
+      });
       
       if (res.success) {
         setShowModal(false);
