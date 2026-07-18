@@ -56,8 +56,8 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
       className="bg-surface h-full flex flex-col border-r border-outline-variant/30 z-50 overflow-hidden"
     >
       {/* Header */}
-      <div className="p-4 flex items-center justify-between border-b border-outline-variant/20 h-20 shrink-0">
-        <div className="flex items-center gap-3 overflow-hidden whitespace-nowrap">
+      <div className={`p-4 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} border-b border-outline-variant/20 h-20 shrink-0`}>
+        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} overflow-hidden whitespace-nowrap`}>
           <div className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-primary to-primary-fixed-variant flex items-center justify-center shadow-md shadow-primary/20">
             <span className="material-symbols-outlined text-on-primary icon-fill text-[22px]">school</span>
           </div>
@@ -74,14 +74,6 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
           )}
         </div>
         
-        <button 
-          onClick={toggleCollapse} 
-          className="hidden md:flex p-1.5 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors shrink-0"
-        >
-          <span className="material-symbols-outlined text-[20px]">
-            {isCollapsed ? 'chevron_right' : 'chevron_left'}
-          </span>
-        </button>
         <button 
           onClick={closeMobile} 
           className="md:hidden flex p-1.5 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors shrink-0"
@@ -114,7 +106,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
               to={item.path} 
               onClick={closeMobile}
               title={isCollapsed ? item.name : ''}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200 active:scale-[0.97] group
+              className={`flex items-center ${isCollapsed ? 'justify-center font-bold' : 'gap-3 px-3'} py-2.5 rounded-xl font-medium transition-all duration-200 active:scale-[0.97] group
                 ${isActive 
                   ? 'bg-primary/10 text-primary font-bold' 
                   : 'text-secondary hover:bg-surface-container-low hover:text-on-surface'
@@ -132,21 +124,23 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
       
       {/* Footer — Logout */}
       <div className="px-3 py-4 border-t border-outline-variant/20 shrink-0">
-        {!isCollapsed && user && (
-          <div className="flex items-center gap-3 px-3 py-2 mb-2">
+        {user && (
+          <div className={`flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'} py-2 mb-2`}>
             <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold text-[13px] shrink-0">
               {user.name?.charAt(0)?.toUpperCase() || 'U'}
             </div>
-            <div className="min-w-0">
-              <p className="font-label-md text-[13px] font-semibold text-on-surface truncate">{user.name}</p>
-              <p className="font-label-md text-[11px] text-outline truncate">{user.email}</p>
-            </div>
+            {!isCollapsed && (
+              <div className="min-w-0">
+                <p className="font-label-md text-[13px] font-semibold text-on-surface truncate">{user.name}</p>
+                <p className="font-label-md text-[11px] text-outline truncate">{user.email}</p>
+              </div>
+            )}
           </div>
         )}
         <button 
           onClick={handleLogout}
           title={isCollapsed ? 'Logout' : ''}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-secondary hover:bg-error-container hover:text-error transition-colors duration-200 active:scale-[0.97]"
+          className={`w-full flex items-center ${isCollapsed ? 'justify-center' : 'gap-3 px-3'} py-2.5 rounded-xl text-secondary hover:bg-error-container hover:text-error transition-colors duration-200 active:scale-[0.97]`}
         >
           <span className="material-symbols-outlined text-[22px]">logout</span>
           {!isCollapsed && <span className="whitespace-nowrap text-[14px] font-medium">Logout</span>}
