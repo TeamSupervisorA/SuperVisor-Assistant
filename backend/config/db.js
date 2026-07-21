@@ -19,10 +19,9 @@ const connectDB = async () => {
     const conn = await mongoose.connect(uri);
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error(`Error connecting to MongoDB: ${error.message}`);
-    // We intentionally fail here instead of falling back to a fake database.
-    // If the real database fails, Vercel SHOULD show a proper error so we can fix it!
-    process.exit(1);
+    console.error(`CRITICAL Error connecting to MongoDB: ${error.message}`);
+    console.error(`URI was: ${uri ? "Provided" : "UNDEFINED!"}`);
+    // We intentionally removed process.exit(1) here so Vercel doesn't hard-crash.
   }
 };
 
