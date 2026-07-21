@@ -19,7 +19,9 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
     { name: 'Tasks & Milestones', icon: 'checklist', path: '/tasks-milestones' },
     { name: 'Submissions', icon: 'upload_file', path: '/student-submissions' },
     { name: 'Team', icon: 'groups', path: '/team-management' },
+    { name: 'Meetings', icon: 'event', path: '/meeting-management' },
     { name: 'Resources', icon: 'library_books', path: '/project-resource-library' },
+    { name: 'Report', icon: 'summarize', path: '/project-report' },
     ...commonItems,
     { name: 'Settings', icon: 'settings', path: '/settings' },
   ];
@@ -30,6 +32,8 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
     { name: 'Evaluations', icon: 'grading', path: '/evaluations' },
     { name: 'Plagiarism', icon: 'policy', path: '/plagiarism-checker' },
     { name: 'Feedback', icon: 'rate_review', path: '/detailed-feedback' },
+    { name: 'Meetings', icon: 'event', path: '/meeting-management' },
+    { name: 'Report', icon: 'summarize', path: '/project-report' },
     ...commonItems,
     { name: 'Settings', icon: 'settings', path: '/settings' },
   ];

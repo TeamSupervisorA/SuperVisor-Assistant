@@ -23,6 +23,7 @@ import PlagiarismChecker from './pages/PlagiarismChecker';
 import StudentSubmissions from './pages/StudentSubmissions';
 import EvaluationsGrades from './pages/EvaluationsGrades';
 import ExploreProjects from './pages/ExploreProjects';
+import ProjectReport from './pages/ProjectReport';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -49,6 +50,7 @@ function App() {
               <Route path="/student-submissions" element={<StudentSubmissions />} />
               <Route path="/detailed-feedback" element={<DetailedFeedback />} />
               <Route path="/meeting-management" element={<MeetingManagement />} />
+              <Route path="/project-report" element={<ProjectReport />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/chat" element={<ProjectChat />} />
 

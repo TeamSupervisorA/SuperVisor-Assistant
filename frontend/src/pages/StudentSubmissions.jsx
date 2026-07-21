@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiFetch } from '../lib/api';
+import { apiFetch, uploadFile, assetUrl } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../components/AuthContext';
 
@@ -19,6 +19,7 @@ const StudentSubmissions = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [newSub, setNewSub] = useState({ title: '', file: null });
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (activeProject) {
@@ -45,43 +46,30 @@ const StudentSubmissions = () => {
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!activeProject || !newSub.file) return alert('Please select a file to upload.');
+    setUploading(true);
     try {
-      // 1. Upload file
-      const formData = new FormData();
-      formData.append('file', newSub.file);
-      
-      const uploadRes = await fetch('http://localhost:5000/api/upload', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-        body: formData
-      });
-      const uploadData = await uploadRes.json();
-      
-      if (!uploadData.success) {
-        throw new Error(uploadData.error || 'Failed to upload file');
-      }
+      // 1. Upload the file from the local device
+      const uploaded = await uploadFile(newSub.file);
 
-      // 2. Create submission with the returned URL
+      // 2. Create the submission record pointing at the stored file
       const res = await apiFetch('/api/submissions', {
         method: 'POST',
-        body: JSON.stringify({ 
-          title: newSub.title, 
-          fileUrl: uploadData.data.fileUrl, 
-          project: activeProject._id 
+        body: JSON.stringify({
+          title: newSub.title,
+          fileUrl: uploaded.fileUrl,
+          project: activeProject._id
         })
-      }).catch(() => ({ success: true, data: { title: newSub.title, fileUrl: uploadData.data.fileUrl, _id: Date.now().toString(), status: 'Submitted', submittedAt: new Date().toISOString() } }));
-      
+      });
+
       if (res.success) {
         setShowModal(false);
         setNewSub({ title: '', file: null });
-        if (res.data) {
-          setSubmissions([res.data, ...submissions]);
-        } else {
-          loadSubmissions();
-        }
+        setSubmissions([res.data, ...submissions]);
       }
     } catch (e) {
-      alert(e.message);
+      alert('Submission failed: ' + e.message);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -116,7 +104,7 @@ const StudentSubmissions = () => {
             <h1 className="font-display text-[32px] md:text-[42px] font-black text-on-surface tracking-tight leading-none mb-2">Submissions</h1>
             <p className="font-title-md text-[16px] text-on-surface-variant font-medium">Upload and track your project deliverables for review.</p>
           </div>
-          <button onClick={() => setShowModal(true)} className="bg-primary text-on-primary px-6 py-3.5 rounded-[16px] font-title-sm text-[15px] font-bold flex items-center gap-2 hover:bg-primary-fixed-variant transition-colors shadow-[0_8px_20px_rgba(var(--primary-rgb),0.2)] hover:shadow-[0_12px_25px_rgba(var(--primary-rgb),0.3)] hover:-translate-y-1 active:translate-y-0 group">
+          <button onClick={() => setShowModal(true)} className="bg-primary text-on-primary px-6 py-3.5 rounded-[16px] font-title-sm text-[15px] font-bold flex items-center gap-2 hover:bg-primary-fixed-variant transition-colors shadow-[0_8px_20px_rgba(var(--color-primary-rgb),0.2)] hover:shadow-[0_12px_25px_rgba(var(--color-primary-rgb),0.3)] hover:-translate-y-1 active:translate-y-0 group">
             <span className="material-symbols-outlined text-[20px] group-hover:-translate-y-0.5 transition-transform">upload</span>
             New Submission
           </button>
@@ -163,7 +151,7 @@ const StudentSubmissions = () => {
                         {sub.grade ? `Grade: ${sub.grade}` : 'Under Review'}
                       </span>
                     </div>
-                    <a href={`http://localhost:5000${sub.fileUrl}`} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors shadow-sm">
+                    <a href={assetUrl(sub.fileUrl)} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors shadow-sm">
                       <span className="material-symbols-outlined text-[20px]">open_in_new</span>
                     </a>
                   </div>
@@ -206,8 +194,12 @@ const StudentSubmissions = () => {
                   </div>
                   <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-outline-variant/30">
                     <button type="button" onClick={() => setShowModal(false)} className="px-6 py-3 rounded-xl font-title-sm text-[14px] font-bold text-on-surface border border-outline-variant hover:bg-surface-container transition-colors">Cancel</button>
-                    <button type="submit" className="px-6 py-3 rounded-xl font-title-sm text-[14px] font-bold bg-primary text-on-primary hover:bg-primary-fixed-variant transition-colors shadow-sm hover:shadow-md active:scale-95 flex items-center justify-center gap-2">
-                      <span className="material-symbols-outlined text-[18px]">send</span> Submit
+                    <button type="submit" disabled={uploading} className={`px-6 py-3 rounded-xl font-title-sm text-[14px] font-bold bg-primary text-on-primary hover:bg-primary-fixed-variant transition-colors shadow-sm hover:shadow-md active:scale-95 flex items-center justify-center gap-2 ${uploading ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                      {uploading ? (
+                        <><motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="material-symbols-outlined text-[18px]">sync</motion.span> Uploading...</>
+                      ) : (
+                        <><span className="material-symbols-outlined text-[18px]">send</span> Submit</>
+                      )}
                     </button>
                   </div>
                 </form>

@@ -62,6 +62,11 @@
   --spacing-container_max: 1440px;
 }
 
+/* Alias used by arbitrary-value shadows in several pages */
+:root {
+  --primary-rgb: var(--color-primary-rgb);
+}
+
 /* Dark Mode Theme Override */
 .dark {
   --color-on-surface-variant: #c9c5d6;
@@ -155,5 +160,27 @@
   }
   .animate-fade-in-up {
     animation: fade-in-up 0.4s ease-out forwards;
+  }
+}
+
+/* Print styles — used by the Project Report "Download / Print" action */
+@media print {
+  aside,
+  header,
+  .no-print {
+    display: none !important;
+  }
+  * {
+    overflow: visible !important;
+    box-shadow: none !important;
+  }
+  .h-screen {
+    height: auto !important;
+  }
+  .min-h-screen {
+    min-height: 0 !important;
+  }
+  body {
+    background: #ffffff !important;
   }
 }

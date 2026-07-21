@@ -49,31 +49,20 @@ const PlagiarismChecker = () => {
     if (!selectedSub) return alert("Select a submission first");
     setRunning(true);
     try {
+      // No client-side mock fallback here: fabricating a similarity score for an
+      // academic-integrity report would be misleading — surface the real error instead
       const res = await apiFetch('/api/plagiarism', {
         method: 'POST',
         body: JSON.stringify({ project: activeProject._id, submission: selectedSub })
-      }).catch(() => ({ 
-        success: true, 
-        data: { 
-          _id: Date.now().toString(), 
-          overallSimilarity: Math.floor(Math.random() * 40), 
-          createdAt: new Date().toISOString(),
-          submission: submissions.find(s => s._id === selectedSub),
-          matchedSources: [
-            { sourceName: 'Wikipedia: Artificial Intelligence', sourceUrl: 'https://en.wikipedia.org', matchPercentage: Math.floor(Math.random() * 20) }
-          ]
-        } 
-      }));
-      
-      if (res.success) {
-        if (res.data) {
-          setReports([res.data, ...reports]);
-        } else {
-          loadData();
-        }
+      });
+
+      if (res.success && res.data) {
+        // The POST response isn't populated — attach the known submission for display
+        const submissionDoc = submissions.find(s => s._id === selectedSub);
+        setReports([{ ...res.data, submission: res.data.submission?.title ? res.data.submission : submissionDoc }, ...reports]);
       }
     } catch (e) {
-      alert(e.message);
+      alert('Plagiarism check failed: ' + e.message);
     } finally {
       setRunning(false);
     }

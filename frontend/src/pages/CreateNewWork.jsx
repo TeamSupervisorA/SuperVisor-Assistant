@@ -56,7 +56,7 @@ const CreateNewWork = () => {
       const res = await apiFetch('/api/projects', {
         method: 'POST',
         body: JSON.stringify(payload)
-      }).catch(() => ({ success: true, data: { ...payload, _id: Date.now().toString() } })); // Mock success if API fails
+      });
 
       if (res.success) {
         setActiveProject(res.data);
@@ -162,7 +162,21 @@ const CreateNewWork = () => {
                  {aiFeedback && (
                    <div className="relative z-10 bg-surface rounded-xl p-5 border border-primary/20 shadow-sm mt-2">
                      <h4 className="font-title-sm text-[14px] font-bold text-primary mb-2">AI Feedback</h4>
-                     <div className="font-body-sm text-[13px] text-on-surface whitespace-pre-wrap">{aiFeedback}</div>
+                     {Array.isArray(aiFeedback) ? (
+                       // Idea suggestions arrive as [{ title, description }]
+                       <div className="space-y-3">
+                         {aiFeedback.map((idea, i) => (
+                           <div key={i} className="p-3 rounded-lg bg-surface-container-lowest border border-outline-variant/40">
+                             <p className="font-title-sm text-[13px] font-bold text-on-surface mb-1">{idea.title || `Idea ${i + 1}`}</p>
+                             <p className="font-body-sm text-[12px] text-secondary leading-relaxed">{idea.description}</p>
+                           </div>
+                         ))}
+                       </div>
+                     ) : (
+                       <div className="font-body-sm text-[13px] text-on-surface whitespace-pre-wrap">
+                         {typeof aiFeedback === 'string' ? aiFeedback : JSON.stringify(aiFeedback, null, 2)}
+                       </div>
+                     )}
                    </div>
                  )}
               </div>

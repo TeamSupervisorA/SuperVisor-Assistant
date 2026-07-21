@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiFetch } from '../lib/api';
+import { apiFetch, uploadFile, assetUrl } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../components/AuthContext';
 
@@ -19,6 +19,7 @@ const ProjectResourceLibrary = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [newResource, setNewResource] = useState({ title: '', type: 'Document', category: 'General', url: '', file: null });
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (activeProject) {
@@ -45,25 +46,14 @@ const ProjectResourceLibrary = () => {
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!activeProject) return;
+    setUploading(true);
     try {
       let finalUrl = newResource.url;
-      
-      // If it's not a link and a file is selected, upload it
+
+      // If it's not a link and a file is selected, upload it from the local device
       if (newResource.type !== 'Link' && newResource.file) {
-        const formData = new FormData();
-        formData.append('file', newResource.file);
-        
-        const uploadRes = await fetch('http://localhost:5000/api/upload', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-          body: formData
-        });
-        const uploadData = await uploadRes.json();
-        
-        if (!uploadData.success) {
-          throw new Error(uploadData.error || 'Failed to upload file');
-        }
-        finalUrl = uploadData.data.fileUrl;
+        const uploaded = await uploadFile(newResource.file);
+        finalUrl = uploaded.fileUrl;
       }
 
       const payload = { ...newResource, url: finalUrl, project: activeProject._id };
@@ -72,19 +62,17 @@ const ProjectResourceLibrary = () => {
       const res = await apiFetch('/api/resources', {
         method: 'POST',
         body: JSON.stringify(payload)
-      }).catch(() => ({ success: true, data: { ...payload, _id: Date.now().toString(), createdAt: new Date().toISOString() } }));
-      
+      });
+
       if (res.success) {
         setShowModal(false);
         setNewResource({ title: '', type: 'Document', category: 'General', url: '', file: null });
-        if (res.data) {
-          setResources([res.data, ...resources]);
-        } else {
-          loadResources();
-        }
+        setResources([res.data, ...resources]);
       }
     } catch (error) {
       alert('Error creating resource: ' + error.message);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -183,7 +171,7 @@ const ProjectResourceLibrary = () => {
                       </div>
                       <h4 className="font-title-md text-[18px] font-bold text-on-surface mb-2 leading-snug group-hover:text-primary transition-colors relative z-10">{res.title}</h4>
                       <p className="font-body-sm text-[13px] text-secondary line-clamp-1 mb-6 truncate relative z-10 group-hover:text-primary/70">
-                        {res.url ? (res.url.startsWith('/uploads') ? <a href={`http://localhost:5000${res.url}`} target="_blank" rel="noreferrer" className="hover:underline">{res.url}</a> : <a href={res.url} target="_blank" rel="noreferrer" className="hover:underline">{res.url}</a>) : 'No file attached'}
+                        {res.url ? <a href={assetUrl(res.url)} target="_blank" rel="noreferrer" className="hover:underline">{res.url}</a> : 'No file attached'}
                       </p>
                       
                       <div className="mt-auto pt-4 border-t border-outline-variant/30 flex items-center justify-between relative z-10">
@@ -265,8 +253,12 @@ const ProjectResourceLibrary = () => {
                   
                   <div className="pt-6 mt-4 border-t border-outline-variant/30 flex justify-end gap-3">
                     <button type="button" onClick={() => setShowModal(false)} className="px-6 py-3 rounded-xl font-title-sm text-[14px] font-bold text-on-surface border border-outline-variant hover:bg-surface-container transition-colors">Cancel</button>
-                    <button type="submit" className="px-6 py-3 rounded-xl font-title-sm text-[14px] font-bold bg-primary text-on-primary shadow-sm hover:shadow-md active:scale-95 transition-all flex items-center justify-center gap-2">
-                      <span className="material-symbols-outlined text-[18px]">upload</span> Upload
+                    <button type="submit" disabled={uploading} className={`px-6 py-3 rounded-xl font-title-sm text-[14px] font-bold bg-primary text-on-primary shadow-sm hover:shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 ${uploading ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                      {uploading ? (
+                        <><motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="material-symbols-outlined text-[18px]">sync</motion.span> Uploading...</>
+                      ) : (
+                        <><span className="material-symbols-outlined text-[18px]">upload</span> Upload</>
+                      )}
                     </button>
                   </div>
                 </form>
