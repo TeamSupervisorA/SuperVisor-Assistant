@@ -12,8 +12,19 @@ const app = express();
 
 // Middleware
 app.use(helmet()); // Security headers
+const configuredOrigins = (process.env.FRONTEND_URL || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const isAllowedOrigin = (origin) => !origin || configuredOrigins.length === 0 || configuredOrigins.includes(origin) || /\.vercel\.app$/i.test(new URL(origin).hostname);
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || '*',
+  origin(origin, callback) {
+    try {
+      callback(null, isAllowedOrigin(origin));
+    } catch {
+      callback(null, false);
+    }
+  },
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
@@ -86,7 +97,7 @@ const Project = require('./models/Project');
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || '*',
+    origin: configuredOrigins.length ? configuredOrigins : '*',
     methods: ['GET', 'POST']
   }
 });

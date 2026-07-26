@@ -1,4 +1,10 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+const API_BASE_URL = (configuredApiUrl || (import.meta.env.DEV ? 'http://localhost:5000' : '')).replace(/\/$/, '');
+
+const getApiBaseUrl = () => {
+  if (API_BASE_URL) return API_BASE_URL;
+  throw new Error('The API is not configured. Set VITE_API_URL in the frontend Vercel project and redeploy.');
+};
 
 export const apiFetch = async (path, options = {}) => {
   const token = localStorage.getItem('token');
@@ -9,7 +15,7 @@ export const apiFetch = async (path, options = {}) => {
     ...options.headers
   };
 
-  const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+  const response = await fetch(`${getApiBaseUrl()}${path}`, { ...options, headers });
 
   let data = null;
   try {
@@ -32,7 +38,7 @@ export const uploadFile = async (file) => {
   formData.append('file', file);
 
   // No Content-Type header — the browser sets the multipart boundary itself
-  const response = await fetch(`${API_BASE_URL}/api/upload`, {
+  const response = await fetch(`${getApiBaseUrl()}/api/upload`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData
@@ -56,7 +62,7 @@ export const uploadFile = async (file) => {
 export const assetUrl = (path) => {
   if (!path) return '';
   if (/^https?:\/\//i.test(path)) return path;
-  return `${API_BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+  return `${getApiBaseUrl()}${path.startsWith('/') ? '' : '/'}${path}`;
 };
 
 export default API_BASE_URL;
