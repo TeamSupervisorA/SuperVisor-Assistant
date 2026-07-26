@@ -28,6 +28,9 @@ exports.protect = async (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ success: false, error: 'Not authorized to access this route' });
     }
+    if (req.user.status === 'inactive') {
+      return res.status(403).json({ success: false, error: 'This account has been deactivated' });
+    }
 
     next();
   } catch (err) {

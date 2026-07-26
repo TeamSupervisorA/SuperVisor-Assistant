@@ -65,6 +65,7 @@ app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/evaluations', require('./routes/evaluationRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/courses', require('./routes/courseRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/teams', require('./routes/teamRoutes'));
 app.use('/api/meetings', require('./routes/meetingRoutes'));
