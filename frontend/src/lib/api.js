@@ -6,6 +6,21 @@ const getApiBaseUrl = () => {
   throw new Error('The API is not configured. Set VITE_API_URL in the frontend Vercel project and redeploy.');
 };
 
+const fetchWithTimeout = async (url, options = {}) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('The server did not respond within 15 seconds. Check VITE_API_URL and the backend Vercel deployment.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
 export const apiFetch = async (path, options = {}) => {
   const token = localStorage.getItem('token');
 
@@ -15,7 +30,7 @@ export const apiFetch = async (path, options = {}) => {
     ...options.headers
   };
 
-  const response = await fetch(`${getApiBaseUrl()}${path}`, { ...options, headers });
+  const response = await fetchWithTimeout(`${getApiBaseUrl()}${path}`, { ...options, headers });
 
   let data = null;
   try {
@@ -38,7 +53,7 @@ export const uploadFile = async (file) => {
   formData.append('file', file);
 
   // No Content-Type header — the browser sets the multipart boundary itself
-  const response = await fetch(`${getApiBaseUrl()}/api/upload`, {
+  const response = await fetchWithTimeout(`${getApiBaseUrl()}/api/upload`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData
