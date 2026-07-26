@@ -27,6 +27,7 @@ import ProjectReport from './pages/ProjectReport';
 import ProposalLifecycle from './pages/ProposalLifecycle';
 import ProgressLogs from './pages/ProgressLogs';
 import ReviewWorkspace from './pages/ReviewWorkspace';
+import AdminManagement from './pages/AdminManagement';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -71,6 +72,7 @@ function App() {
               <Route element={<ProtectedRoute roles={['admin']} />}>
                 <Route path="/admin-dashboard" element={<AdminDashboard />} />
                 <Route path="/course-management" element={<CourseManagement />} />
+                <Route path="/admin-management" element={<AdminManagement />} />
               </Route>
             </Route>
           </Route>

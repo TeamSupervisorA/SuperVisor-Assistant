@@ -47,6 +47,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
   const adminItems = [
     { name: 'Dashboard', icon: 'dashboard', path: '/admin-dashboard' },
     { name: 'Course Management', icon: 'school', path: '/course-management' },
+    { name: 'Users & Departments', icon: 'manage_accounts', path: '/admin-management' },
     ...commonItems,
     { name: 'Settings', icon: 'settings', path: '/settings' },
   ];
