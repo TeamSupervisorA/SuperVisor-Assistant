@@ -45,11 +45,13 @@ exports.exploreProjects = async (req, res) => {
     const { search } = req.query;
     let query = {};
     
-    if (search) {
+    if (search && typeof search === 'string') {
+      // Escape special characters to prevent regex injection
+      const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       query = {
         $or: [
-          { title: { $regex: search, $options: 'i' } },
-          { description: { $regex: search, $options: 'i' } }
+          { title: { $regex: safeSearch, $options: 'i' } },
+          { description: { $regex: safeSearch, $options: 'i' } }
         ]
       };
     }
