@@ -3,7 +3,6 @@ const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const helmet = require('helmet');
-const mongoSanitize = require('express-mongo-sanitize');
 const rateLimit = require('express-rate-limit');
 
 // Connect to database
@@ -19,7 +18,24 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use(mongoSanitize()); // Prevent NoSQL Injection
+
+// express-mongo-sanitize mutates req.query, which is read-only in Express 5 and
+// causes every request to fail. Sanitize JSON request bodies without touching
+// Express-owned request properties.
+const sanitizeObject = (value) => {
+  if (!value || typeof value !== 'object') return;
+  for (const key of Object.keys(value)) {
+    if (key.startsWith('$') || key.includes('.')) {
+      delete value[key];
+    } else {
+      sanitizeObject(value[key]);
+    }
+  }
+};
+app.use((req, res, next) => {
+  sanitizeObject(req.body);
+  next();
+});
 
 // Rate limiting
 const limiter = rateLimit({
@@ -41,6 +57,10 @@ app.use('/api/auth/', authLimiter);
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/ai', require('./routes/aiRoutes'));
 app.use('/api/projects', require('./routes/projectRoutes'));
+app.use('/api', require('./routes/proposalRoutes'));
+app.use('/api', require('./routes/progressRoutes'));
+app.use('/api', require('./routes/reviewRoutes'));
+app.use('/api', require('./routes/reportRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/evaluations', require('./routes/evaluationRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
@@ -58,12 +78,34 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const http = require('http');
 const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
+const User = require('./models/User');
+const Project = require('./models/Project');
 
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: process.env.FRONTEND_URL || '*',
     methods: ['GET', 'POST']
+  }
+});
+
+const canAccessSocketProject = (project, user) =>
+  Boolean(project) && (user.role === 'admin' ||
+  project.supervisor?.toString() === user.id ||
+  project.students.some((student) => student.toString() === user.id));
+
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth?.token;
+    if (!token) return next(new Error('Authentication required'));
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+    if (!user) return next(new Error('Authentication required'));
+    socket.user = user;
+    next();
+  } catch {
+    next(new Error('Authentication required'));
   }
 });
 
@@ -71,14 +113,20 @@ const io = new Server(server, {
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
 
-  socket.on('join_project', (projectId) => {
+  socket.on('join_project', async (projectId) => {
+    const project = await Project.findById(projectId);
+    if (!canAccessSocketProject(project, socket.user)) {
+      return socket.emit('socket_error', 'Not authorized to join this project');
+    }
     socket.join(projectId);
-    console.log(`Socket ${socket.id} joined project ${projectId}`);
   });
 
-  socket.on('send_message', (data) => {
-    // broadcast to project room
-    io.to(data.project).emit('receive_message', data);
+  socket.on('send_message', async (data) => {
+    const project = await Project.findById(data?.project);
+    if (!canAccessSocketProject(project, socket.user)) {
+      return socket.emit('socket_error', 'Not authorized to send to this project');
+    }
+    socket.to(data.project).emit('receive_message', data);
   });
 
   socket.on('disconnect', () => {

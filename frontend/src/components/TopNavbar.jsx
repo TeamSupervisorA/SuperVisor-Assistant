@@ -28,7 +28,7 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
         });
         const json = await res.json();
         if (json.success) setNotifications(json.data);
-      } catch (e) {
+      } catch {
         // Silent fail — notifications are non-critical
       }
     };
@@ -46,9 +46,10 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
             // Update active project with fresh data if it exists in the list
             const updatedProject = res.data.find(p => p._id === activeProject._id);
             if (updatedProject) setActiveProject(updatedProject);
+            else setActiveProject(null);
           }
         }
-      } catch (e) {
+      } catch {
         console.error("Failed to load user projects");
       }
     };
@@ -81,7 +82,7 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
     try {
       await apiFetch(`/api/notifications/${notifId}/read`, { method: 'PUT' });
       setNotifications(prev => prev.map(n => n._id === notifId ? { ...n, isRead: true } : n));
-    } catch (e) {
+    } catch {
       // Optimistic — just mark locally
       setNotifications(prev => prev.map(n => n._id === notifId ? { ...n, isRead: true } : n));
     }

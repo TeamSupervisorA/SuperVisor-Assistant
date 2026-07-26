@@ -1,35 +1,26 @@
 const Task = require('../models/Task');
-const Project = require('../models/Project');
-
-// Check the user can access the task's project
-const canAccessProject = (project, user) => {
-  if (user.role === 'admin') return true;
-  if (project.supervisor && project.supervisor.toString() === user.id) return true;
-  return project.students.some(s => s.toString() === user.id);
-};
+const { Project, canAccessProject, projectIdsForUser } = require('../utils/projectAccess');
 
 // @desc    Get tasks (optionally filtered by project)
 // @route   GET /api/tasks?project=<projectId>
 // @access  Private
 exports.getTasks = async (req, res) => {
   try {
-    // Implement Delay Detection: Update overdue tasks to 'delayed'
-    await Task.updateMany(
-      { status: { $ne: 'completed' }, dueDate: { $lt: new Date() } },
-      { $set: { status: 'delayed' } }
-    );
-
     let query = {};
 
     if (req.query.project) {
+      const project = await Project.findById(req.query.project);
+      if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
+      if (!canAccessProject(project, req.user)) {
+        return res.status(403).json({ success: false, error: 'Not authorized to view this project\'s tasks' });
+      }
       query.project = req.query.project;
     }
 
     if (req.user.role === 'student') {
       query.assignedTo = req.user.id;
     } else if (req.user.role === 'supervisor') {
-      const projects = await Project.find({ supervisor: req.user.id }).select('_id');
-      query.project = query.project || { $in: projects.map(p => p._id) };
+      query.project = query.project || { $in: await projectIdsForUser(req.user) };
     }
 
     const tasks = await Task.find(query)
@@ -63,7 +54,7 @@ exports.createTask = async (req, res) => {
       req.body.assignedTo = req.user.id;
     }
 
-    const task = await Task.create(req.body);
+    const task = await Task.create({ ...req.body, history: [{ actor: req.user.id, action: 'created', toStatus: req.body.status || 'todo' }] });
 
     res.status(201).json({ success: true, data: task });
   } catch (error) {
@@ -95,12 +86,49 @@ exports.updateTask = async (req, res) => {
       updates = { status: req.body.status };
     }
 
+    if (updates.status === 'blocked' && !updates.blockedReason && !task.blockedReason) {
+      return res.status(422).json({ success: false, error: 'Blocked tasks require a blockedReason' });
+    }
+    if (['done', 'completed'].includes(updates.status) && !task.completedAt) updates.completedAt = new Date();
+    updates.history = [...task.history, {
+      actor: req.user.id,
+      action: 'updated',
+      fromStatus: task.status,
+      toStatus: updates.status || task.status
+    }];
+
     task = await Task.findByIdAndUpdate(req.params.id, updates, {
       new: true,
       runValidators: true
     });
 
     res.status(200).json({ success: true, data: task });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc Transition a task through the academic task lifecycle
+exports.transitionTask = async (req, res) => {
+  try {
+    const { status, note = '', blockedReason = '', evidence = [] } = req.body;
+    if (!['todo', 'in_progress', 'blocked', 'done', 'cancelled'].includes(status)) {
+      return res.status(422).json({ success: false, error: 'Invalid task status transition' });
+    }
+    const task = await Task.findById(req.params.id).populate('project');
+    if (!task) return res.status(404).json({ success: false, error: 'Task not found' });
+    if (!canAccessProject(task.project, req.user)) return res.status(403).json({ success: false, error: 'Not authorized to transition this task' });
+    if (req.user.role === 'student' && task.assignedTo?.toString() !== req.user.id) return res.status(403).json({ success: false, error: 'Only the assignee may transition this task' });
+    if (status === 'blocked' && !blockedReason) return res.status(422).json({ success: false, error: 'Blocked tasks require a blockedReason' });
+
+    const fromStatus = task.status;
+    task.status = status;
+    task.blockedReason = status === 'blocked' ? blockedReason : '';
+    if (status === 'done') task.completedAt = new Date();
+    if (evidence.length) task.evidence = evidence;
+    task.history.push({ actor: req.user.id, action: 'transitioned', fromStatus, toStatus: status, note });
+    await task.save();
+    res.json({ success: true, data: task });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
   }

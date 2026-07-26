@@ -1,5 +1,5 @@
 const Submission = require('../models/Submission');
-const Project = require('../models/Project');
+const { Project, canAccessProject, projectIdsForUser } = require('../utils/projectAccess');
 const Notification = require('../models/Notification');
 
 // Notifications are best-effort — never fail the main operation over one
@@ -12,9 +12,17 @@ const notify = async (fields) => {
 exports.getAllSubmissions = async (req, res) => {
   try {
     const filter = {};
-    if (req.query.project) filter.project = req.query.project;
+    if (req.query.project) {
+      const project = await Project.findById(req.query.project);
+      if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
+      if (!canAccessProject(project, req.user)) {
+        return res.status(403).json({ success: false, error: 'Not authorized to view this project\'s submissions' });
+      }
+      filter.project = req.query.project;
+    }
     // Students only see their own submissions
     if (req.user.role === 'student') filter.student = req.user.id;
+    else if (req.user.role === 'supervisor') filter.project = filter.project || { $in: await projectIdsForUser(req.user) };
 
     const submissions = await Submission.find(filter).populate('student', 'name email').populate('project', 'title').sort({ submittedAt: -1 });
     res.status(200).json({ success: true, count: submissions.length, data: submissions });
@@ -25,12 +33,17 @@ exports.getAllSubmissions = async (req, res) => {
 
 exports.createSubmission = async (req, res) => {
   try {
+    const project = await Project.findById(req.body.project);
+    if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
+    if (!canAccessProject(project, req.user)) {
+      return res.status(403).json({ success: false, error: 'Not authorized to submit to this project' });
+    }
+
     req.body.student = req.user.id;
     const submission = await Submission.create(req.body);
 
     // Let the supervisor know a new deliverable is waiting for review
-    const project = await Project.findById(submission.project).select('title supervisor');
-    if (project?.supervisor) {
+    if (project.supervisor) {
       await notify({
         user: project.supervisor,
         title: 'New submission to review',
@@ -50,6 +63,11 @@ exports.updateSubmission = async (req, res) => {
   try {
     let submission = await Submission.findById(req.params.id);
     if (!submission) return res.status(404).json({ success: false, error: 'Submission not found' });
+
+    const project = await Project.findById(submission.project);
+    if (!canAccessProject(project, req.user)) {
+      return res.status(403).json({ success: false, error: 'Not authorized to update this submission' });
+    }
 
     let updates = req.body;
     if (req.user.role === 'student') {
@@ -84,6 +102,11 @@ exports.deleteSubmission = async (req, res) => {
   try {
     const submission = await Submission.findById(req.params.id);
     if (!submission) return res.status(404).json({ success: false, error: 'Submission not found' });
+
+    const project = await Project.findById(submission.project);
+    if (!canAccessProject(project, req.user)) {
+      return res.status(403).json({ success: false, error: 'Not authorized to delete this submission' });
+    }
 
     if (req.user.role === 'student' && submission.student.toString() !== req.user.id) {
       return res.status(403).json({ success: false, error: 'Not authorized to delete this submission' });

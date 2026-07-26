@@ -77,10 +77,10 @@ const CreateNewWork = () => {
       const res = await apiFetch('/api/ai/suggest-ideas', {
         method: 'POST',
         body: JSON.stringify({ interests: aiIdeaInterest, department: 'Computer Science' }) // hardcoded dept for now
-      }).catch(() => ({ success: true, data: 'Mock: AI suggests building a Healthcare Dashboard using React and Node.js.' }));
+      });
       if (res.success) setAiFeedback(res.data);
-    } catch (e) {
-      alert('Error fetching AI suggestions');
+    } catch (error) {
+      alert(`Error fetching AI suggestions: ${error.message}`);
     } finally {
       setAiLoading(false);
     }
@@ -95,10 +95,10 @@ const CreateNewWork = () => {
       const res = await apiFetch('/api/ai/review-proposal', {
         method: 'POST',
         body: JSON.stringify({ proposalText })
-      }).catch(() => ({ success: true, data: 'Mock: The proposal is well-structured. Consider adding more specific metrics to your expected outcome.' }));
+      });
       if (res.success) setAiFeedback(res.data);
-    } catch (e) {
-      alert('Error fetching AI review');
+    } catch (error) {
+      alert(`Error fetching AI review: ${error.message}`);
     } finally {
       setAiLoading(false);
     }

@@ -49,7 +49,7 @@ const MeetingManagement = () => {
       const res = await apiFetch('/api/meetings', {
         method: 'POST',
         body: JSON.stringify({ ...newMeeting, project: activeProject._id })
-      }).catch(() => ({ success: true, data: { ...newMeeting, _id: Date.now().toString() } }));
+      });
       
       if (res.success) {
         setShowModal(false);

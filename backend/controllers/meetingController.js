@@ -1,9 +1,19 @@
 const Meeting = require('../models/Meeting');
+const { Project, canAccessProject, projectIdsForUser } = require('../utils/projectAccess');
 
 exports.getAllMeetings = async (req, res) => {
   try {
     const filter = {};
-    if (req.query.project) filter.project = req.query.project;
+    if (req.query.project) {
+      const project = await Project.findById(req.query.project);
+      if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
+      if (!canAccessProject(project, req.user)) {
+        return res.status(403).json({ success: false, error: 'Not authorized to view this project\'s meetings' });
+      }
+      filter.project = req.query.project;
+    } else if (req.user.role !== 'admin') {
+      filter.project = { $in: await projectIdsForUser(req.user) };
+    }
 
     const meetings = await Meeting.find(filter).populate('project', 'title').sort({ date: 1 });
     res.status(200).json({ success: true, count: meetings.length, data: meetings });
@@ -14,6 +24,11 @@ exports.getAllMeetings = async (req, res) => {
 
 exports.createMeeting = async (req, res) => {
   try {
+    const project = await Project.findById(req.body.project);
+    if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
+    if (!canAccessProject(project, req.user)) {
+      return res.status(403).json({ success: false, error: 'Not authorized to create a meeting for this project' });
+    }
     const meeting = await Meeting.create({ ...req.body, organizer: req.user.id });
     res.status(201).json({ success: true, data: meeting });
   } catch (error) {
@@ -21,10 +36,10 @@ exports.createMeeting = async (req, res) => {
   }
 };
 
-// Only the organizer, or a supervisor/admin, may modify a meeting
-const canModifyMeeting = (meeting, user) =>
+// Only the organizer, that project's supervisor, or an admin may modify a meeting.
+const canModifyMeeting = (meeting, project, user) =>
   user.role === 'admin' ||
-  user.role === 'supervisor' ||
+  (project.supervisor && project.supervisor.toString() === user.id) ||
   (meeting.organizer && meeting.organizer.toString() === user.id);
 
 exports.updateMeeting = async (req, res) => {
@@ -32,7 +47,8 @@ exports.updateMeeting = async (req, res) => {
     let meeting = await Meeting.findById(req.params.id);
     if (!meeting) return res.status(404).json({ success: false, error: 'Meeting not found' });
 
-    if (!canModifyMeeting(meeting, req.user)) {
+    const project = await Project.findById(meeting.project);
+    if (!canModifyMeeting(meeting, project, req.user)) {
       return res.status(403).json({ success: false, error: 'Not authorized to update this meeting' });
     }
 
@@ -48,7 +64,8 @@ exports.deleteMeeting = async (req, res) => {
     const meeting = await Meeting.findById(req.params.id);
     if (!meeting) return res.status(404).json({ success: false, error: 'Meeting not found' });
 
-    if (!canModifyMeeting(meeting, req.user)) {
+    const project = await Project.findById(meeting.project);
+    if (!canModifyMeeting(meeting, project, req.user)) {
       return res.status(403).json({ success: false, error: 'Not authorized to delete this meeting' });
     }
 

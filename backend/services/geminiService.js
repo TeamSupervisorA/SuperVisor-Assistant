@@ -1,6 +1,8 @@
 const { GoogleGenAI } = require('@google/genai');
 
-const MODEL = 'gemini-2.5-flash';
+// Keep this configurable so deployments can select a model enabled for their
+// account. Gemini 3.6 Flash is the current production Flash model.
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
 let aiClient = null;
 
@@ -37,7 +39,7 @@ ${text}`;
     contents: prompt,
     config: {
       systemInstruction: `You are an expert academic supervisor. ${randomStyle} Always format your feedback clearly. Provide specific, actionable advice rather than generic statements. Never use the exact same phrasing for different submissions.`,
-      temperature: 0.9
+      // Gemini 3.x uses its default sampling settings.
     }
   });
 
@@ -57,7 +59,6 @@ ${text}`;
     contents: prompt,
     config: {
       systemInstruction: "You are an advanced academic integrity AI. Perform a rigorous linguistic analysis to detect anomalies, AI signatures, or matching patterns. Be highly objective.",
-      temperature: 0.2, // Lower temperature for more deterministic analysis
       responseMimeType: 'application/json'
     }
   });
@@ -83,7 +84,6 @@ Return a JSON array of objects, where each object has a 'title' (catchy and acad
     contents: prompt,
     config: {
       systemInstruction: "You are a visionary academic advisor known for thinking outside the box. Your goal is to inspire students with unique, interdisciplinary, and highly engaging project ideas that push the boundaries of their field. Use varied, inspiring language and avoid clichés.",
-      temperature: 0.9, // Higher temperature for maximum creativity
       responseMimeType: 'application/json'
     }
   });
@@ -118,7 +118,6 @@ ${proposalText}`;
     contents: prompt,
     config: {
       systemInstruction: `You are a senior academic reviewer. ${randomStyle} Your tone should be highly analytical and objective. Provide varied and dynamic structural elements (like bolding key terms, using bulleted lists), and never give the exact same generic feedback twice.`,
-      temperature: 0.85
     }
   });
 
@@ -146,7 +145,6 @@ Return as a JSON object with 'taskTitle' and 'explanation'. Do not return markdo
     contents: prompt,
     config: {
       systemInstruction: `You are a world-class agile project manager for academic research. ${randomStyle} Your advice should be highly context-aware, fresh, and uniquely tailored to the student's progress to keep their momentum high. Do not repeat the same advice format.`,
-      temperature: 0.9,
       responseMimeType: 'application/json'
     }
   });

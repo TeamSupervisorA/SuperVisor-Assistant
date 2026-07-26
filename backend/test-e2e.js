@@ -1,4 +1,8 @@
 require('dotenv').config();
+process.env.NODE_ENV = 'test';
+process.env.PORT = '5000';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'e2e-secret';
+require('./server');
 
 const API_BASE = 'http://localhost:5000/api';
 
@@ -45,7 +49,7 @@ async function runTests() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${supervisorToken}`
       },
-      body: JSON.stringify({ title: 'AI Research', description: 'Testing Gemini API', status: 'active', students: [regData.user._id] })
+      body: JSON.stringify({ title: 'AI Research', description: 'Testing Gemini API', status: 'active', students: [regData.user.id] })
     });
     const projData = await projRes.json();
     if (!projData.success) throw new Error(projData.error);
@@ -75,4 +79,6 @@ async function runTests() {
   }
 }
 
-runTests();
+setTimeout(() => {
+  runTests().finally(() => process.exit());
+}, 1000);

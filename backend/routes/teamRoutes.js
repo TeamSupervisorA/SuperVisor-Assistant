@@ -19,4 +19,7 @@ router
   .put(teamController.updateTeam)
   .delete(teamController.deleteTeam);
 
+router.post('/:id/leader/nominate', teamController.nominateLeader);
+router.post('/:id/leader/confirm', teamController.confirmLeader);
+
 module.exports = router;

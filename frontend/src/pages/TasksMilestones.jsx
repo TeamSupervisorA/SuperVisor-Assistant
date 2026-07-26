@@ -16,7 +16,7 @@ const itemVariants = {
 const TasksMilestones = () => {
   const { activeProject } = useAuth();
   const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [newTask, setNewTask] = useState({ title: '', description: '', status: 'todo', dueDate: '' });
   const [aiGuidance, setAiGuidance] = useState(null);
@@ -33,20 +33,11 @@ const TasksMilestones = () => {
   const loadTasks = async () => {
     try {
       setLoading(true);
-      const res = await apiFetch(`/api/tasks?project=${activeProject._id}`).catch(() => ({ data: [] }));
+      const res = await apiFetch(`/api/tasks?project=${activeProject._id}`);
       
       if (res.data && res.data.length > 0) {
         setTasks(res.data);
-      } else {
-        // Mock data to ensure the logic and UI is demonstratable
-        setTasks([
-          { _id: '1', title: 'Literature Review Draft', status: 'completed', dueDate: new Date(Date.now() - 86400000 * 5).toISOString() },
-          { _id: '2', title: 'Design Database Schema', status: 'in_progress', dueDate: new Date(Date.now() + 86400000 * 2).toISOString() },
-          { _id: '3', title: 'Create Figma Wireframes', status: 'in_progress', dueDate: new Date(Date.now() - 86400000 * 1).toISOString() }, // Delayed
-          { _id: '4', title: 'Implement Authentication API', status: 'todo', dueDate: new Date(Date.now() + 86400000 * 5).toISOString() },
-          { _id: '5', title: 'Prepare Mid-term Presentation', status: 'todo', dueDate: new Date(Date.now() + 86400000 * 10).toISOString() },
-        ]);
-      }
+      } else setTasks([]);
     } catch (error) {
       console.error('Failed to load tasks', error);
     } finally {
@@ -60,14 +51,12 @@ const TasksMilestones = () => {
     try {
       const payload = { ...newTask, project: activeProject._id };
       if (!payload.dueDate) delete payload.dueDate;
-      // In a real scenario, this hits the API. For the demo, we update local state if API fails.
       const res = await apiFetch('/api/tasks', {
         method: 'POST',
         body: JSON.stringify(payload)
-      }).catch(() => null);
+      });
       
-      const createdTask = res?.success ? res.data : { _id: Date.now().toString(), ...payload };
-      setTasks([...tasks, createdTask]);
+      setTasks([...tasks, res.data]);
       setShowModal(false);
       setNewTask({ title: '', description: '', status: 'todo', dueDate: '' });
     } catch (error) {
@@ -82,8 +71,8 @@ const TasksMilestones = () => {
       const taskSummaries = tasks.map(t => `${t.title} (${t.status})`).join(', ');
       const res = await apiFetch('/api/ai/recommend-task', {
         method: 'POST',
-        body: JSON.stringify({ tasks: taskSummaries })
-      }).catch(() => ({ success: true, data: `Based on your board, prioritize completing "${tasks.find(t => t.status !== 'completed')?.title || 'any pending task'}" next.` }));
+        body: JSON.stringify({ currentStatus: taskSummaries, pastTasks: tasks.map((task) => task.title) })
+      });
       
       if (res.success) setAiGuidance(res.data);
     } catch (e) {

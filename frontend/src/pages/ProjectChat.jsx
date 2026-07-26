@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import API_BASE_URL from '../lib/api';
 import { useAuth } from '../components/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 const ProjectChat = () => {
   const { activeProject, user } = useAuth();
@@ -27,7 +27,8 @@ const ProjectChat = () => {
   // Socket Connection for Team Chat
   useEffect(() => {
     if (!projectId) return;
-    const newSocket = io(API_BASE_URL);
+    const token = localStorage.getItem('token');
+    const newSocket = io(API_BASE_URL, { auth: { token } });
     setSocket(newSocket);
     newSocket.emit('join_project', projectId);
     newSocket.on('receive_message', (message) => {

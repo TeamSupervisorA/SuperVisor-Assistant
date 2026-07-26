@@ -144,7 +144,6 @@ const PlagiarismChecker = () => {
               const simScore = report.overallSimilarity;
               const isDanger = simScore >= 30;
               const isWarning = simScore >= 15 && simScore < 30;
-              const isSafe = simScore < 15;
               const statusColorClass = isDanger ? 'text-error' : isWarning ? 'text-tertiary' : 'text-primary';
               const bgGlowClass = isDanger ? 'bg-error' : isWarning ? 'bg-tertiary' : 'bg-primary';
 

@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext(null);
 
@@ -24,15 +23,18 @@ export const AuthProvider = ({ children }) => {
     if (storedActiveProject) {
       try {
         setActiveProject(JSON.parse(storedActiveProject));
-      } catch (e) {
+      } catch {
         localStorage.removeItem('activeProject');
       }
     }
 
     if (storedToken && storedUser) {
       try {
+        const parsedUser = JSON.parse(storedUser);
+        const normalizedUser = { ...parsedUser, _id: parsedUser._id || parsedUser.id };
         setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+        setUser(normalizedUser);
+        localStorage.setItem('user', JSON.stringify(normalizedUser));
       } catch {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -42,10 +44,13 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (tokenValue, userData) => {
+    const normalizedUser = { ...userData, _id: userData._id || userData.id };
     localStorage.setItem('token', tokenValue);
-    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('user', JSON.stringify(normalizedUser));
+    localStorage.removeItem('activeProject');
     setToken(tokenValue);
-    setUser(userData);
+    setUser(normalizedUser);
+    setActiveProject(null);
   };
 
   const logout = () => {

@@ -3,6 +3,7 @@ const {
   getTasks,
   createTask,
   updateTask,
+  transitionTask,
   deleteTask
 } = require('../controllers/taskController');
 const { protect, authorize } = require('../middleware/auth');
@@ -18,5 +19,7 @@ router.route('/')
 router.route('/:id')
   .put(updateTask) // students may update status of their own tasks
   .delete(authorize('supervisor', 'admin'), deleteTask);
+
+router.post('/:id/transition', transitionTask);
 
 module.exports = router;

@@ -26,10 +26,12 @@ const ProjectReport = () => {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [versions, setVersions] = useState([]);
 
   useEffect(() => {
     if (activeProject) {
       loadReport();
+      loadVersions();
     } else {
       setLoading(false);
     }
@@ -45,6 +47,24 @@ const ProjectReport = () => {
       setError(e.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadVersions = async () => {
+    try {
+      const res = await apiFetch(`/api/projects/${activeProject._id}/reports`);
+      setVersions(res.data || []);
+    } catch {
+      setVersions([]);
+    }
+  };
+
+  const saveVersion = async () => {
+    try {
+      await apiFetch(`/api/projects/${activeProject._id}/reports`, { method: 'POST', body: JSON.stringify({ type: 'progress' }) });
+      await loadVersions();
+    } catch (e) {
+      setError(e.message);
     }
   };
 
@@ -114,8 +134,10 @@ const ProjectReport = () => {
             <button onClick={() => window.print()} className="px-5 py-2.5 rounded-xl bg-primary text-on-primary font-label-md text-[13px] font-bold hover:bg-primary-fixed-variant transition-colors shadow-sm flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span> Download / Print
             </button>
+            <button onClick={saveVersion} className="px-5 py-2.5 rounded-xl bg-primary text-on-primary font-label-md text-[13px] font-bold hover:bg-primary-fixed-variant transition-colors shadow-sm">Save report version</button>
           </div>
         </motion.div>
+        {versions.length > 0 && <motion.div variants={itemVariants} className="rounded-2xl border border-outline-variant/30 bg-surface p-5"><h2 className="font-bold text-on-surface mb-2">Saved report versions</h2><div className="flex flex-wrap gap-2">{versions.map((version) => <span key={version._id} className="rounded-full bg-surface-container px-3 py-1 text-sm">{version.type} v{version.version} · {version.status}</span>)}</div></motion.div>}
 
         {/* Executive Summary */}
         <motion.section variants={itemVariants} className="bg-surface/80 backdrop-blur-xl rounded-[32px] p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border-l-4 border-l-primary border-y border-r border-outline-variant/30">

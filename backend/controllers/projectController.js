@@ -1,19 +1,9 @@
-const Project = require('../models/Project');
+const { Project, idOf, canAccessProject } = require('../utils/projectAccess');
 const Task = require('../models/Task');
 const Submission = require('../models/Submission');
 const Meeting = require('../models/Meeting');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
-
-// Works for both populated docs and raw ObjectIds
-const idOf = (ref) => (ref && ref._id ? ref._id : ref)?.toString();
-
-// A user may view/report on a project if they are admin, its supervisor, or one of its students
-const isProjectMember = (project, user) => {
-  if (user.role === 'admin') return true;
-  if (idOf(project.supervisor) === user.id) return true;
-  return project.students.some(s => idOf(s) === user.id);
-};
 
 // @desc    Get projects (students/supervisors see their own, admins see all)
 // @route   GET /api/projects
@@ -79,6 +69,10 @@ exports.getProject = async (req, res) => {
 
     if (!project) {
       return res.status(404).json({ success: false, error: 'Project not found' });
+    }
+
+    if (!canAccessProject(project, req.user)) {
+      return res.status(403).json({ success: false, error: 'Not authorized to view this project' });
     }
 
     res.status(200).json({ success: true, data: project });
@@ -178,15 +172,9 @@ exports.getProjectReport = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
-    if (!isProjectMember(project, req.user)) {
+    if (!canAccessProject(project, req.user)) {
       return res.status(403).json({ success: false, error: 'Not authorized to view this project report' });
     }
-
-    // Refresh delay detection so the report reflects reality
-    await Task.updateMany(
-      { project: req.params.id, status: { $ne: 'completed' }, dueDate: { $lt: new Date() } },
-      { $set: { status: 'delayed' } }
-    );
 
     const [tasks, submissions, meetings] = await Promise.all([
       Task.find({ project: req.params.id }).populate('assignedTo', 'name').sort({ dueDate: 1 }),
@@ -195,9 +183,9 @@ exports.getProjectReport = async (req, res) => {
     ]);
 
     const totalTasks = tasks.length;
-    const completedTasks = tasks.filter(t => t.status === 'completed').length;
-    const pendingTasks = tasks.filter(t => ['todo', 'in_progress', 'review'].includes(t.status)).length;
-    const delayedTasks = tasks.filter(t => t.status === 'delayed').length;
+    const completedTasks = tasks.filter(t => ['done', 'completed'].includes(t.status)).length;
+    const pendingTasks = tasks.filter(t => ['todo', 'in_progress', 'review', 'blocked'].includes(t.status)).length;
+    const delayedTasks = tasks.filter(t => t.isDelayed || (t.dueDate && t.dueDate < new Date() && !['done', 'completed', 'cancelled'].includes(t.status))).length;
 
     const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
@@ -273,7 +261,7 @@ exports.addProjectMember = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
-    if (!isProjectMember(project, req.user)) {
+    if (!canAccessProject(project, req.user)) {
       return res.status(403).json({ success: false, error: 'Not authorized to manage this team' });
     }
 

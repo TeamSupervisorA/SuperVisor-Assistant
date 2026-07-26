@@ -17,11 +17,14 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
   const studentItems = [
     { name: 'Dashboard', icon: 'dashboard', path: '/dashboard' },
     { name: 'Tasks & Milestones', icon: 'checklist', path: '/tasks-milestones' },
+    { name: 'Progress Logs', icon: 'timeline', path: '/progress-logs' },
     { name: 'Submissions', icon: 'upload_file', path: '/student-submissions' },
     { name: 'Team', icon: 'groups', path: '/team-management' },
     { name: 'Meetings', icon: 'event', path: '/meeting-management' },
     { name: 'Resources', icon: 'library_books', path: '/project-resource-library' },
     { name: 'Report', icon: 'summarize', path: '/project-report' },
+    { name: 'Proposals', icon: 'article', path: '/proposals' },
+    { name: 'Reviews', icon: 'rate_review', path: '/reviews' },
     ...commonItems,
     { name: 'Settings', icon: 'settings', path: '/settings' },
   ];
@@ -29,11 +32,14 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
   const supervisorItems = [
     { name: 'Dashboard', icon: 'dashboard', path: '/supervisor-dashboard' },
     { name: 'Tasks & Milestones', icon: 'checklist', path: '/tasks-milestones' },
+    { name: 'Progress Logs', icon: 'timeline', path: '/progress-logs' },
     { name: 'Evaluations', icon: 'grading', path: '/evaluations' },
     { name: 'Plagiarism', icon: 'policy', path: '/plagiarism-checker' },
     { name: 'Feedback', icon: 'rate_review', path: '/detailed-feedback' },
     { name: 'Meetings', icon: 'event', path: '/meeting-management' },
     { name: 'Report', icon: 'summarize', path: '/project-report' },
+    { name: 'Proposals', icon: 'article', path: '/proposals' },
+    { name: 'Reviews', icon: 'rate_review', path: '/reviews' },
     ...commonItems,
     { name: 'Settings', icon: 'settings', path: '/settings' },
   ];

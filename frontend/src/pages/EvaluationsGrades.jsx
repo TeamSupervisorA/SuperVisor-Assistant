@@ -52,7 +52,7 @@ const EvaluationsGrades = () => {
       const res = await apiFetch('/api/evaluations', {
         method: 'POST',
         body: JSON.stringify({ ...newEval, project: activeProject._id })
-      }).catch(() => ({ success: true, data: { ...newEval, _id: Date.now().toString(), totalScore: totalScore(newEval.scores), createdAt: new Date().toISOString() } }));
+      });
       
       if (res.success) {
         setShowModal(false);
@@ -127,7 +127,6 @@ const EvaluationsGrades = () => {
               const score = ev.totalScore || totalScore(ev.scores);
               const isExcellent = score >= 80;
               const isAverage = score >= 50 && score < 80;
-              const isPoor = score < 50;
 
               return (
                 <motion.div key={ev._id || idx} variants={itemVariants} className="bg-surface/80 backdrop-blur-xl p-8 rounded-[32px] shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-outline-variant/30 flex flex-col relative overflow-hidden group hover:shadow-md transition-shadow">

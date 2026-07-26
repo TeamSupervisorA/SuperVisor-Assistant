@@ -1,7 +1,7 @@
 const Team = require('../models/Team');
-const Project = require('../models/Project');
-
-const idOf = (ref) => (ref && ref._id ? ref._id : ref)?.toString();
+const { Project, idOf, canAccessProject, projectIdsForUser } = require('../utils/projectAccess');
+const LeaderHistory = require('../models/LeaderHistory');
+const { recordAudit } = require('../services/auditService');
 
 // Leader of the team, its supervisor, or an admin may modify it
 const canModifyTeam = (team, user) => {
@@ -13,7 +13,16 @@ const canModifyTeam = (team, user) => {
 exports.getAllTeams = async (req, res) => {
   try {
     const filter = {};
-    if (req.query.project) filter.project = req.query.project;
+    if (req.query.project) {
+      const project = await Project.findById(req.query.project);
+      if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
+      if (!canAccessProject(project, req.user)) {
+        return res.status(403).json({ success: false, error: 'Not authorized to view this project\'s teams' });
+      }
+      filter.project = req.query.project;
+    } else if (req.user.role !== 'admin') {
+      filter.project = { $in: await projectIdsForUser(req.user) };
+    }
 
     const teams = await Team.find(filter)
       .populate('project', 'title')
@@ -27,8 +36,15 @@ exports.getAllTeams = async (req, res) => {
 
 exports.getTeam = async (req, res) => {
   try {
-    const team = await Team.findById(req.params.id).populate('project', 'title').populate('supervisor', 'name email').populate('members.user', 'name email');
+    const team = await Team.findById(req.params.id);
     if (!team) return res.status(404).json({ success: false, error: 'Team not found' });
+    const project = await Project.findById(team.project);
+    if (!canAccessProject(project, req.user)) {
+      return res.status(403).json({ success: false, error: 'Not authorized to view this team' });
+    }
+    await team.populate('project', 'title');
+    await team.populate('supervisor', 'name email');
+    await team.populate('members.user', 'name email');
     res.status(200).json({ success: true, data: team });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -39,19 +55,26 @@ exports.createTeam = async (req, res) => {
   try {
     const body = { ...req.body };
 
+    const project = await Project.findById(body.project);
+    if (!project) {
+      return res.status(404).json({ success: false, error: 'Project not found' });
+    }
+    if (!canAccessProject(project, req.user)) {
+      return res.status(403).json({ success: false, error: 'You can only create a team for an accessible project' });
+    }
+
     if (req.user.role === 'student') {
       // Students may only create teams for projects they belong to,
       // and always become the team leader (proposal §4.2)
-      const project = await Project.findById(body.project);
-      if (!project) {
-        return res.status(404).json({ success: false, error: 'Project not found' });
-      }
       if (!project.students.some(s => idOf(s) === req.user.id)) {
         return res.status(403).json({ success: false, error: 'You can only create a team for your own project' });
       }
       const members = (body.members || []).filter(m => idOf(m.user) !== req.user.id);
       body.members = [{ user: req.user.id, role: 'Leader' }, ...members];
+      body.activeLeader = req.user.id;
       body.supervisor = project.supervisor || undefined;
+    } else if (req.user.role === 'supervisor') {
+      body.supervisor = req.user.id;
     }
 
     const team = await Team.create(body);
@@ -61,10 +84,54 @@ exports.createTeam = async (req, res) => {
   }
 };
 
+exports.nominateLeader = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const team = await Team.findById(req.params.id);
+    if (!team) return res.status(404).json({ success: false, error: 'Team not found' });
+    const project = await Project.findById(team.project);
+    if (!canAccessProject(project, req.user)) return res.status(403).json({ success: false, error: 'Not authorized to nominate a leader' });
+    if (!team.members.some((member) => idOf(member.user) === userId && member.state !== 'removed')) return res.status(422).json({ success: false, error: 'Leader must be an active team member' });
+    team.pendingLeader = userId;
+    await team.save();
+    await recordAudit({ actor: req.user.id, action: 'team.leader_nominated', entityType: 'team', entityId: team._id, metadata: { pendingLeader: userId } });
+    res.json({ success: true, data: team });
+  } catch (error) { res.status(400).json({ success: false, error: error.message }); }
+};
+
+exports.confirmLeader = async (req, res) => {
+  try {
+    const { reason = 'Supervisor-confirmed leader change' } = req.body;
+    const team = await Team.findById(req.params.id);
+    if (!team) return res.status(404).json({ success: false, error: 'Team not found' });
+    const project = await Project.findById(team.project);
+    if (req.user.role !== 'admin' && project.supervisor?.toString() !== req.user.id) return res.status(403).json({ success: false, error: 'Only the assigned supervisor may confirm a leader' });
+    if (!team.pendingLeader) return res.status(409).json({ success: false, error: 'No leader nomination is awaiting confirmation' });
+
+    const previousLeader = team.activeLeader;
+    team.members.forEach((member) => {
+      if (idOf(member.user) === idOf(team.pendingLeader)) member.role = 'Leader';
+      else if (member.role === 'Leader') member.role = 'Developer';
+    });
+    team.activeLeader = team.pendingLeader;
+    team.pendingLeader = null;
+    if (team.status === 'forming') team.status = 'active';
+    await team.save();
+    await LeaderHistory.create({ team: team._id, fromUser: previousLeader, toUser: team.activeLeader, changedBy: req.user.id, reason });
+    await recordAudit({ actor: req.user.id, action: 'team.leader_confirmed', entityType: 'team', entityId: team._id, metadata: { fromUser: previousLeader, toUser: team.activeLeader, reason } });
+    res.json({ success: true, data: team });
+  } catch (error) { res.status(400).json({ success: false, error: error.message }); }
+};
+
 exports.updateTeam = async (req, res) => {
   try {
     let team = await Team.findById(req.params.id);
     if (!team) return res.status(404).json({ success: false, error: 'Team not found' });
+
+    const project = await Project.findById(team.project);
+    if (!canAccessProject(project, req.user)) {
+      return res.status(403).json({ success: false, error: 'Not authorized to update this team' });
+    }
 
     if (!canModifyTeam(team, req.user)) {
       return res.status(403).json({ success: false, error: 'Not authorized to update this team' });
@@ -81,6 +148,11 @@ exports.deleteTeam = async (req, res) => {
   try {
     const team = await Team.findById(req.params.id);
     if (!team) return res.status(404).json({ success: false, error: 'Team not found' });
+
+    const project = await Project.findById(team.project);
+    if (!canAccessProject(project, req.user)) {
+      return res.status(403).json({ success: false, error: 'Not authorized to delete this team' });
+    }
 
     if (!canModifyTeam(team, req.user)) {
       return res.status(403).json({ success: false, error: 'Not authorized to delete this team' });

@@ -1,8 +1,11 @@
 const express = require('express');
-const { generateFeedback, checkPlagiarism, suggestIdeas, reviewProposal, recommendTask } = require('../controllers/aiController');
+const { generateFeedback, checkPlagiarism, suggestIdeas, reviewProposal, recommendTask, getInteractions, rateInteraction } = require('../controllers/aiController');
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
+
+router.get('/interactions', protect, getInteractions);
+router.put('/interactions/:id/rating', protect, rateInteraction);
 
 router.post('/feedback', protect, generateFeedback);
 router.post('/plagiarism', protect, authorize('supervisor', 'admin'), checkPlagiarism);

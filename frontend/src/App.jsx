@@ -24,6 +24,9 @@ import StudentSubmissions from './pages/StudentSubmissions';
 import EvaluationsGrades from './pages/EvaluationsGrades';
 import ExploreProjects from './pages/ExploreProjects';
 import ProjectReport from './pages/ProjectReport';
+import ProposalLifecycle from './pages/ProposalLifecycle';
+import ProgressLogs from './pages/ProgressLogs';
+import ReviewWorkspace from './pages/ReviewWorkspace';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -51,6 +54,9 @@ function App() {
               <Route path="/detailed-feedback" element={<DetailedFeedback />} />
               <Route path="/meeting-management" element={<MeetingManagement />} />
               <Route path="/project-report" element={<ProjectReport />} />
+              <Route path="/proposals" element={<ProposalLifecycle />} />
+              <Route path="/progress-logs" element={<ProgressLogs />} />
+              <Route path="/reviews" element={<ReviewWorkspace />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/chat" element={<ProjectChat />} />
 
