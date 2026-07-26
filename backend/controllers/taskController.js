@@ -1,6 +1,22 @@
 const Task = require('../models/Task');
 const { Project, canAccessProject, projectIdsForUser } = require('../utils/projectAccess');
 
+const hasDependencyCycle = async (taskId, dependencies) => {
+  const visited = new Set();
+  const walk = async (id) => {
+    const key = id.toString();
+    if (key === taskId?.toString()) return true;
+    if (visited.has(key)) return false;
+    visited.add(key);
+    const task = await Task.findById(id).select('dependencies');
+    if (!task) return false;
+    for (const dependency of task.dependencies) if (await walk(dependency)) return true;
+    return false;
+  };
+  for (const dependency of dependencies || []) if (await walk(dependency)) return true;
+  return false;
+};
+
 // @desc    Get tasks (optionally filtered by project)
 // @route   GET /api/tasks?project=<projectId>
 // @access  Private
@@ -54,6 +70,13 @@ exports.createTask = async (req, res) => {
       req.body.assignedTo = req.user.id;
     }
 
+    if (req.body.dependencies?.length) {
+      const dependencyCount = await Task.countDocuments({ _id: { $in: req.body.dependencies }, project: project._id });
+      if (dependencyCount !== req.body.dependencies.length) return res.status(422).json({ success: false, error: 'Dependencies must be tasks in the same project' });
+    }
+    if (await hasDependencyCycle(null, req.body.dependencies)) {
+      return res.status(422).json({ success: false, error: 'Task dependencies cannot contain a cycle' });
+    }
     const task = await Task.create({ ...req.body, history: [{ actor: req.user.id, action: 'created', toStatus: req.body.status || 'todo' }] });
 
     res.status(201).json({ success: true, data: task });
@@ -88,6 +111,11 @@ exports.updateTask = async (req, res) => {
 
     if (updates.status === 'blocked' && !updates.blockedReason && !task.blockedReason) {
       return res.status(422).json({ success: false, error: 'Blocked tasks require a blockedReason' });
+    }
+    if (updates.dependencies) {
+      const dependencyCount = await Task.countDocuments({ _id: { $in: updates.dependencies }, project: task.project._id });
+      if (dependencyCount !== updates.dependencies.length) return res.status(422).json({ success: false, error: 'Dependencies must be tasks in the same project' });
+      if (await hasDependencyCycle(task._id, updates.dependencies)) return res.status(422).json({ success: false, error: 'Task dependencies cannot contain a cycle' });
     }
     if (['done', 'completed'].includes(updates.status) && !task.completedAt) updates.completedAt = new Date();
     updates.history = [...task.history, {
