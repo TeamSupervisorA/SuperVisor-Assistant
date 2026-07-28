@@ -10,6 +10,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please add an email'],
     unique: true,
+    trim: true,
+    lowercase: true,
     match: [
       /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
       'Please add a valid email'
@@ -18,7 +20,7 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: [true, 'Please add a password'],
-    minlength: 6,
+    minlength: [8, 'Password must be at least 8 characters long'],
     select: false // Don't return password by default
   },
   role: {

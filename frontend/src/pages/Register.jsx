@@ -13,7 +13,7 @@ const roleHome = {
 const getPasswordStrength = (password) => {
   if (!password) return { score: 0, label: '', color: 'bg-outline-variant/30' };
   let score = 0;
-  if (password.length >= 6) score++;
+  if (password.length >= 8) score++;
   if (password.length >= 10) score++;
   if (/[A-Z]/.test(password)) score++;
   if (/[0-9]/.test(password)) score++;
@@ -34,7 +34,7 @@ const Register = () => {
   const [form, setForm] = useState({
     fullName: '',
     email: '',
-    role: '',
+    role: 'student',
     studentId: '',
     department: '',
     batch: '',
@@ -58,16 +58,12 @@ const Register = () => {
     e.preventDefault();
     setError('');
 
-    if (!form.role) {
-      setError('Please select a role.');
-      return;
-    }
     if (form.password !== form.confirmPassword) {
       setError('Passwords do not match.');
       return;
     }
-    if (form.password.length < 6) {
-      setError('Password must be at least 6 characters.');
+    if (form.password.length < 8) {
+      setError('Password must be at least 8 characters.');
       return;
     }
 
@@ -155,20 +151,15 @@ const Register = () => {
             {/* Role Selection */}
             <div className="space-y-3">
               <label className="block font-label-md text-[12px] font-bold text-secondary uppercase tracking-widest pl-1">I am a...</label>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <label className={`relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 cursor-pointer transition-all ${form.role === 'student' ? 'border-primary bg-primary/10 shadow-sm' : 'border-outline-variant/50 bg-surface-container-lowest/50 hover:bg-surface-container-lowest/80 hover:border-outline-variant'}`}>
                   <input type="radio" name="role" value="student" checked={form.role === 'student'} onChange={handleChange} className="sr-only" />
                   <span className={`material-symbols-outlined text-[32px] mb-2 ${form.role === 'student' ? 'text-primary icon-fill' : 'text-on-surface-variant'}`}>person</span>
                   <span className={`font-title-sm text-[14px] font-bold ${form.role === 'student' ? 'text-primary' : 'text-on-surface-variant'}`}>Student</span>
                   {form.role === 'student' && <span className="absolute top-2 right-2 w-3 h-3 bg-primary rounded-full"></span>}
                 </label>
-                <label className={`relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 cursor-pointer transition-all ${form.role === 'supervisor' ? 'border-primary bg-primary/10 shadow-sm' : 'border-outline-variant/50 bg-surface-container-lowest/50 hover:bg-surface-container-lowest/80 hover:border-outline-variant'}`}>
-                  <input type="radio" name="role" value="supervisor" checked={form.role === 'supervisor'} onChange={handleChange} className="sr-only" />
-                  <span className={`material-symbols-outlined text-[32px] mb-2 ${form.role === 'supervisor' ? 'text-primary icon-fill' : 'text-on-surface-variant'}`}>supervisor_account</span>
-                  <span className={`font-title-sm text-[14px] font-bold ${form.role === 'supervisor' ? 'text-primary' : 'text-on-surface-variant'}`}>Supervisor</span>
-                  {form.role === 'supervisor' && <span className="absolute top-2 right-2 w-3 h-3 bg-primary rounded-full"></span>}
-                </label>
               </div>
+              <p className="text-center text-xs text-secondary">Supervisor access is provisioned by your institution’s administrator.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

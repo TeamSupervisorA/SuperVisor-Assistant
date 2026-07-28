@@ -28,6 +28,7 @@ import ProposalLifecycle from './pages/ProposalLifecycle';
 import ProgressLogs from './pages/ProgressLogs';
 import ReviewWorkspace from './pages/ReviewWorkspace';
 import AdminManagement from './pages/AdminManagement';
+import ResearchStudio from './pages/ResearchStudio';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -58,6 +59,7 @@ function App() {
               <Route path="/proposals" element={<ProposalLifecycle />} />
               <Route path="/progress-logs" element={<ProgressLogs />} />
               <Route path="/reviews" element={<ReviewWorkspace />} />
+              <Route path="/research-studio" element={<ResearchStudio />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/chat" element={<ProjectChat />} />
 

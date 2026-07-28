@@ -66,7 +66,7 @@ exports.createTask = async (req, res) => {
 
     // Tasks created by students default to being assigned to themselves,
     // otherwise the student list view (filtered by assignedTo) would never show them
-    if (req.user.role === 'student' && !req.body.assignedTo) {
+    if (req.user.role === 'student') {
       req.body.assignedTo = req.user.id;
     }
 
@@ -77,7 +77,9 @@ exports.createTask = async (req, res) => {
     if (await hasDependencyCycle(null, req.body.dependencies)) {
       return res.status(422).json({ success: false, error: 'Task dependencies cannot contain a cycle' });
     }
-    const task = await Task.create({ ...req.body, history: [{ actor: req.user.id, action: 'created', toStatus: req.body.status || 'todo' }] });
+    const allowed = ['title', 'description', 'project', 'assignedTo', 'status', 'priority', 'dueDate', 'dependencies', 'acceptanceCriteria', 'blockedReason', 'evidence'];
+    const input = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowed.includes(key)));
+    const task = await Task.create({ ...input, history: [{ actor: req.user.id, action: 'created', toStatus: input.status || 'todo' }] });
 
     res.status(201).json({ success: true, data: task });
   } catch (error) {

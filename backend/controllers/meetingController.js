@@ -1,6 +1,12 @@
 const Meeting = require('../models/Meeting');
 const { Project, canAccessProject, projectIdsForUser } = require('../utils/projectAccess');
 
+const attendeesBelongToProject = (attendees, project) => {
+  if (!attendees) return true;
+  const allowed = new Set([...(project.students || []).map((id) => id.toString()), project.supervisor?.toString()].filter(Boolean));
+  return attendees.every((attendee) => allowed.has(attendee.toString()));
+};
+
 exports.getAllMeetings = async (req, res) => {
   try {
     const filter = {};
@@ -29,6 +35,9 @@ exports.createMeeting = async (req, res) => {
     if (!canAccessProject(project, req.user)) {
       return res.status(403).json({ success: false, error: 'Not authorized to create a meeting for this project' });
     }
+    if (!attendeesBelongToProject(req.body.attendees, project)) {
+      return res.status(422).json({ success: false, error: 'Meeting attendees must belong to the project' });
+    }
     const meeting = await Meeting.create({ ...req.body, organizer: req.user.id });
     res.status(201).json({ success: true, data: meeting });
   } catch (error) {
@@ -51,8 +60,13 @@ exports.updateMeeting = async (req, res) => {
     if (!canModifyMeeting(meeting, project, req.user)) {
       return res.status(403).json({ success: false, error: 'Not authorized to update this meeting' });
     }
+    const allowedFields = ['title', 'date', 'time', 'type', 'status', 'attendees', 'agenda', 'notes'];
+    const updates = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowedFields.includes(key)));
+    if (!attendeesBelongToProject(updates.attendees, project)) {
+      return res.status(422).json({ success: false, error: 'Meeting attendees must belong to the project' });
+    }
 
-    meeting = await Meeting.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    meeting = await Meeting.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
     res.status(200).json({ success: true, data: meeting });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });

@@ -14,7 +14,15 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    const extensions = {
+      'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif',
+      'application/pdf': '.pdf', 'application/msword': '.doc',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+      'application/vnd.ms-excel': '.xls',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+      'text/plain': '.txt'
+    };
+    cb(null, `file-${uniqueSuffix}${extensions[file.mimetype]}`);
   }
 });
 
@@ -38,16 +46,19 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { fileSize: 10 * 1024 * 1024, files: 1, fields: 4 }, // 10MB, one file
   fileFilter: fileFilter
 }).single('file');
 
 exports.uploadFile = (req, res) => {
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+    return res.status(503).json({ success: false, error: 'File uploads require a configured private object-storage provider in production.' });
+  }
   upload(req, res, function (err) {
     if (err instanceof multer.MulterError) {
       return res.status(400).json({ success: false, error: err.message });
     } else if (err) {
-      return res.status(500).json({ success: false, error: err.message });
+      return res.status(415).json({ success: false, error: err.message });
     }
 
     if (!req.file) {

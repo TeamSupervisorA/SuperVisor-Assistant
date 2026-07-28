@@ -2,6 +2,7 @@
 process.env.NODE_ENV = 'test';
 process.env.PORT = '5099';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'smoke-secret';
+process.env.ALLOW_PUBLIC_SUPERVISOR_REGISTRATION = 'true';
 
 require('./server');
 
@@ -36,6 +37,9 @@ const run = async () => {
   const bob = await reg('Bob', 'bob@test.com', 'student');
   const eve = await reg('Eve', 'eve@test.com', 'student');
   const sup = await reg('Dr. Sup', 'sup@test.com', 'supervisor');
+  process.env.ALLOW_PUBLIC_SUPERVISOR_REGISTRATION = 'false';
+  const unapprovedSupervisor = await reg('Unapproved Supervisor', 'unapproved@test.com', 'supervisor');
+  check('public supervisor registration is downgraded to student', unapprovedSupervisor.user.role === 'student');
 
   // ---- supervisor creates a project and assigns its first student
   const proj = await api('/api/projects', { method: 'POST', token: sup.token, body: { title: 'Smoke Project', description: 'x', students: [alice.user.id] } });
@@ -66,6 +70,24 @@ const run = async () => {
 
   const repEve = await api(`/api/projects/${pid}/report`, { token: eve.token });
   check('outsider cannot fetch report (403)', repEve.status === 403);
+
+  // ---- project-scoped research workspace
+  const workspaceCreate = await api(`/api/workspace/projects/${pid}/documents`, {
+    method: 'POST', token: alice.token,
+    body: { title: 'Thesis Draft', kind: 'paper', language: 'latex', content: '\\section{Introduction}\nResearch draft.' }
+  });
+  check('member creates a project-scoped paper draft', workspaceCreate.status === 201 && workspaceCreate.data.data.kind === 'paper');
+  const workspaceId = workspaceCreate.data.data._id;
+  const workspaceList = await api(`/api/workspace/projects/${pid}/documents`, { token: bob.token });
+  check('teammate can list workspace documents', workspaceList.status === 200 && workspaceList.data.data.some(d => d._id === workspaceId));
+  const workspaceUpdate = await api(`/api/workspace/documents/${workspaceId}`, { method: 'PUT', token: bob.token, body: { content: '\\section{Introduction}\nUpdated collaboratively.' } });
+  check('teammate can update workspace document', workspaceUpdate.status === 200 && workspaceUpdate.data.data.content.includes('Updated collaboratively'));
+  const workspaceEve = await api(`/api/workspace/documents/${workspaceId}`, { token: eve.token });
+  check('outsider cannot view workspace document (403)', workspaceEve.status === 403);
+  const badResearchSearch = await api('/api/research/search?q=x', { token: alice.token });
+  check('research search validates short queries', badResearchSearch.status === 422);
+  const researchSearch = await api('/api/research/search?q=machine%20learning', { token: alice.token });
+  check('research search returns scholarly metadata', researchSearch.status === 200 && researchSearch.data.data.length > 0 && researchSearch.data.data.every(work => work.title && work.source), JSON.stringify(researchSearch.data).slice(0, 160));
 
   // ---- immutable proposal lifecycle
   const proposalDraft = await api(`/api/projects/${pid}/proposals`, { method: 'POST', token: alice.token, body: { title: 'Smoke Proposal', content: 'A versioned proposal for the smoke test.' } });
@@ -103,10 +125,12 @@ const run = async () => {
 
   // ---- delay detection reflected in report
   await api('/api/tasks', { method: 'POST', token: alice.token, body: { title: 'Overdue Task', project: pid, dueDate: '2020-01-01' } });
+  const studentAssignedTask = await api('/api/tasks', { method: 'POST', token: alice.token, body: { title: 'Cannot assign others', project: pid, assignedTo: bob.user.id } });
+  check('student-created tasks stay assigned to the student', studentAssignedTask.status === 201 && studentAssignedTask.data.data.assignedTo === alice.user.id);
   await api('/api/tasks', { method: 'POST', token: alice.token, body: { title: 'Done Task', project: pid, status: 'completed' } });
   const rep2 = await api(`/api/projects/${pid}/report`, { token: alice.token });
   const ts = rep2.data.data.taskSummary;
-  check('report detects delayed task', ts.delayed === 1 && ts.completed === 1 && rep2.data.data.progressPercentage === 50, JSON.stringify(ts));
+  check('report detects delayed task', ts.delayed === 1 && ts.completed === 1 && rep2.data.data.progressPercentage === 33, JSON.stringify(ts));
 
   // ---- team policy
   const team = await api('/api/teams', { method: 'POST', token: alice.token, body: { name: 'Smoke Team', project: pid, members: [{ user: bob.user.id, role: 'Developer' }] } });
@@ -128,10 +152,15 @@ const run = async () => {
   fd.append('file', new Blob(['hello smoke'], { type: 'text/plain' }), 'smoke.txt');
   const upRes = await fetch(`${BASE}/api/upload`, { method: 'POST', headers: { Authorization: `Bearer ${alice.token}` }, body: fd });
   const upData = await upRes.json();
-  check('file upload works', upRes.status === 200 && upData.data.fileUrl.startsWith('/uploads/'), JSON.stringify(upData).slice(0, 120));
+  check('file upload normalizes the extension', upRes.status === 200 && upData.data.fileUrl.endsWith('.txt'), JSON.stringify(upData).slice(0, 120));
 
   const fileFetch = await fetch(`${BASE}${upData.data.fileUrl}`);
   check('uploaded file is served statically', fileFetch.status === 200 && (await fileFetch.text()) === 'hello smoke');
+
+  process.env.VERCEL = '1';
+  const productionUpload = await fetch(`${BASE}/api/upload`, { method: 'POST', headers: { Authorization: `Bearer ${alice.token}` }, body: fd });
+  check('cloud-local upload is blocked until private object storage is configured', productionUpload.status === 503);
+  delete process.env.VERCEL;
 
   // ---- submission + grading notifications
   const sub = await api('/api/submissions', { method: 'POST', token: alice.token, body: { title: 'Draft 1', project: pid, fileUrl: upData.data.fileUrl } });

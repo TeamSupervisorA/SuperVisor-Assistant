@@ -5,18 +5,35 @@ const connectDB = require('./config/db');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
+const isProduction = process.env.NODE_ENV === 'production';
+if (isProduction) {
+  const missing = [];
+  if (!process.env.MONGODB_URI) missing.push('MONGODB_URI');
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) missing.push('JWT_SECRET (at least 32 characters)');
+  if (missing.length) throw new Error(`Missing required production environment variables: ${missing.join(', ')}`);
+}
+
 // Connect to database
 connectDB();
 
 const app = express();
+if (isProduction) app.set('trust proxy', 1);
+app.disable('x-powered-by');
 
 // Middleware
-app.use(helmet()); // Security headers
+app.use(helmet({
+  referrerPolicy: { policy: 'no-referrer' },
+  crossOriginEmbedderPolicy: false
+}));
 const configuredOrigins = (process.env.FRONTEND_URL || '')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
-const isAllowedOrigin = (origin) => !origin || configuredOrigins.length === 0 || configuredOrigins.includes(origin) || /\.vercel\.app$/i.test(new URL(origin).hostname);
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true; // CLI, health checks, and same-origin non-browser requests
+  if (!configuredOrigins.length) return !isProduction;
+  return configuredOrigins.includes(origin);
+};
 const corsOptions = {
   origin(origin, callback) {
     try {
@@ -28,7 +45,7 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 // express-mongo-sanitize mutates req.query, which is read-only in Express 5 and
 // causes every request to fail. Sanitize JSON request bodies without touching
@@ -51,16 +68,20 @@ app.use((req, res, next) => {
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // limit each IP to 1000 requests per windowMs
-  message: 'Too many requests from this IP, please try again later'
+  max: 300,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many requests from this IP, please try again later' }
 });
 app.use(limiter);
 
 // Specific stricter limit for auth routes
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 50,
-  message: 'Too many login attempts, please try again later'
+  max: 10,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many authentication attempts, please try again later' }
 });
 app.use('/api/auth/', authLimiter);
 
@@ -83,10 +104,23 @@ app.use('/api/meetings', require('./routes/meetingRoutes'));
 app.use('/api/resources', require('./routes/resourceRoutes'));
 app.use('/api/submissions', require('./routes/submissionRoutes'));
 app.use('/api/upload', require('./routes/uploadRoutes'));
+app.use('/api/workspace', require('./routes/workspaceRoutes'));
+app.use('/api/research', require('./routes/researchRoutes'));
 
 // Serve uploads folder as static
 const path = require('path');
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Local uploads are a development-only compatibility path. Do not expose
+// academic files publicly from a serverless filesystem in production.
+if (!isProduction) {
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+    setHeaders: (res) => {
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+      res.setHeader('Content-Disposition', 'attachment');
+      res.setHeader('Cache-Control', 'no-store');
+    }
+  }));
+}
 
 const http = require('http');
 const { Server } = require('socket.io');
@@ -97,7 +131,7 @@ const Project = require('./models/Project');
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: configuredOrigins.length ? configuredOrigins : '*',
+    origin: (origin, callback) => callback(null, isAllowedOrigin(origin)),
     methods: ['GET', 'POST']
   }
 });
@@ -113,7 +147,7 @@ io.use(async (socket, next) => {
     if (!token) return next(new Error('Authentication required'));
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id);
-    if (!user) return next(new Error('Authentication required'));
+    if (!user || user.status === 'inactive') return next(new Error('Authentication required'));
     socket.user = user;
     next();
   } catch {

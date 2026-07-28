@@ -5,6 +5,7 @@ const router = express.Router();
 router.use(protect, authorize('admin'));
 router.get('/users', controller.getUsers);
 router.patch('/users/:id/status', controller.setUserStatus);
+router.patch('/users/:id/role', controller.setUserRole);
 router.get('/departments', controller.getDepartments);
 router.post('/departments', controller.createDepartment);
 module.exports = router;

@@ -3,6 +3,12 @@ const { Project, idOf, canAccessProject, projectIdsForUser } = require('../utils
 const LeaderHistory = require('../models/LeaderHistory');
 const { recordAudit } = require('../services/auditService');
 
+const hasOnlyProjectStudents = async (members, project) => {
+  const ids = (members || []).map((member) => idOf(member.user || member)).filter(Boolean);
+  if (!ids.length) return true;
+  return ids.every((id) => project.students.some((student) => idOf(student) === id));
+};
+
 // Leader of the team, its supervisor, or an admin may modify it
 const canModifyTeam = (team, user) => {
   if (user.role === 'admin') return true;
@@ -77,6 +83,10 @@ exports.createTeam = async (req, res) => {
       body.supervisor = req.user.id;
     }
 
+    if (!(await hasOnlyProjectStudents(body.members, project))) {
+      return res.status(422).json({ success: false, error: 'Team members must be students assigned to this project' });
+    }
+
     const team = await Team.create(body);
     res.status(201).json({ success: true, data: team });
   } catch (error) {
@@ -137,7 +147,13 @@ exports.updateTeam = async (req, res) => {
       return res.status(403).json({ success: false, error: 'Not authorized to update this team' });
     }
 
-    team = await Team.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const canManageMembership = req.user.role === 'admin' || idOf(project.supervisor) === req.user.id;
+    const allowedFields = canManageMembership ? ['name', 'status', 'members'] : ['name'];
+    const updates = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowedFields.includes(key)));
+    if (updates.members && !(await hasOnlyProjectStudents(updates.members, project))) {
+      return res.status(422).json({ success: false, error: 'Team members must be students assigned to this project' });
+    }
+    team = await Team.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
     res.status(200).json({ success: true, data: team });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });

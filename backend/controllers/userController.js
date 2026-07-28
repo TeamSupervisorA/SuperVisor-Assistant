@@ -21,8 +21,16 @@ exports.updateSettings = async (req, res) => {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
     
-    // Update settings object
-    user.settings = { ...user.settings, ...req.body };
+    const allowed = ['aiChatbot', 'ideaGenerator', 'proposalFeedback', 'plagiarismAutoCheck', 'systemPrompt', 'plagiarismTolerance'];
+    const settings = {};
+    allowed.forEach((key) => { if (req.body[key] !== undefined) settings[key] = req.body[key]; });
+    if (typeof settings.systemPrompt === 'string' && settings.systemPrompt.length > 4000) {
+      return res.status(422).json({ success: false, error: 'System prompt must be 4000 characters or fewer' });
+    }
+    if (settings.plagiarismTolerance !== undefined && (!Number.isFinite(settings.plagiarismTolerance) || settings.plagiarismTolerance < 0 || settings.plagiarismTolerance > 100)) {
+      return res.status(422).json({ success: false, error: 'Plagiarism tolerance must be between 0 and 100' });
+    }
+    user.settings = { ...user.settings, ...settings };
     await user.save();
     
     res.status(200).json({ success: true, data: user.settings });

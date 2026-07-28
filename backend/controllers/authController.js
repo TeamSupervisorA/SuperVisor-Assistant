@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 const sendTokenResponse = (user, statusCode, res) => {
   // Create token
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: '30d'
+    expiresIn: process.env.JWT_EXPIRES_IN || '8h'
   });
 
   res.status(statusCode).json({
@@ -30,13 +30,16 @@ exports.register = async (req, res) => {
   try {
     const { name, email, password, role, studentId, department, batch } = req.body;
 
-    // Never allow self-registration as admin
-    const safeRole = ['student', 'supervisor'].includes(role) ? role : 'student';
+    // Public registration is student-only unless an institution explicitly
+    // enables supervisor onboarding during a controlled setup window.
+    const safeRole = role === 'supervisor' && process.env.ALLOW_PUBLIC_SUPERVISOR_REGISTRATION === 'true'
+      ? 'supervisor'
+      : 'student';
 
     // Create user
     const user = await User.create({
       name,
-      email,
+      email: typeof email === 'string' ? email.trim().toLowerCase() : email,
       password,
       role: safeRole,
       studentId: studentId || null,
@@ -63,7 +66,7 @@ exports.login = async (req, res) => {
     }
 
     // Check for user
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email: String(email).trim().toLowerCase() }).select('+password');
 
     if (!user) {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
@@ -96,20 +99,9 @@ exports.adminLogin = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Please provide an email and password' });
     }
 
-    const user = await User.findOne({ email }).select('+password');
-
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Invalid credentials' });
-    }
-
-    // Ensure the user actually has the admin role
-    if (user.role !== 'admin') {
-      return res.status(403).json({ success: false, error: 'Access denied. Administrator privileges required.' });
-    }
-
-    const isMatch = await user.matchPassword(password);
-
-    if (!isMatch) {
+    const user = await User.findOne({ email: String(email).trim().toLowerCase() }).select('+password');
+    const isMatch = user ? await user.matchPassword(password) : false;
+    if (!user || user.role !== 'admin' || !isMatch) {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
 

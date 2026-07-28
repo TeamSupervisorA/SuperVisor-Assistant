@@ -27,6 +27,23 @@ exports.setUserStatus = async (req, res) => {
   } catch (error) { res.status(400).json({ success: false, error: error.message }); }
 };
 
+// Public registration intentionally creates students only. Administrators use
+// this audited endpoint to provision or revoke supervisor access.
+exports.setUserRole = async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!['student', 'supervisor'].includes(role)) return res.status(422).json({ success: false, error: 'Role must be student or supervisor' });
+    const target = await User.findById(req.params.id);
+    if (!target) return res.status(404).json({ success: false, error: 'User not found' });
+    if (target.role === 'admin') return res.status(403).json({ success: false, error: 'Administrator roles cannot be changed through this endpoint' });
+    const previousRole = target.role;
+    target.role = role;
+    await target.save();
+    await recordAudit({ actor: req.user.id, action: 'user.role_changed', entityType: 'user', entityId: target._id, metadata: { previousRole, role } });
+    res.json({ success: true, data: { id: target._id, role: target.role } });
+  } catch (error) { res.status(400).json({ success: false, error: error.message }); }
+};
+
 exports.getDepartments = async (req, res) => {
   try { res.json({ success: true, data: await Department.find().sort({ name: 1 }) }); }
   catch (error) { res.status(400).json({ success: false, error: error.message }); }
