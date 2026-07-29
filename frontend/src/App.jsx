@@ -32,7 +32,10 @@ import AdminManagement from './pages/AdminManagement';
 import NotFound from './pages/NotFound';
 
 const ResearchStudio = lazy(() => import('./pages/ResearchStudio'));
+const PaperEditor = lazy(() => import('./pages/PaperEditor'));
+const CodeIDE = lazy(() => import('./pages/CodeIDE'));
 const ResearchStudioRoute = () => <Suspense fallback={<div className="grid min-h-screen place-items-center bg-background text-secondary">Loading Research Studio…</div>}><ResearchStudio /></Suspense>;
+const WorkspaceRoute = ({ children }) => <Suspense fallback={<div className="grid min-h-screen place-items-center bg-background text-secondary">Loading workspace…</div>}>{children}</Suspense>;
 
 function App() {
   return (
@@ -63,6 +66,8 @@ function App() {
               <Route path="/progress-logs" element={<ProgressLogs />} />
               <Route path="/reviews" element={<ReviewWorkspace />} />
               <Route path="/research-studio" element={<ResearchStudioRoute />} />
+              <Route path="/paper-editor" element={<WorkspaceRoute><PaperEditor /></WorkspaceRoute>} />
+              <Route path="/code-ide" element={<WorkspaceRoute><CodeIDE /></WorkspaceRoute>} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/chat" element={<ProjectChat />} />
 

@@ -65,18 +65,20 @@ const relativeTime = (date) => {
   return `Saved ${new Date(date).toLocaleDateString()}`;
 };
 
-const EmptyProject = () => (
+const EmptyProject = ({ workspace = 'research' }) => (
   <div className="min-h-[calc(100vh-64px)] grid place-items-center bg-background p-6">
     <div className="max-w-lg rounded-[28px] border border-outline-variant/30 bg-surface p-10 text-center shadow-[0_24px_80px_rgba(25,32,70,.08)]">
       <div className="mx-auto mb-5 grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary"><span className="material-symbols-outlined text-[30px]">folder_open</span></div>
       <h1 className="text-2xl font-extrabold text-on-surface">Choose a project to begin</h1>
-      <p className="mt-3 leading-relaxed text-secondary">Research Studio keeps paper drafts, code notes, and literature search results safely within the active project.</p>
+      <p className="mt-3 leading-relaxed text-secondary">Choose a project to open its {workspace} workspace.</p>
     </div>
   </div>
 );
 
-const ResearchStudio = () => {
+export const ResearchStudio = ({ workspace = 'research' }) => {
   const { activeProject } = useAuth();
+  const isPaperWorkspace = workspace === 'paper';
+  const isCodeWorkspace = workspace === 'code';
   const [documents, setDocuments] = useState([]);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [loading, setLoading] = useState(Boolean(activeProject));
@@ -93,7 +95,7 @@ const ResearchStudio = () => {
     setLoading(true);
     try {
       const result = await apiFetch(`/api/workspace/projects/${activeProject._id}/documents`);
-      const nextDocuments = result.data || [];
+      const nextDocuments = (result.data || []).filter((item) => !isPaperWorkspace && !isCodeWorkspace || (isPaperWorkspace ? item.kind === 'paper' : item.kind === 'code'));
       setDocuments(nextDocuments);
       const preferred = nextDocuments.find((item) => item._id === keepId) || nextDocuments[0];
       if (preferred) {
@@ -107,7 +109,7 @@ const ResearchStudio = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeProject?._id]);
+  }, [activeProject?._id, isCodeWorkspace, isPaperWorkspace]);
 
   useEffect(() => {
     setDocuments([]);
@@ -272,6 +274,10 @@ const ResearchStudio = () => {
     .replace(/%.*$/gm, '').trim(), [selectedDocument?.content]);
   const wordCount = useMemo(() => (textPreview.match(/\S+/g) || []).length, [textPreview]);
   const citationCount = useMemo(() => (selectedDocument?.content.match(/\\cite\{[^}]+\}/g) || []).length, [selectedDocument?.content]);
+  const codeStats = useMemo(() => {
+    const content = selectedDocument?.content || '';
+    return { lines: content ? content.split('\n').length : 0, todos: (content.match(/\bTODO\b/gi) || []).length, logs: (content.match(/console\.log|print\(/g) || []).length };
+  }, [selectedDocument?.content]);
   const readiness = useMemo(() => {
     const content = selectedDocument?.content || '';
     return [
@@ -283,7 +289,7 @@ const ResearchStudio = () => {
     ];
   }, [selectedDocument?.content]);
 
-  if (!activeProject) return <EmptyProject />;
+  if (!activeProject) return <EmptyProject workspace={isPaperWorkspace ? 'paper editor' : isCodeWorkspace ? 'code IDE' : 'research'} />;
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-[#f7f8fc] text-slate-900 dark:bg-background dark:text-on-surface">
@@ -292,14 +298,14 @@ const ResearchStudio = () => {
           <div className="flex items-start gap-4">
             <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 text-white shadow-lg shadow-indigo-600/20"><span className="material-symbols-outlined">auto_stories</span></div>
             <div>
-              <div className="mb-1 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.16em] text-indigo-600 dark:text-primary"><span>Research Studio</span><span className="size-1 rounded-full bg-current"/><span className="truncate">{activeProject.title}</span></div>
-              <h1 className="text-2xl font-extrabold tracking-tight text-slate-950 dark:text-on-surface md:text-[28px]">Write, build, and cite in one focused workspace.</h1>
-              <p className="mt-1 text-sm text-slate-500 dark:text-secondary">Project-scoped drafts, implementation notes, and literature discovery.</p>
+              <div className="mb-1 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.16em] text-indigo-600 dark:text-primary"><span>{isPaperWorkspace ? 'Paper editor' : isCodeWorkspace ? 'Code IDE' : 'Research Studio'}</span><span className="size-1 rounded-full bg-current"/><span className="truncate">{activeProject.title}</span></div>
+              <h1 className="text-2xl font-extrabold tracking-tight text-slate-950 dark:text-on-surface md:text-[28px]">{isPaperWorkspace ? 'Write and review your LaTeX paper.' : isCodeWorkspace ? 'Build and document your project implementation.' : 'Write, build, and cite in one focused workspace.'}</h1>
+              <p className="mt-1 text-sm text-slate-500 dark:text-secondary">{isPaperWorkspace ? 'Source, reading preview, paper structure, and literature in one place.' : isCodeWorkspace ? 'Project-scoped implementation files, source editor, and development checks.' : 'Project-scoped drafts, implementation notes, and literature discovery.'}</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button onClick={() => createDocument('paper')} className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-px hover:bg-slate-800 dark:bg-primary dark:text-on-primary"><span className="material-symbols-outlined text-[18px]">article</span> New paper</button>
-            <button onClick={() => createDocument('code')} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700 dark:border-outline-variant/50 dark:bg-surface dark:text-on-surface"><span className="material-symbols-outlined text-[18px]">terminal</span> New code lab</button>
+            {!isCodeWorkspace && <button onClick={() => createDocument('paper')} className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-px hover:bg-slate-800 dark:bg-primary dark:text-on-primary"><span className="material-symbols-outlined text-[18px]">article</span> New paper</button>}
+            {!isPaperWorkspace && <button onClick={() => createDocument('code')} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700 dark:border-outline-variant/50 dark:bg-surface dark:text-on-surface"><span className="material-symbols-outlined text-[18px]">terminal</span> New code file</button>}
           </div>
         </header>
 
@@ -309,7 +315,7 @@ const ResearchStudio = () => {
           <aside className="rounded-[24px] border border-slate-200/80 bg-white p-3 shadow-[0_12px_40px_rgba(36,48,84,.05)] dark:border-outline-variant/30 dark:bg-surface">
             <div className="mb-3 flex items-center justify-between px-2 pt-2"><span className="text-xs font-bold uppercase tracking-[.14em] text-slate-500 dark:text-secondary">Project files</span><span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500 dark:bg-surface-container">{documents.length}</span></div>
             <div className="space-y-1">
-              {loading ? <div className="p-5 text-center text-sm text-slate-500">Loading workspace…</div> : documents.length === 0 ? <div className="px-3 py-6 text-center text-sm leading-relaxed text-slate-500">Create a paper draft or code lab to start your project record.</div> : documents.map((document) => {
+              {loading ? <div className="p-5 text-center text-sm text-slate-500">Loading workspace…</div> : documents.length === 0 ? <div className="px-3 py-6 text-center text-sm leading-relaxed text-slate-500">{isPaperWorkspace ? 'Create a LaTeX paper to begin drafting.' : isCodeWorkspace ? 'Create a code file to begin documenting implementation work.' : 'Create a paper draft or code lab to start your project record.'}</div> : documents.map((document) => {
                 const selected = document._id === selectedDocument?._id;
                 return <button key={document._id} onClick={() => selectDocument(document._id)} className={`flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition ${selected ? 'bg-indigo-50 text-indigo-900 dark:bg-primary/15 dark:text-primary' : 'text-slate-700 hover:bg-slate-50 dark:text-on-surface dark:hover:bg-surface-container-low'}`}>
                   <span className={`material-symbols-outlined mt-0.5 text-[18px] ${selected ? 'text-indigo-600 dark:text-primary' : 'text-slate-400'}`}>{document.kind === 'paper' ? 'description' : 'code'}</span>
@@ -330,7 +336,7 @@ const ResearchStudio = () => {
               </div>
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50/70 px-5 py-3 dark:border-outline-variant/30 dark:bg-surface-container-low">
                 <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-on-surface"><span className="material-symbols-outlined text-[18px] text-indigo-600 dark:text-primary">vertical_split</span>Live split workspace <span className="hidden font-normal text-slate-500 sm:inline dark:text-secondary">— source and reading preview update together</span></div>
-                <div className="flex gap-2 text-[11px] font-bold text-slate-500 dark:text-secondary"><span className="rounded-full bg-white px-2.5 py-1 shadow-sm dark:bg-surface">{wordCount.toLocaleString()} words</span><span className="rounded-full bg-white px-2.5 py-1 shadow-sm dark:bg-surface">{sections.length} sections</span><span className="rounded-full bg-white px-2.5 py-1 shadow-sm dark:bg-surface">{citationCount} citations</span></div>
+                <div className="flex gap-2 text-[11px] font-bold text-slate-500 dark:text-secondary">{selectedDocument.kind === 'paper' ? <><span className="rounded-full bg-white px-2.5 py-1 shadow-sm dark:bg-surface">{wordCount.toLocaleString()} words</span><span className="rounded-full bg-white px-2.5 py-1 shadow-sm dark:bg-surface">{sections.length} sections</span><span className="rounded-full bg-white px-2.5 py-1 shadow-sm dark:bg-surface">{citationCount} citations</span></> : <><span className="rounded-full bg-white px-2.5 py-1 shadow-sm dark:bg-surface">{codeStats.lines} lines</span><span className="rounded-full bg-white px-2.5 py-1 shadow-sm dark:bg-surface">{codeStats.todos} TODOs</span><span className="rounded-full bg-white px-2.5 py-1 shadow-sm dark:bg-surface">{codeStats.logs} output calls</span></>}</div>
               </div>
               <div className="grid min-h-[680px] grid-cols-1 divide-y divide-slate-200 dark:divide-outline-variant/30 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
                 <section className="min-w-0 bg-[#1e1e1e]">
@@ -338,10 +344,7 @@ const ResearchStudio = () => {
                   <div className="h-[560px]"><Editor height="100%" language={languageFor(selectedDocument)} value={selectedDocument.content} theme="vs-dark" onChange={(value) => updateSelected({ content: value || '' })} options={{ minimap: { enabled: false }, fontSize: 14, lineNumbersMinChars: 3, wordWrap: 'on', padding: { top: 18 }, scrollBeyondLastLine: false, automaticLayout: true }} /></div>
                 </section>
                 <section className="min-w-0 bg-slate-100 p-4 dark:bg-surface-container-low">
-                  <div className="mx-auto flex h-[560px] max-w-[760px] flex-col overflow-hidden rounded-sm bg-white shadow-[0_4px_18px_rgba(15,23,42,.14)]">
-                    <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3"><span className="inline-flex items-center gap-2 text-xs font-bold text-slate-700"><span className="material-symbols-outlined text-[16px] text-indigo-600">visibility</span>Live reading preview</span><span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Source-aware</span></div>
-                    <article className="overflow-y-auto px-7 py-8 text-slate-800 sm:px-10"><h2 className="border-b border-slate-200 pb-5 text-center font-serif text-2xl font-bold leading-tight">{selectedDocument.title}</h2><p className="mb-8 mt-3 text-center text-xs text-slate-500">{selectedDocument.kind === 'paper' ? 'LaTeX draft reading view' : 'Research implementation notebook'}</p><div className="whitespace-pre-wrap font-serif text-[15px] leading-8 text-slate-700">{selectedDocument.kind === 'paper' ? textPreview || 'Start writing to see the reading preview.' : selectedDocument.content || 'Start coding to see the source preview.'}</div></article>
-                  </div>
+                  {selectedDocument.kind === 'paper' ? <div className="mx-auto flex h-[560px] max-w-[760px] flex-col overflow-hidden rounded-sm bg-white shadow-[0_4px_18px_rgba(15,23,42,.14)]"><div className="flex items-center justify-between border-b border-slate-200 px-5 py-3"><span className="inline-flex items-center gap-2 text-xs font-bold text-slate-700"><span className="material-symbols-outlined text-[16px] text-indigo-600">picture_as_pdf</span>Typeset reading preview</span><span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Source-aware</span></div><article className="overflow-y-auto px-7 py-8 text-slate-800 sm:px-10"><h2 className="border-b border-slate-200 pb-5 text-center font-serif text-2xl font-bold leading-tight">{selectedDocument.title}</h2><p className="mb-8 mt-3 text-center text-xs text-slate-500">LaTeX draft reading view</p><div className="whitespace-pre-wrap font-serif text-[15px] leading-8 text-slate-700">{textPreview || 'Start writing to see the reading preview.'}</div></article></div> : <div className="flex h-[560px] flex-col overflow-hidden rounded-sm bg-[#111827] font-mono text-sm text-slate-200 shadow-[0_4px_18px_rgba(15,23,42,.14)]"><div className="flex items-center justify-between border-b border-white/10 px-4 py-3"><span className="inline-flex items-center gap-2 font-sans text-xs font-bold"><span className="material-symbols-outlined text-[16px] text-emerald-400">terminal</span>Development output</span><span className="font-sans text-[10px] uppercase tracking-wider text-slate-500">Safe workspace</span></div><pre className="flex-1 overflow-auto whitespace-pre-wrap p-5 text-xs leading-6 text-slate-300">$ project-notebook status\nFile: {selectedDocument.title}\nLanguage: {selectedDocument.language || 'javascript'}\nLines: {codeStats.lines}\nTODO markers: {codeStats.todos}\n\nRun code in your approved local or cloud development environment. This academic workspace intentionally does not execute arbitrary code in the browser.</pre><div className="border-t border-white/10 px-4 py-3 text-[11px] text-slate-500">Save source here, then download it for local execution or your institution’s approved compute environment.</div></div>}
                 </section>
               </div>
               <section className="border-t border-slate-200 p-5 dark:border-outline-variant/30 md:p-6">
@@ -355,7 +358,7 @@ const ResearchStudio = () => {
           <aside className="space-y-5">
             <section className="rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-[0_12px_40px_rgba(36,48,84,.05)] dark:border-outline-variant/30 dark:bg-surface"><div className="mb-4 flex items-center gap-2"><span className="material-symbols-outlined text-indigo-600 dark:text-primary">account_tree</span><h2 className="text-sm font-bold">Writing map</h2></div>{selectedDocument?.kind === 'paper' ? <div className="space-y-2">{sections.length ? sections.map((section, index) => <div key={`${section}-${index}`} className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 dark:bg-surface-container-low dark:text-on-surface"><span className="size-1.5 rounded-full bg-indigo-500"/>{section}</div>) : <p className="text-sm leading-relaxed text-slate-500 dark:text-secondary">Use <code className="rounded bg-slate-100 px-1 dark:bg-surface-container">\\section&#123;…&#125;</code> headings to shape your paper.</p>}</div> : <p className="text-sm leading-relaxed text-slate-500 dark:text-secondary">Treat this code lab as an experiment record: state the question, input, method, and output alongside implementation.</p>}</section>
             {selectedDocument?.kind === 'paper' && <section className="rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-[0_12px_40px_rgba(36,48,84,.05)] dark:border-outline-variant/30 dark:bg-surface"><div className="mb-3 flex items-center justify-between gap-2"><div className="flex items-center gap-2"><span className="material-symbols-outlined text-emerald-600">fact_check</span><h2 className="text-sm font-bold">Paper readiness</h2></div><span className="text-xs font-bold text-slate-500 dark:text-secondary">{readiness.filter(([, complete]) => complete).length}/{readiness.length}</span></div><div className="space-y-2">{readiness.map(([label, complete]) => <div key={label} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-xs dark:bg-surface-container-low"><span className="text-slate-700 dark:text-on-surface">{label}</span><span className={`material-symbols-outlined text-[17px] ${complete ? 'text-emerald-600' : 'text-slate-300 dark:text-secondary'}`}>{complete ? 'check_circle' : 'radio_button_unchecked'}</span></div>)}</div><p className="mt-3 text-[11px] leading-relaxed text-slate-500 dark:text-secondary">This checks structure only. Confirm academic quality, evidence, and citation accuracy before submission.</p></section>}
-            <section className="rounded-[24px] border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-5 shadow-[0_12px_40px_rgba(36,48,84,.04)] dark:border-primary/20 dark:from-primary/10 dark:to-surface"><div className="flex items-center gap-2"><span className="material-symbols-outlined text-indigo-600 dark:text-primary">open_in_new</span><h2 className="text-sm font-bold">Overleaf handoff</h2></div><p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-secondary">Keep a source copy here, then open your team’s Overleaf project for native compiling and real-time LaTeX collaboration.</p>{selectedDocument?.kind === 'paper' && <><input value={selectedDocument.overleafUrl || ''} onChange={(event) => updateSelected({ overleafUrl: event.target.value })} placeholder="https://www.overleaf.com/project/…" className="mt-4 w-full rounded-lg border border-indigo-100 bg-white px-3 py-2 text-xs outline-none focus:border-indigo-400 dark:border-outline-variant/50 dark:bg-surface-container-lowest"/><button onClick={openOverleaf} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2.5 text-xs font-bold text-white hover:bg-indigo-700 dark:bg-primary dark:text-on-primary"><span className="material-symbols-outlined text-[16px]">rocket_launch</span>{selectedDocument.overleafUrl ? 'Open linked project' : 'Create Overleaf project'}</button></>}<a href="https://docs.overleaf.com/integrations-and-add-ons/git-integration-and-github-synchronization/git" target="_blank" rel="noreferrer" className="mt-3 block text-center text-[11px] font-bold text-indigo-700 hover:underline dark:text-primary">Learn about Git integration ↗</a></section>
+            {selectedDocument?.kind === 'paper' ? <section className="rounded-[24px] border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-5 shadow-[0_12px_40px_rgba(36,48,84,.04)] dark:border-primary/20 dark:from-primary/10 dark:to-surface"><div className="flex items-center gap-2"><span className="material-symbols-outlined text-indigo-600 dark:text-primary">open_in_new</span><h2 className="text-sm font-bold">Overleaf handoff</h2></div><p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-secondary">Link an Overleaf project for native compiling, collaboration, and PDF download. It opens securely in a new tab.</p><input value={selectedDocument.overleafUrl || ''} onChange={(event) => updateSelected({ overleafUrl: event.target.value })} placeholder="https://www.overleaf.com/project/…" className="mt-4 w-full rounded-lg border border-indigo-100 bg-white px-3 py-2 text-xs outline-none focus:border-indigo-400 dark:border-outline-variant/50 dark:bg-surface-container-lowest"/><button onClick={openOverleaf} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2.5 text-xs font-bold text-white hover:bg-indigo-700 dark:bg-primary dark:text-on-primary"><span className="material-symbols-outlined text-[16px]">rocket_launch</span>{selectedDocument.overleafUrl ? 'Open linked project' : 'Create Overleaf project'}</button><a href="https://docs.overleaf.com/integrations-and-add-ons/git-integration-and-github-synchronization/git" target="_blank" rel="noreferrer" className="mt-3 block text-center text-[11px] font-bold text-indigo-700 hover:underline dark:text-primary">Learn about Git integration ↗</a></section> : <section className="rounded-[24px] border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-5 shadow-[0_12px_40px_rgba(36,48,84,.04)] dark:border-primary/20 dark:from-primary/10 dark:to-surface"><div className="flex items-center gap-2"><span className="material-symbols-outlined text-emerald-600">terminal</span><h2 className="text-sm font-bold">IDE workflow</h2></div><ol className="mt-3 space-y-2 text-xs leading-relaxed text-slate-600 dark:text-secondary"><li>1. Write and autosave implementation notes.</li><li>2. Download the source file.</li><li>3. Run it only in an approved local or cloud environment.</li><li>4. Record outcomes, assumptions, and limitations in the source.</li></ol></section>}
             <section className="rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-[0_12px_40px_rgba(36,48,84,.05)] dark:border-outline-variant/30 dark:bg-surface"><div className="flex items-center gap-2"><span className="material-symbols-outlined text-emerald-600">verified_user</span><h2 className="text-sm font-bold">Academic safeguard</h2></div><p className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-secondary">Literature search supplies metadata, not evidence. Read the original work, confirm DOI and author details, and respect your institution’s AI policy.</p></section>
           </aside>
         </div>
