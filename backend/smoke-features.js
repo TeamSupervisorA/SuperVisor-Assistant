@@ -37,6 +37,12 @@ const run = async () => {
   const bob = await reg('Bob', 'bob@test.com', 'student');
   const eve = await reg('Eve', 'eve@test.com', 'student');
   const sup = await reg('Dr. Sup', 'sup@test.com', 'supervisor');
+  const duplicateRegistration = await api('/api/auth/register', { method: 'POST', body: { name: 'Alice Again', email: 'alice@test.com', password: 'pass1234' } });
+  check('duplicate registration returns a safe sign-in message', duplicateRegistration.status === 409 && /account already exists/i.test(duplicateRegistration.data.error));
+  const unknownReset = await api('/api/auth/forgot-password', { method: 'POST', body: { email: 'unknown@test.com' } });
+  check('password reset does not reveal unknown accounts', unknownReset.status === 200 && /If an account exists/i.test(unknownReset.data.message));
+  const invalidReset = await api('/api/auth/reset-password/not-a-valid-token', { method: 'POST', body: { password: 'pass1234' } });
+  check('invalid reset token is rejected', invalidReset.status === 400);
   process.env.ALLOW_PUBLIC_SUPERVISOR_REGISTRATION = 'false';
   const unapprovedSupervisor = await reg('Unapproved Supervisor', 'unapproved@test.com', 'supervisor');
   check('public supervisor registration is downgraded to student', unapprovedSupervisor.user.role === 'student');
@@ -131,6 +137,20 @@ const run = async () => {
   const rep2 = await api(`/api/projects/${pid}/report`, { token: alice.token });
   const ts = rep2.data.data.taskSummary;
   check('report detects delayed task', ts.delayed === 1 && ts.completed === 1 && rep2.data.data.progressPercentage === 33, JSON.stringify(ts));
+
+  // ---- task lifecycle and dependency enforcement
+  const prerequisite = await api('/api/tasks', { method: 'POST', token: alice.token, body: { title: 'Complete evidence review', project: pid, acceptanceCriteria: 'Evidence notes are verified.' } });
+  const dependent = await api('/api/tasks', { method: 'POST', token: alice.token, body: { title: 'Draft findings', project: pid, acceptanceCriteria: 'A findings draft is ready for review.', dependencies: [prerequisite.data.data._id] } });
+  const earlyStart = await api(`/api/tasks/${dependent.data.data._id}/transition`, { method: 'POST', token: alice.token, body: { status: 'in_progress' } });
+  check('dependencies prevent premature task start', earlyStart.status === 422);
+  const prerequisiteStart = await api(`/api/tasks/${prerequisite.data.data._id}/transition`, { method: 'POST', token: alice.token, body: { status: 'in_progress' } });
+  const prerequisiteDone = await api(`/api/tasks/${prerequisite.data.data._id}/transition`, { method: 'POST', token: alice.token, body: { status: 'done' } });
+  check('task can progress through its valid lifecycle', prerequisiteStart.status === 200 && prerequisiteDone.status === 200);
+  const dependentStart = await api(`/api/tasks/${dependent.data.data._id}/transition`, { method: 'POST', token: alice.token, body: { status: 'in_progress' } });
+  const dependentReview = await api(`/api/tasks/${dependent.data.data._id}/transition`, { method: 'POST', token: alice.token, body: { status: 'review' } });
+  const studentAccept = await api(`/api/tasks/${dependent.data.data._id}/transition`, { method: 'POST', token: alice.token, body: { status: 'done' } });
+  const supervisorAccept = await api(`/api/tasks/${dependent.data.data._id}/transition`, { method: 'POST', token: sup.token, body: { status: 'done' } });
+  check('review tasks require supervisor acceptance', dependentStart.status === 200 && dependentReview.status === 200 && studentAccept.status === 403 && supervisorAccept.status === 200);
 
   // ---- team policy
   const team = await api('/api/teams', { method: 'POST', token: alice.token, body: { name: 'Smoke Team', project: pid, members: [{ user: bob.user.id, role: 'Developer' }] } });
