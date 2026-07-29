@@ -43,6 +43,19 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
+  useEffect(() => {
+    const handleInvalidSession = () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('activeProject');
+      setToken(null);
+      setUser(null);
+      setActiveProject(null);
+    };
+    window.addEventListener('auth-invalid', handleInvalidSession);
+    return () => window.removeEventListener('auth-invalid', handleInvalidSession);
+  }, []);
+
   const login = (tokenValue, userData) => {
     const normalizedUser = { ...userData, _id: userData._id || userData.id };
     localStorage.setItem('token', tokenValue);
@@ -51,6 +64,12 @@ export const AuthProvider = ({ children }) => {
     setToken(tokenValue);
     setUser(normalizedUser);
     setActiveProject(null);
+  };
+
+  const updateUser = (userData) => {
+    const normalizedUser = { ...userData, _id: userData._id || userData.id };
+    localStorage.setItem('user', JSON.stringify(normalizedUser));
+    setUser(normalizedUser);
   };
 
   const logout = () => {
@@ -84,6 +103,7 @@ export const AuthProvider = ({ children }) => {
       activeProject,
       setActiveProject: handleSetActiveProject,
       login, 
+      updateUser,
       logout, 
       getDashboardPath, 
       isAuthenticated: !!token 

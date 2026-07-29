@@ -195,7 +195,7 @@ const LandingPage = () => {
           <div className="w-px h-5 bg-outline-variant/30 hidden sm:block"></div>
 
           <div className="flex items-center gap-2 sm:gap-4">
-            <Link to="/login" className="font-label-md text-[14px] font-semibold text-on-surface-variant hover:text-on-surface transition-colors px-4 py-2 rounded-full hover:bg-surface-variant/30 hidden sm:block">Sign In</Link>
+            <Link to="/login" className="font-label-md text-[14px] font-semibold text-on-surface-variant hover:text-on-surface transition-colors px-3 py-2 rounded-full hover:bg-surface-variant/30">Sign In</Link>
             <Link to="/register" className="font-label-md text-[14px] font-semibold bg-on-surface text-surface px-6 py-2.5 rounded-full hover:scale-105 transition-transform duration-300 shadow-[0_4px_20px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_20px_rgba(255,255,255,0.1)] relative overflow-hidden group">
               <span className="relative z-10">Get Started</span>
               <div className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>

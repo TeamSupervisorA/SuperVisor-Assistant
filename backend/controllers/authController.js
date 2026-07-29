@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 // Get token from model, create cookie and send response
 const sendTokenResponse = (user, statusCode, res) => {
@@ -49,6 +50,9 @@ exports.register = async (req, res) => {
 
     sendTokenResponse(user, 201, res);
   } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(409).json({ success: false, error: 'An account already exists with this email. Sign in or reset your password instead.' });
+    }
     res.status(400).json({ success: false, error: error.message });
   }
 };
@@ -123,5 +127,75 @@ exports.getMe = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+const sendResetEmail = async ({ email, name, resetUrl }) => {
+  if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) {
+    throw new Error('Password reset email is not configured. Contact the platform administrator.');
+  }
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: process.env.EMAIL_FROM,
+      to: [email],
+      subject: 'Reset your SuperVisorAI password',
+      text: `Hello ${name},\n\nUse this link within one hour to reset your password:\n${resetUrl}\n\nIf you did not request this, you can ignore this email.`
+    })
+  });
+  if (!response.ok) throw new Error('Unable to send the password reset email. Please try again later.');
+};
+
+// @desc Request a password-reset email
+// @route POST /api/auth/forgot-password
+// @access Public
+exports.forgotPassword = async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!email) return res.status(400).json({ success: false, error: 'Please provide your email address' });
+    const user = await User.findOne({ email }).select('+passwordResetToken +passwordResetExpires');
+    // Keep the response identical for unknown email addresses to avoid account enumeration.
+    if (!user) return res.json({ success: true, message: 'If an account exists for this email, a reset link has been sent.' });
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    user.passwordResetToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+    user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000);
+    await user.save({ validateBeforeSave: false });
+
+    const frontendOrigin = (process.env.FRONTEND_URL || '').split(',').map((value) => value.trim()).find(Boolean);
+    if (!frontendOrigin) throw new Error('FRONTEND_URL is not configured');
+    const resetUrl = `${frontendOrigin.replace(/\/$/, '')}/reset-password?token=${rawToken}`;
+    try {
+      await sendResetEmail({ email: user.email, name: user.name, resetUrl });
+    } catch (error) {
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+      throw error;
+    }
+    res.json({ success: true, message: 'If an account exists for this email, a reset link has been sent.' });
+  } catch (error) {
+    res.status(503).json({ success: false, error: error.message || 'Unable to start password reset' });
+  }
+};
+
+// @desc Set a password using a valid one-time reset token
+// @route POST /api/auth/reset-password/:token
+// @access Public
+exports.resetPassword = async (req, res) => {
+  try {
+    const password = String(req.body?.password || '');
+    if (password.length < 8) return res.status(422).json({ success: false, error: 'Password must be at least 8 characters long' });
+    const token = crypto.createHash('sha256').update(req.params.token).digest('hex');
+    const user = await User.findOne({ passwordResetToken: token, passwordResetExpires: { $gt: new Date() } }).select('+password +passwordResetToken +passwordResetExpires');
+    if (!user) return res.status(400).json({ success: false, error: 'This password-reset link is invalid or has expired. Request a new one.' });
+    user.password = password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+    sendTokenResponse(user, 200, res);
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message || 'Unable to reset password' });
   }
 };

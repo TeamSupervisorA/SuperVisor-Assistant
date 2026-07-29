@@ -1,0 +1,13 @@
+import { useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { apiFetch } from '../lib/api';
+import { useAuth } from '../components/AuthContext';
+
+const ResetPassword = () => {
+  const [params] = useSearchParams(); const navigate = useNavigate(); const { login } = useAuth();
+  const [password, setPassword] = useState(''); const [confirm, setConfirm] = useState(''); const [error, setError] = useState(''); const [loading, setLoading] = useState(false);
+  const submit = async (event) => { event.preventDefault(); setError(''); const token = params.get('token'); if (!token) return setError('This reset link is incomplete. Request a new one.'); if (password.length < 8) return setError('Password must be at least 8 characters long.'); if (password !== confirm) return setError('Passwords do not match.'); setLoading(true); try { const result = await apiFetch(`/api/auth/reset-password/${token}`, { method: 'POST', body: JSON.stringify({ password }) }); login(result.token, result.user); navigate('/dashboard'); } catch (requestError) { setError(requestError.message || 'Unable to reset password.'); } finally { setLoading(false); } };
+  return <main className="grid min-h-screen place-items-center bg-background p-5"><form onSubmit={submit} className="w-full max-w-md rounded-3xl border border-outline-variant/30 bg-surface p-8 shadow-xl"><Link to="/login" className="text-sm font-bold text-primary">← Back to sign in</Link><h1 className="mt-6 text-3xl font-extrabold text-on-surface">Choose a new password</h1>{error && <p role="alert" className="mt-5 rounded-xl bg-error/10 p-3 text-sm text-error">{error}</p>}<label className="mt-6 block text-sm font-bold text-on-surface">New password<input required type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="mt-2 w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest px-3 py-3 outline-none focus:border-primary" /></label><label className="mt-4 block text-sm font-bold text-on-surface">Confirm password<input required type="password" value={confirm} onChange={(event) => setConfirm(event.target.value)} className="mt-2 w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest px-3 py-3 outline-none focus:border-primary" /></label><button disabled={loading} className="mt-6 w-full rounded-xl bg-primary px-4 py-3 font-bold text-on-primary disabled:opacity-60">{loading ? 'Saving…' : 'Reset password'}</button></form></main>;
+};
+
+export default ResetPassword;

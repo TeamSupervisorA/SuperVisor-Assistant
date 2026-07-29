@@ -23,6 +23,8 @@ const Settings = () => {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -46,16 +48,18 @@ const Settings = () => {
 
   const handleSave = async () => {
     setSaving(true);
+    setNotice('');
+    setError('');
     try {
       const res = await apiFetch('/api/users/settings', {
         method: 'PUT',
         body: JSON.stringify(settings)
       });
       if (res.success) {
-        alert('Settings saved successfully!');
+        setNotice('Settings saved successfully.');
       }
     } catch (err) {
-      alert('Failed to save settings: ' + err.message);
+      setError(err.message || 'Unable to save settings.');
     } finally {
       setSaving(false);
     }
@@ -84,6 +88,8 @@ const Settings = () => {
           <h2 className="font-display text-[32px] md:text-[42px] font-black text-on-surface tracking-tight leading-none mb-2">AI & Plagiarism Settings</h2>
           <p className="font-title-md text-[16px] text-on-surface-variant font-medium max-w-xl">Configure institutional safeguards and artificial intelligence parameters for the supervision suite.</p>
         </motion.div>
+        {notice && <div role="status" className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">{notice}</div>}
+        {error && <div role="alert" className="rounded-xl border border-error/25 bg-error/10 px-4 py-3 text-sm text-error">{error}</div>}
 
         {/* Bento Grid Layout */}
         <motion.div variants={containerVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">

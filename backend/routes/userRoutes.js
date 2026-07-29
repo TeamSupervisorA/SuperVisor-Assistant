@@ -6,6 +6,8 @@ const router = express.Router();
 
 router.use(protect);
 
+router.route('/profile').get(userController.getProfile).put(userController.updateProfile);
+
 router
   .route('/settings')
   .get(userController.getSettings)

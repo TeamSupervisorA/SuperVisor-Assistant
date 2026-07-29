@@ -6,6 +6,8 @@ import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import AdminLogin from './pages/AdminLogin';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import StudentDashboard from './pages/StudentDashboard';
 import SupervisorDashboard from './pages/SupervisorDashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -19,6 +21,7 @@ import DetailedFeedback from './pages/DetailedFeedback';
 import MeetingManagement from './pages/MeetingManagement';
 import CourseManagement from './pages/CourseManagement';
 import Settings from './pages/Settings';
+import Profile from './pages/Profile';
 import ProjectChat from './pages/ProjectChat';
 import PlagiarismChecker from './pages/PlagiarismChecker';
 import StudentSubmissions from './pages/StudentSubmissions';
@@ -46,6 +49,8 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           
           {/* Protected Dashboard Routes */}
@@ -69,6 +74,7 @@ function App() {
               <Route path="/paper-editor" element={<WorkspaceRoute><PaperEditor /></WorkspaceRoute>} />
               <Route path="/code-ide" element={<WorkspaceRoute><CodeIDE /></WorkspaceRoute>} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/chat" element={<ProjectChat />} />
 
               {/* Supervisor + Admin only */}

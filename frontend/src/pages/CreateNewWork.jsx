@@ -28,6 +28,7 @@ const CreateNewWork = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiFeedback, setAiFeedback] = useState(null);
   const [aiIdeaInterest, setAiIdeaInterest] = useState('');
+  const [error, setError] = useState('');
   
   const navigate = useNavigate();
   const { setActiveProject, getDashboardPath } = useAuth();
@@ -38,7 +39,8 @@ const CreateNewWork = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.title.trim() || !formData.problemStatement.trim()) return alert('Title and Problem Statement are required');
+    setError('');
+    if (!formData.title.trim() || !formData.problemStatement.trim()) { setError('Project title and problem statement are required.'); return; }
     
     setLoading(true);
     try {
@@ -63,7 +65,7 @@ const CreateNewWork = () => {
         navigate(getDashboardPath());
       }
     } catch (error) {
-      alert('Error creating project: ' + error.message);
+      setError(error.message || 'Unable to create the project.');
     } finally {
       setLoading(false);
     }
@@ -130,6 +132,7 @@ const CreateNewWork = () => {
             AI Proposal Assist
           </button>
         </motion.div>
+        {error && <div role="alert" className="rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">{error}</div>}
 
         {/* AI Assist Banner (Collapsible) */}
         <AnimatePresence>

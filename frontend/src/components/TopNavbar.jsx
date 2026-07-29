@@ -327,7 +327,7 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
                 {/* Menu Items */}
                 <div className="py-2">
                   {[
-                    { icon: 'person', label: 'My Profile', action: () => { setShowUserMenu(false); navigate('/settings'); } },
+                    { icon: 'person', label: 'My Profile', action: () => { setShowUserMenu(false); navigate('/profile'); } },
                     { icon: 'settings', label: 'Settings', action: () => { setShowUserMenu(false); navigate('/settings'); } },
                     { icon: isDark ? 'light_mode' : 'dark_mode', label: isDark ? 'Light Mode' : 'Dark Mode', action: () => { toggleDark(); } },
                   ].map((item, i) => (

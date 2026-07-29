@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { apiFetch } from '../lib/api';
@@ -19,6 +19,14 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  useEffect(() => {
+    const notice = sessionStorage.getItem('authNotice');
+    if (notice) {
+      setError(notice);
+      sessionStorage.removeItem('authNotice');
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -122,7 +130,7 @@ const Login = () => {
             <div className="space-y-2">
               <div className="flex justify-between items-center pl-1">
                 <label className="block font-label-md text-[12px] font-bold text-secondary uppercase tracking-widest" htmlFor="password">Password</label>
-                <a className="font-label-md text-[12px] font-bold text-primary hover:text-primary-fixed-variant transition-colors" href="#">Forgot?</a>
+                <Link className="font-label-md text-[12px] font-bold text-primary hover:text-primary-fixed-variant transition-colors" to="/forgot-password">Forgot password?</Link>
               </div>
               <div className="relative group">
                 <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[22px] group-focus-within:text-primary transition-colors">lock</span>

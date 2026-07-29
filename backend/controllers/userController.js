@@ -1,5 +1,25 @@
 const User = require('../models/User');
 
+const publicProfile = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, department: user.department, studentId: user.studentId, batch: user.batch });
+
+exports.getProfile = async (req, res) => {
+  const user = await User.findById(req.user.id);
+  if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+  res.json({ success: true, data: publicProfile(user) });
+};
+
+exports.updateProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+    ['name', 'department', 'studentId', 'batch'].forEach((field) => {
+      if (typeof req.body[field] === 'string') user[field] = req.body[field].trim();
+    });
+    await user.save();
+    res.json({ success: true, data: publicProfile(user) });
+  } catch (error) { res.status(400).json({ success: false, error: error.message }); }
+};
+
 // Get user settings
 exports.getSettings = async (req, res) => {
   try {

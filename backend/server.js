@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const connectDB = require('./config/db');
+const { connectDB, getDatabaseStatus } = require('./config/db');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
@@ -17,8 +17,9 @@ if (isProduction) {
   }
 }
 
-// Connect to database
-connectDB();
+// Begin the connection early. Every API request below also awaits this shared
+// promise, preventing Mongoose's opaque "buffering timed out" errors.
+connectDB().catch(() => {});
 
 const app = express();
 if (isProduction) app.set('trust proxy', 1);
@@ -50,6 +51,25 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
+
+app.get('/api/health', (req, res) => {
+  res.status(getDatabaseStatus() === 'connected' ? 200 : 503).json({
+    success: getDatabaseStatus() === 'connected',
+    database: getDatabaseStatus()
+  });
+});
+
+app.use('/api', async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch {
+    res.status(503).json({
+      success: false,
+      error: 'Database unavailable. The administrator must verify MongoDB Atlas network access and MONGODB_URI.'
+    });
+  }
+});
 
 // express-mongo-sanitize mutates req.query, which is read-only in Express 5 and
 // causes every request to fail. Sanitize JSON request bodies without touching
