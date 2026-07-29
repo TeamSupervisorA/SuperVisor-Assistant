@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Editor from '@monaco-editor/react';
+import Editor, { loader } from '@monaco-editor/react';
+import * as monaco from 'monaco-editor';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../components/AuthContext';
+
+// Keep Monaco fully inside the Vite bundle. The default CDN loader can remain
+// on "Loading…" when a production Content-Security-Policy blocks injected
+// third-party scripts.
+loader.config({ monaco });
 
 const paperStarter = `\\documentclass[11pt]{article}
 \\usepackage[margin=1in]{geometry}

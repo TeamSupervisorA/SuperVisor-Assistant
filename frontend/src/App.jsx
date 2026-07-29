@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './components/AuthContext';
 import { ThemeProvider } from './components/ThemeContext';
@@ -28,8 +29,10 @@ import ProposalLifecycle from './pages/ProposalLifecycle';
 import ProgressLogs from './pages/ProgressLogs';
 import ReviewWorkspace from './pages/ReviewWorkspace';
 import AdminManagement from './pages/AdminManagement';
-import ResearchStudio from './pages/ResearchStudio';
 import NotFound from './pages/NotFound';
+
+const ResearchStudio = lazy(() => import('./pages/ResearchStudio'));
+const ResearchStudioRoute = () => <Suspense fallback={<div className="grid min-h-screen place-items-center bg-background text-secondary">Loading Research Studio…</div>}><ResearchStudio /></Suspense>;
 
 function App() {
   return (
@@ -59,7 +62,7 @@ function App() {
               <Route path="/proposals" element={<ProposalLifecycle />} />
               <Route path="/progress-logs" element={<ProgressLogs />} />
               <Route path="/reviews" element={<ReviewWorkspace />} />
-              <Route path="/research-studio" element={<ResearchStudio />} />
+              <Route path="/research-studio" element={<ResearchStudioRoute />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/chat" element={<ProjectChat />} />
 
