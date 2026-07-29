@@ -1,364 +1,153 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../lib/api';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../components/AuthContext';
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.1 } }
+const statusMeta = {
+  todo: { label: 'Planned', icon: 'list_alt', tone: 'bg-slate-100 text-slate-700 dark:bg-surface-container dark:text-on-surface' },
+  in_progress: { label: 'In progress', icon: 'play_circle', tone: 'bg-indigo-50 text-indigo-700 dark:bg-primary/15 dark:text-primary' },
+  blocked: { label: 'Blocked', icon: 'block', tone: 'bg-red-50 text-red-700 dark:bg-error/15 dark:text-error' },
+  review: { label: 'Awaiting review', icon: 'rate_review', tone: 'bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200' },
+  done: { label: 'Complete', icon: 'task_alt', tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' },
+  cancelled: { label: 'Cancelled', icon: 'cancel', tone: 'bg-slate-100 text-slate-500 dark:bg-surface-container dark:text-secondary' }
 };
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 15 },
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+const priorityMeta = {
+  critical: 'bg-red-100 text-red-700 dark:bg-error/20 dark:text-error',
+  high: 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-200',
+  medium: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200',
+  low: 'bg-slate-100 text-slate-600 dark:bg-surface-container dark:text-secondary'
 };
+
+const normalizeStatus = (status) => status === 'completed' ? 'done' : status === 'delayed' ? 'todo' : status;
+const completed = (task) => ['done', 'completed'].includes(task.status);
+const dateOnly = (value) => value ? new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date';
+const overdue = (task) => Boolean(task.dueDate && new Date(task.dueDate) < new Date() && !completed(task) && task.status !== 'cancelled');
+
+const emptyTask = { title: '', description: '', acceptanceCriteria: '', priority: 'medium', dueDate: '', dependencies: [], assignedTo: '' };
+const primaryActionClass = 'inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-xs font-bold text-on-primary hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50';
+const secondaryActionClass = 'inline-flex items-center justify-center rounded-lg border border-outline-variant/50 px-3 py-2 text-xs font-bold text-on-surface hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50';
+const fieldLabelClass = 'mb-2 block text-xs font-bold uppercase tracking-wide text-secondary';
+const fieldInputClass = 'w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest px-3 py-2.5 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15';
 
 const TasksMilestones = () => {
-  const { activeProject } = useAuth();
+  const { activeProject, user } = useAuth();
   const [tasks, setTasks] = useState([]);
-  const [, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [newTask, setNewTask] = useState({ title: '', description: '', status: 'todo', dueDate: '' });
-  const [aiGuidance, setAiGuidance] = useState(null);
-  const [aiLoading, setAiLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [draft, setDraft] = useState(emptyTask);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [updatingId, setUpdatingId] = useState('');
+
+  const projectId = activeProject?._id;
+  const loadTasks = useCallback(async () => {
+    if (!projectId) return;
+    setLoading(true);
+    try {
+      const response = await apiFetch(`/api/tasks?project=${projectId}`);
+      setTasks(response.data || []);
+    } catch (requestError) {
+      setError(requestError.message || 'Unable to load project tasks.');
+      setTasks([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [projectId]);
 
   useEffect(() => {
-    if (activeProject) {
-      loadTasks();
-    } else {
-      setLoading(false);
-    }
-  }, [activeProject]);
+    setError('');
+    if (projectId) loadTasks();
+    else { setTasks([]); setLoading(false); }
+  }, [projectId, loadTasks]);
 
-  const loadTasks = async () => {
-    try {
-      setLoading(true);
-      const res = await apiFetch(`/api/tasks?project=${activeProject._id}`);
-      
-      if (res.data && res.data.length > 0) {
-        setTasks(res.data);
-      } else setTasks([]);
-    } catch (error) {
-      console.error('Failed to load tasks', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const taskById = useMemo(() => new Map(tasks.map((task) => [String(task._id), task])), [tasks]);
+  const dependencyNames = (task) => (task.dependencies || []).map((dependency) => taskById.get(String(dependency))?.title || 'Unavailable task');
+  const waitingOnDependencies = (task) => (task.dependencies || []).some((dependency) => !completed(taskById.get(String(dependency)) || {}));
+  const actionableTasks = tasks.filter((task) => !completed(task) && task.status !== 'cancelled');
+  const doneTasks = tasks.filter(completed);
+  const blockedTasks = tasks.filter((task) => task.status === 'blocked');
+  const reviewTasks = tasks.filter((task) => task.status === 'review');
+  const overdueTasks = tasks.filter(overdue);
+  const progress = tasks.length ? Math.round((doneTasks.length / tasks.filter((task) => task.status !== 'cancelled').length || 1) * 100) : 0;
 
-  const handleCreateTask = async (e) => {
-    e.preventDefault();
-    if (!activeProject) return;
+  const nextTask = [...actionableTasks].sort((a, b) => {
+    const score = (task) => (task.status === 'blocked' ? 0 : overdue(task) ? 1 : waitingOnDependencies(task) ? 4 : task.status === 'review' ? 2 : task.priority === 'critical' ? 1.5 : task.priority === 'high' ? 2 : 3);
+    const difference = score(a) - score(b);
+    if (difference) return difference;
+    return new Date(a.dueDate || '9999-12-31') - new Date(b.dueDate || '9999-12-31');
+  })[0];
+
+  const createTask = async (event) => {
+    event.preventDefault();
+    if (!activeProject?._id || saving) return;
+    setError('');
+    const title = draft.title.trim();
+    const acceptanceCriteria = draft.acceptanceCriteria.trim();
+    if (!title || !acceptanceCriteria) { setError('A task needs both a clear title and an expected outcome.'); return; }
+    setSaving(true);
     try {
-      const payload = { ...newTask, project: activeProject._id };
+      const payload = { ...draft, title, acceptanceCriteria, description: draft.description.trim(), project: activeProject._id };
       if (!payload.dueDate) delete payload.dueDate;
-      const res = await apiFetch('/api/tasks', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-      
-      setTasks([...tasks, res.data]);
-      setShowModal(false);
-      setNewTask({ title: '', description: '', status: 'todo', dueDate: '' });
-    } catch (error) {
-      console.error('Error creating task', error);
-    }
+      if (!payload.assignedTo) delete payload.assignedTo;
+      const response = await apiFetch('/api/tasks', { method: 'POST', body: JSON.stringify(payload) });
+      setTasks((current) => [...current, response.data]);
+      setDraft(emptyTask);
+      setShowCreate(false);
+    } catch (requestError) {
+      setError(requestError.message || 'Unable to create the task.');
+    } finally { setSaving(false); }
   };
 
-  const fetchAiGuidance = async () => {
-    if (tasks.length === 0) return alert('Add some tasks first before getting AI guidance.');
-    setAiLoading(true);
+  const transition = async (task, status) => {
+    if (updatingId) return;
+    let blockedReason = '';
+    if (status === 'blocked') {
+      blockedReason = window.prompt('What is blocking this work? This is required so the next person knows how to help.')?.trim() || '';
+      if (!blockedReason) return;
+    }
+    setError('');
+    setUpdatingId(task._id);
     try {
-      const taskSummaries = tasks.map(t => `${t.title} (${t.status})`).join(', ');
-      const res = await apiFetch('/api/ai/recommend-task', {
-        method: 'POST',
-        body: JSON.stringify({ currentStatus: taskSummaries, pastTasks: tasks.map((task) => task.title) })
-      });
-      
-      if (res.success) setAiGuidance(res.data);
-    } catch (e) {
-      console.error('AI Guidance error', e);
-    } finally {
-      setAiLoading(false);
-    }
+      const response = await apiFetch(`/api/tasks/${task._id}/transition`, { method: 'POST', body: JSON.stringify({ status, blockedReason }) });
+      setTasks((current) => current.map((item) => item._id === task._id ? response.data : item));
+    } catch (requestError) {
+      setError(requestError.message || 'Unable to update this task.');
+    } finally { setUpdatingId(''); }
   };
 
-  // Logic: Delay Detection (Section 4.6)
-  const isDelayed = (task) => {
-    if (!task.dueDate || task.status === 'completed') return false;
-    return new Date(task.dueDate) < new Date();
+  const members = activeProject?.students || [];
+  const columns = [
+    { id: 'todo', label: 'Planned', helper: 'Ready work and prerequisites', tasks: tasks.filter((task) => normalizeStatus(task.status) === 'todo') },
+    { id: 'in_progress', label: 'In progress', helper: 'Active work with a defined outcome', tasks: tasks.filter((task) => normalizeStatus(task.status) === 'in_progress') },
+    { id: 'review', label: 'Review & decisions', helper: 'Work awaiting feedback or resolution', tasks: tasks.filter((task) => ['review', 'blocked'].includes(normalizeStatus(task.status))) },
+    { id: 'done', label: 'Completed', helper: 'Accepted outcomes', tasks: tasks.filter((task) => completed(task)) }
+  ];
+
+  if (!activeProject) return <div className="grid min-h-[70vh] place-items-center bg-background p-6"><div className="max-w-md rounded-3xl border border-outline-variant/30 bg-surface p-8 text-center shadow-sm"><span className="material-symbols-outlined text-5xl text-secondary">folder_off</span><h1 className="mt-4 text-2xl font-extrabold text-on-surface">Choose a project first</h1><p className="mt-2 text-sm leading-relaxed text-secondary">Tasks are always connected to a project, its people, and its deliverables. Select a project from the top navigation to continue.</p></div></div>;
+
+  const taskActions = (task) => {
+    const status = normalizeStatus(task.status);
+    const waiting = waitingOnDependencies(task);
+    const isSupervisor = ['supervisor', 'admin'].includes(user?.role);
+    if (status === 'todo') return <button disabled={waiting || Boolean(updatingId)} onClick={() => transition(task, 'in_progress')} className={primaryActionClass}>{waiting ? 'Waiting for prerequisite' : 'Start task'}</button>;
+    if (status === 'in_progress') return <div className="flex gap-2"><button disabled={Boolean(updatingId)} onClick={() => transition(task, 'review')} className={primaryActionClass}>Submit for review</button><button disabled={Boolean(updatingId)} onClick={() => transition(task, 'blocked')} className={secondaryActionClass}>Block</button></div>;
+    if (status === 'blocked') return <button disabled={Boolean(updatingId)} onClick={() => transition(task, 'in_progress')} className={primaryActionClass}>Resume task</button>;
+    if (status === 'review') return isSupervisor ? <div className="flex gap-2"><button disabled={Boolean(updatingId) || waiting} onClick={() => transition(task, 'done')} className={primaryActionClass}>Accept outcome</button><button disabled={Boolean(updatingId)} onClick={() => transition(task, 'in_progress')} className={secondaryActionClass}>Return for changes</button></div> : <span className="text-xs font-semibold text-amber-700 dark:text-amber-200">Awaiting supervisor decision</span>;
+    return <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">Outcome accepted</span>;
   };
 
-  const todoTasks = tasks.filter(t => t.status === 'todo');
-  const inProgressTasks = tasks.filter(t => t.status === 'in_progress');
-  const completedTasks = tasks.filter(t => t.status === 'completed');
-  const delayedTasksCount = tasks.filter(isDelayed).length;
+  return <div className="min-h-screen bg-background px-4 py-6 sm:px-6 lg:px-8"><main className="mx-auto max-w-[1700px]">
+    <header className="flex flex-col justify-between gap-4 border-b border-outline-variant/30 pb-6 md:flex-row md:items-end"><div><p className="text-xs font-bold uppercase tracking-[.16em] text-primary">Project execution</p><h1 className="mt-2 text-3xl font-extrabold tracking-tight text-on-surface">Tasks & milestones</h1><p className="mt-2 text-sm text-secondary"><span className="font-bold text-on-surface">{activeProject.title}</span> · every task should produce a verifiable project outcome.</p></div><button onClick={() => { setError(''); setShowCreate(true); }} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary shadow-sm hover:brightness-95"><span className="material-symbols-outlined text-[18px]">add_task</span>New task</button></header>
 
-  const progress = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
+    {error && <div role="alert" className="mt-5 flex items-start gap-3 rounded-xl border border-error/30 bg-error/10 p-4 text-sm text-error"><span className="material-symbols-outlined text-[19px]">error</span><span>{error}</span></div>}
 
-  if (!activeProject) {
-    return (
-      <div className="w-full min-h-screen bg-background relative flex items-center justify-center p-6">
-        <div className="absolute inset-0 bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
-        <div className="relative z-10 text-center bg-surface/80 backdrop-blur-xl border border-outline-variant/30 p-12 rounded-[32px] shadow-lg max-w-md w-full">
-          <span className="material-symbols-outlined text-6xl text-secondary mb-4 opacity-50">folder_off</span>
-          <h2 className="font-display text-[24px] font-bold text-on-surface mb-2 tracking-tight">No Project Selected</h2>
-          <p className="font-body-md text-on-surface-variant">Please select an active project from the top navigation to view its tasks and milestones.</p>
-        </div>
-      </div>
-    );
-  }
+    <section className="mt-6 grid gap-4 lg:grid-cols-[1.5fr_repeat(3,minmax(0,.65fr))]"><article className="rounded-2xl border border-primary/20 bg-primary/5 p-5"><p className="text-xs font-bold uppercase tracking-wider text-primary">Next logical action</p>{nextTask ? <><h2 className="mt-2 text-lg font-extrabold text-on-surface">{nextTask.title}</h2><p className="mt-1 text-sm text-secondary">{nextTask.status === 'blocked' ? `Blocked: ${nextTask.blockedReason || 'needs clarification'}` : overdue(nextTask) ? `Overdue since ${dateOnly(nextTask.dueDate)}` : waitingOnDependencies(nextTask) ? `Waiting for: ${dependencyNames(nextTask).join(', ')}` : `Expected outcome: ${nextTask.acceptanceCriteria || 'Define the outcome before starting.'}`}</p><div className="mt-4">{taskActions(nextTask)}</div></> : <><h2 className="mt-2 text-lg font-extrabold text-on-surface">No open work</h2><p className="mt-1 text-sm text-secondary">Create the next deliverable when the project is ready to move forward.</p></>}</article>
+      {[['task_alt', `${progress}%`, 'Accepted progress'], ['priority_high', `${overdueTasks.length + blockedTasks.length}`, 'Needs attention'], ['rate_review', reviewTasks.length, 'Awaiting review']].map(([icon, value, label]) => <article key={label} className="rounded-2xl border border-outline-variant/30 bg-surface p-5 shadow-sm"><span className="material-symbols-outlined text-primary">{icon}</span><p className="mt-3 text-2xl font-extrabold text-on-surface">{loading ? '—' : value}</p><p className="mt-1 text-sm text-secondary">{label}</p></article>)}</section>
 
-  return (
-    <div className="w-full min-h-screen bg-background relative overflow-hidden flex flex-col">
-      {/* Background Mesh */}
-      <div className="absolute top-0 right-1/4 w-[800px] h-[600px] bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
-      <div className="absolute bottom-0 left-1/4 w-[600px] h-[500px] bg-tertiary-container/5 rounded-full blur-[80px] pointer-events-none z-0"></div>
+    <section className="mt-6 grid gap-4 xl:grid-cols-4">{columns.map((column) => <section key={column.id} className="min-h-[360px] rounded-2xl border border-outline-variant/30 bg-surface-container-low p-3"><header className="mb-3 flex items-start justify-between gap-3 px-2 pt-2"><div><h2 className="font-bold text-on-surface">{column.label}</h2><p className="mt-1 text-xs text-secondary">{column.helper}</p></div><span className="rounded-full bg-surface px-2 py-1 text-xs font-bold text-secondary">{column.tasks.length}</span></header><div className="space-y-3">{loading ? <div className="rounded-xl bg-surface p-4 text-sm text-secondary">Loading tasks…</div> : column.tasks.map((task) => { const status = normalizeStatus(task.status); const meta = statusMeta[status] || statusMeta.todo; const waiting = waitingOnDependencies(task); return <article key={task._id} className="rounded-xl border border-outline-variant/25 bg-surface p-4 shadow-sm"><div className="flex items-start justify-between gap-2"><span className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${meta.tone}`}>{meta.label}</span><span className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase ${priorityMeta[task.priority || 'medium']}`}>{task.priority || 'medium'}</span></div><h3 className="mt-3 text-sm font-extrabold leading-snug text-on-surface">{task.title}</h3>{task.description && <p className="mt-2 text-xs leading-relaxed text-secondary">{task.description}</p>}<div className="mt-3 rounded-lg bg-surface-container-low px-3 py-2"><p className="text-[10px] font-bold uppercase tracking-wide text-secondary">Expected outcome</p><p className="mt-1 text-xs leading-relaxed text-on-surface">{task.acceptanceCriteria || 'No outcome defined yet.'}</p></div>{(task.dependencies || []).length > 0 && <p className={`mt-3 text-xs ${waiting ? 'text-amber-700 dark:text-amber-200' : 'text-secondary'}`}><span className="material-symbols-outlined mr-1 align-[-3px] text-[15px]">account_tree</span>{waiting ? 'Waiting for: ' : 'Prerequisite complete: '}{dependencyNames(task).join(', ')}</p>}{task.dueDate && <p className={`mt-3 text-xs font-semibold ${overdue(task) ? 'text-error' : 'text-secondary'}`}><span className="material-symbols-outlined mr-1 align-[-3px] text-[15px]">event</span>{overdue(task) ? 'Overdue · ' : 'Due · '}{dateOnly(task.dueDate)}</p>}{task.status === 'blocked' && <p className="mt-3 rounded-lg bg-error/10 px-3 py-2 text-xs text-error">Blocker: {task.blockedReason}</p>}<div className="mt-4">{updatingId === task._id ? <span className="text-xs font-semibold text-secondary">Updating…</span> : taskActions(task)}</div></article>; })}{!loading && column.tasks.length === 0 && <div className="rounded-xl border border-dashed border-outline-variant/40 p-5 text-center text-xs leading-relaxed text-secondary">No {column.label.toLowerCase()} tasks.</div>}</div></section>)}</section>
 
-      <motion.div 
-        initial="hidden" animate="show" variants={containerVariants}
-        className="relative z-10 p-6 md:p-8 lg:p-10 w-full max-w-[1600px] mx-auto h-[calc(100vh-80px)] flex flex-col gap-8"
-      >
-        {/* Header */}
-        <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-          <div>
-            <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary font-label-md text-[12px] font-bold mb-3 border border-primary/20 uppercase tracking-wide">Workspace</span>
-            <h1 className="font-display text-[28px] md:text-[36px] font-black text-on-surface tracking-tight leading-none mb-2">Tasks & Milestones</h1>
-            <p className="font-title-md text-[16px] text-on-surface-variant font-medium">Project: <strong className="text-primary">{activeProject.title}</strong></p>
-          </div>
-          <button onClick={() => setShowModal(true)} className="bg-primary text-on-primary px-6 py-3 rounded-xl font-label-md text-[14px] font-bold hover:bg-primary-fixed-variant transition-colors shadow-[0_4px_14px_rgba(var(--color-primary-rgb),0.3)] flex items-center gap-2 hover:-translate-y-0.5 active:translate-y-0">
-            <span className="material-symbols-outlined text-[20px]">add_task</span>
-            Create Task
-          </button>
-        </motion.div>
-
-        {/* Dashboard Widgets Grid */}
-        <motion.div variants={containerVariants} className="grid grid-cols-1 lg:grid-cols-12 gap-6 shrink-0">
-          
-          {/* Overall Progress & Delay Alert (4 cols) */}
-          <motion.div variants={itemVariants} className="lg:col-span-4 bg-surface/80 backdrop-blur-xl rounded-[32px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-outline-variant/30 flex flex-col justify-between">
-            <div className="flex justify-between items-start mb-6">
-              <h3 className="font-label-md text-[13px] font-bold uppercase tracking-wider text-on-surface">Overall Progress</h3>
-              {delayedTasksCount > 0 && (
-                <span className="bg-error/10 text-error px-2 py-1 rounded-md font-label-sm font-bold uppercase text-[10px] border border-error/20 flex items-center gap-1 animate-pulse">
-                  <span className="material-symbols-outlined text-[12px]">warning</span>
-                  {delayedTasksCount} Delayed
-                </span>
-              )}
-            </div>
-            
-            <div className="mb-4">
-              <div className="flex justify-between items-end mb-2">
-                <span className="font-display text-[36px] font-bold text-primary leading-none">{progress}%</span>
-                <span className="font-body-sm text-[13px] font-medium text-secondary">{progress === 100 ? 'Completed' : 'On Track'}</span>
-              </div>
-              <div className="w-full bg-secondary-container h-3 rounded-full overflow-hidden relative">
-                <motion.div 
-                  initial={{ width: 0 }} animate={{ width: `${progress}%` }} transition={{ duration: 1, ease: "easeOut" }}
-                  className={`h-full rounded-full ${delayedTasksCount > 0 ? 'bg-error' : 'bg-primary'}`}
-                  style={{ backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent)', backgroundSize: '1rem 1rem' }}
-                />
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Milestone Timeline (4 cols) */}
-          <motion.div variants={itemVariants} className="lg:col-span-4 bg-surface/80 backdrop-blur-xl rounded-[32px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-outline-variant/30 flex flex-col justify-center relative overflow-hidden group">
-            <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-tertiary/10 rounded-full blur-[40px] pointer-events-none transition-colors group-hover:bg-tertiary/20"></div>
-            <h3 className="font-label-md text-[13px] font-bold uppercase tracking-wider text-on-surface mb-6 relative z-10">Project Milestones</h3>
-            
-            <div className="flex justify-between items-center relative px-2 z-10">
-              <div className="absolute top-1/2 left-4 right-4 h-1 bg-outline-variant/30 -translate-y-1/2 z-0 rounded-full"></div>
-              
-              {['Proposal', 'Design', 'Code', 'Defense'].map((step, idx) => {
-                const isActive = idx === 1; // Mocking current step
-                const isPast = idx < 1;
-                return (
-                  <div key={step} className="relative z-10 flex flex-col items-center gap-2 group/step cursor-pointer">
-                    <div className={`w-5 h-5 rounded-full border-4 shadow-sm transition-transform group-hover/step:scale-125 ${isActive ? 'bg-surface border-tertiary' : isPast ? 'bg-tertiary border-tertiary' : 'bg-surface border-outline-variant'}`}></div>
-                    <span className={`font-label-sm text-[11px] font-bold uppercase tracking-wider ${isActive ? 'text-tertiary' : isPast ? 'text-on-surface' : 'text-secondary'}`}>{step}</span>
-                  </div>
-                )
-              })}
-            </div>
-          </motion.div>
-
-          {/* AI Guidance (4 cols) */}
-          <motion.div variants={itemVariants} className="lg:col-span-4 bg-surface-container-lowest/80 backdrop-blur-xl rounded-[32px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border-l-4 border-l-primary border-y border-r border-y-outline-variant/30 border-r-outline-variant/30 flex flex-col relative overflow-hidden group">
-            <div className="absolute right-0 top-0 w-48 h-48 bg-primary/5 rounded-full blur-[50px] pointer-events-none group-hover:bg-primary/10 transition-colors"></div>
-            
-            <div className="flex items-center justify-between mb-3 relative z-10">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-[20px] animate-pulse">lightbulb</span>
-                <h3 className="font-label-md text-[13px] font-bold uppercase tracking-wider text-on-surface">AI Next-Task Guidance</h3>
-              </div>
-              <button onClick={fetchAiGuidance} disabled={aiLoading} className="px-3 py-1 bg-primary/10 text-primary hover:bg-primary/20 rounded-md font-bold text-[11px] uppercase tracking-wider">
-                {aiLoading ? 'Analyzing...' : 'Analyze Board'}
-              </button>
-            </div>
-            
-            <div className="relative z-10 flex-1 flex items-center">
-               <p className="font-body-sm text-[14px] text-on-surface-variant leading-relaxed">
-                 {aiGuidance ? aiGuidance : 'Click Analyze Board to get AI-powered recommendations on what task to prioritize next based on your current progress and deadlines.'}
-               </p>
-            </div>
-          </motion.div>
-
-        </motion.div>
-
-        {/* Kanban Board Container */}
-        <motion.div variants={itemVariants} className="flex-1 min-h-0 overflow-x-auto pb-4">
-          <div className="flex gap-6 h-full items-start min-w-[1024px]">
-            
-            {/* Column Function */}
-            {[
-              { id: 'todo', title: 'Pending', tasks: todoTasks, icon: 'list_alt', color: 'bg-surface-container-low/60', indicator: 'bg-secondary' },
-              { id: 'in_progress', title: 'In Progress', tasks: inProgressTasks, icon: 'clock_loader_40', color: 'bg-primary/5', indicator: 'bg-primary' },
-              { id: 'completed', title: 'Completed', tasks: completedTasks, icon: 'task_alt', color: 'bg-tertiary-container/10', indicator: 'bg-tertiary' }
-            ].map(col => (
-              <div key={col.id} className={`flex-1 w-80 ${col.color} backdrop-blur-md rounded-[24px] p-4 flex flex-col max-h-[calc(100vh-320px)] border border-outline-variant/20 shadow-sm`}>
-                
-                <div className="flex items-center justify-between mb-5 px-2">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${col.indicator}`}></div>
-                    <h3 className="font-title-md text-[18px] font-bold text-on-surface">{col.title}</h3>
-                  </div>
-                  <span className="bg-surface border border-outline-variant/30 text-secondary font-label-sm text-[12px] font-bold py-1 px-3 rounded-full shadow-sm">{col.tasks.length}</span>
-                </div>
-                
-                <div className="flex flex-col gap-3 overflow-y-auto pr-2 custom-scrollbar">
-                  {col.tasks.map(task => {
-                    const delayed = isDelayed(task);
-                    return (
-                      <motion.div 
-                        layoutId={task._id}
-                        key={task._id} 
-                        className={`bg-surface/90 backdrop-blur-sm p-5 rounded-2xl shadow-sm border ${delayed ? 'border-error/50 border-l-4 border-l-error' : 'border-outline-variant/30 hover:border-primary/40'} hover:shadow-md transition-all cursor-pointer group`}
-                      >
-                        <div className="flex justify-between items-start mb-3">
-                           {delayed ? (
-                             <span className="bg-error/10 text-error border border-error/20 font-label-sm text-[10px] font-bold uppercase py-1 px-2 rounded-md tracking-wider flex items-center gap-1">
-                               <span className="material-symbols-outlined text-[12px]">warning</span> Delayed
-                             </span>
-                           ) : (
-                             <span className="bg-surface-container text-secondary font-label-sm text-[10px] font-bold uppercase py-1 px-2 rounded-md tracking-wider">
-                               {task.status.replace('_', ' ')}
-                             </span>
-                           )}
-                        </div>
-                        
-                        <h4 className="font-title-sm text-[15px] font-bold text-on-surface mb-4 line-clamp-2 leading-snug group-hover:text-primary transition-colors">{task.title}</h4>
-                        
-                        {task.dueDate && (
-                          <div className={`flex items-center justify-between pt-3 border-t ${delayed ? 'border-error/20' : 'border-outline-variant/20'}`}>
-                            <div className={`flex items-center gap-1.5 ${delayed ? 'text-error' : 'text-secondary'}`}>
-                              <span className="material-symbols-outlined text-[16px]">{delayed ? 'event_busy' : 'calendar_today'}</span>
-                              <span className="font-label-sm text-[11px] font-bold">{new Date(task.dueDate).toLocaleDateString()}</span>
-                            </div>
-                            <div className="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                               <span className="material-symbols-outlined text-[14px] text-on-surface">arrow_forward</span>
-                            </div>
-                          </div>
-                        )}
-                      </motion.div>
-                    )
-                  })}
-                  {col.tasks.length === 0 && (
-                    <div className="text-center p-8 border-2 border-dashed border-outline-variant/30 rounded-2xl flex flex-col items-center justify-center text-secondary/60">
-                       <span className="material-symbols-outlined text-[32px] mb-2">{col.icon}</span>
-                       <span className="font-label-md text-[13px]">No tasks</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-
-          </div>
-        </motion.div>
-
-      </motion.div>
-
-      {/* Task Creation Modal */}
-      <AnimatePresence>
-        {showModal && (
-          <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-          >
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="bg-surface rounded-[32px] shadow-2xl w-full max-w-lg overflow-hidden border border-outline-variant/20"
-            >
-              <div className="p-6 md:p-8 border-b border-outline-variant/20 bg-surface/50">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-title-lg text-[24px] font-black text-on-surface tracking-tight">Create New Task</h3>
-                  <button onClick={() => setShowModal(false)} className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-secondary hover:text-on-surface hover:bg-surface-variant transition-colors">
-                    <span className="material-symbols-outlined">close</span>
-                  </button>
-                </div>
-              </div>
-              
-              <form onSubmit={handleCreateTask} className="p-6 md:p-8 flex flex-col gap-5">
-                <div>
-                  <label className="block font-label-md font-bold text-on-surface mb-2 uppercase tracking-wider text-[12px]">Task Title</label>
-                  <input 
-                    type="text" required
-                    value={newTask.title} onChange={e => setNewTask({...newTask, title: e.target.value})}
-                    className="w-full bg-surface-container-lowest border border-outline-variant/40 p-4 rounded-xl font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-secondary"
-                    placeholder="e.g. Design Database Schema"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block font-label-md font-bold text-on-surface mb-2 uppercase tracking-wider text-[12px]">Description</label>
-                  <textarea 
-                    rows="3"
-                    value={newTask.description} onChange={e => setNewTask({...newTask, description: e.target.value})}
-                    className="w-full bg-surface-container-lowest border border-outline-variant/40 p-4 rounded-xl font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-secondary resize-none"
-                    placeholder="Brief details about the task..."
-                  ></textarea>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-5">
-                  <div>
-                    <label className="block font-label-md font-bold text-on-surface mb-2 uppercase tracking-wider text-[12px]">Status</label>
-                    <div className="relative">
-                      <select 
-                        value={newTask.status} onChange={e => setNewTask({...newTask, status: e.target.value})}
-                        className="w-full bg-surface-container-lowest border border-outline-variant/40 p-4 pr-10 rounded-xl font-body-md text-on-surface focus:outline-none focus:border-primary transition-all appearance-none cursor-pointer"
-                      >
-                        <option value="todo">Pending</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                      </select>
-                      <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-secondary">expand_more</span>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block font-label-md font-bold text-on-surface mb-2 uppercase tracking-wider text-[12px]">Due Date</label>
-                    <input 
-                      type="date"
-                      value={newTask.dueDate} onChange={e => setNewTask({...newTask, dueDate: e.target.value})}
-                      className="w-full bg-surface-container-lowest border border-outline-variant/40 p-4 rounded-xl font-body-md text-on-surface focus:outline-none focus:border-primary transition-all"
-                    />
-                  </div>
-                </div>
-                
-                <div className="mt-4 flex justify-end gap-3 pt-4 border-t border-outline-variant/20">
-                  <button type="button" onClick={() => setShowModal(false)} className="px-6 py-3 rounded-xl font-label-md font-bold text-on-surface hover:bg-surface-container transition-colors">
-                    Cancel
-                  </button>
-                  <button type="submit" className="bg-primary text-on-primary px-8 py-3 rounded-xl font-label-md text-[14px] font-bold hover:bg-primary-fixed-variant transition-colors shadow-sm flex items-center gap-2">
-                    Create Task
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-    </div>
-  );
+    {showCreate && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 p-4 backdrop-blur-sm"><form onSubmit={createTask} className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-outline-variant/30 bg-surface shadow-2xl"><header className="flex items-start justify-between gap-4 border-b border-outline-variant/30 p-6"><div><h2 className="text-xl font-extrabold text-on-surface">Create a connected task</h2><p className="mt-1 text-sm text-secondary">Define the outcome, priority, timing, owner, and any prerequisite work.</p></div><button type="button" onClick={() => setShowCreate(false)} className="rounded-lg p-2 text-secondary hover:bg-surface-container"><span className="material-symbols-outlined">close</span></button></header><div className="grid gap-5 p-6 sm:grid-cols-2"><label className="sm:col-span-2"><span className={fieldLabelClass}>Task title</span><input required value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder="e.g. Validate the survey instrument" className={fieldInputClass} /></label><label className="sm:col-span-2"><span className={fieldLabelClass}>Expected outcome</span><textarea required rows="3" value={draft.acceptanceCriteria} onChange={(event) => setDraft({ ...draft, acceptanceCriteria: event.target.value })} placeholder="What evidence proves this task is complete?" className={`${fieldInputClass} resize-y`} /></label><label className="sm:col-span-2"><span className={fieldLabelClass}>Context (optional)</span><textarea rows="2" value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} placeholder="Relevant method, source, or decision context" className={`${fieldInputClass} resize-y`} /></label><label><span className={fieldLabelClass}>Priority</span><select value={draft.priority} onChange={(event) => setDraft({ ...draft, priority: event.target.value })} className={fieldInputClass}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label><label><span className={fieldLabelClass}>Due date</span><input type="date" value={draft.dueDate} onChange={(event) => setDraft({ ...draft, dueDate: event.target.value })} className={fieldInputClass} /></label>{user?.role !== 'student' && members.length > 0 && <label><span className={fieldLabelClass}>Owner</span><select value={draft.assignedTo} onChange={(event) => setDraft({ ...draft, assignedTo: event.target.value })} className={fieldInputClass}><option value="">Unassigned</option>{members.map((member) => <option key={member._id || member.id || member} value={member._id || member.id || member}>{member.name || member.email || 'Student'}</option>)}</select></label>}<label className={user?.role !== 'student' && members.length > 0 ? '' : 'sm:col-span-2'}><span className={fieldLabelClass}>Prerequisite tasks</span><select multiple value={draft.dependencies} onChange={(event) => setDraft({ ...draft, dependencies: Array.from(event.target.selectedOptions, (option) => option.value) })} className={`${fieldInputClass} min-h-28`}>{tasks.filter((task) => !completed(task) && task.status !== 'cancelled').map((task) => <option key={task._id} value={task._id}>{task.title}</option>)}</select><span className="mt-1 block text-[11px] text-secondary">Hold Ctrl/Cmd to choose multiple prerequisites.</span></label></div><footer className="flex justify-end gap-3 border-t border-outline-variant/30 p-5"><button type="button" onClick={() => setShowCreate(false)} className="rounded-xl px-4 py-2.5 text-sm font-bold text-on-surface hover:bg-surface-container">Cancel</button><button disabled={saving} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary disabled:opacity-60">{saving ? 'Creating…' : 'Create task'}</button></footer></form></div>}
+  </main></div>;
 };
 
 export default TasksMilestones;

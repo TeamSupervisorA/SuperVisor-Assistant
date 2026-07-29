@@ -1,6 +1,25 @@
 const Task = require('../models/Task');
 const { Project, canAccessProject, projectIdsForUser } = require('../utils/projectAccess');
 
+const completedStatuses = new Set(['done', 'completed']);
+const lifecycleStatuses = new Set(['todo', 'in_progress', 'blocked', 'review', 'done', 'cancelled']);
+const transitions = {
+  todo: new Set(['in_progress', 'blocked', 'cancelled']),
+  in_progress: new Set(['todo', 'blocked', 'review', 'done', 'cancelled']),
+  blocked: new Set(['todo', 'in_progress', 'cancelled']),
+  review: new Set(['in_progress', 'blocked', 'done']),
+  done: new Set(['in_progress']),
+  cancelled: new Set(['todo'])
+};
+
+const normalizedStatus = (status) => status === 'completed' ? 'done' : status === 'delayed' ? 'todo' : status;
+
+const hasOpenDependencies = async (dependencies = []) => {
+  if (!dependencies.length) return false;
+  const incomplete = await Task.countDocuments({ _id: { $in: dependencies }, status: { $nin: [...completedStatuses] } });
+  return incomplete > 0;
+};
+
 const hasDependencyCycle = async (taskId, dependencies) => {
   const visited = new Set();
   const walk = async (id) => {
@@ -102,29 +121,24 @@ exports.updateTask = async (req, res) => {
       return res.status(403).json({ success: false, error: 'Not authorized to update this task' });
     }
 
-    let updates = req.body;
-    if (req.user.role === 'student') {
-      // Students can only move their own tasks between statuses
-      if (!task.assignedTo || task.assignedTo.toString() !== req.user.id) {
-        return res.status(403).json({ success: false, error: 'Not authorized to update this task' });
-      }
-      updates = { status: req.body.status };
+    if (req.body.status !== undefined || req.body.blockedReason !== undefined) {
+      return res.status(422).json({ success: false, error: 'Use the task transition endpoint to change task status or blockers' });
     }
+    if (req.user.role === 'student') return res.status(403).json({ success: false, error: 'Students can update work status through the task transition controls' });
 
-    if (updates.status === 'blocked' && !updates.blockedReason && !task.blockedReason) {
-      return res.status(422).json({ success: false, error: 'Blocked tasks require a blockedReason' });
-    }
+    const editableFields = ['title', 'description', 'priority', 'dueDate', 'dependencies', 'acceptanceCriteria', 'assignedTo', 'evidence'];
+    const updates = Object.fromEntries(Object.entries(req.body).filter(([key]) => editableFields.includes(key)));
+    if (!Object.keys(updates).length) return res.status(422).json({ success: false, error: 'No editable task fields were provided' });
     if (updates.dependencies) {
       const dependencyCount = await Task.countDocuments({ _id: { $in: updates.dependencies }, project: task.project._id });
       if (dependencyCount !== updates.dependencies.length) return res.status(422).json({ success: false, error: 'Dependencies must be tasks in the same project' });
       if (await hasDependencyCycle(task._id, updates.dependencies)) return res.status(422).json({ success: false, error: 'Task dependencies cannot contain a cycle' });
     }
-    if (['done', 'completed'].includes(updates.status) && !task.completedAt) updates.completedAt = new Date();
     updates.history = [...task.history, {
       actor: req.user.id,
       action: 'updated',
       fromStatus: task.status,
-      toStatus: updates.status || task.status
+      toStatus: task.status
     }];
 
     task = await Task.findByIdAndUpdate(req.params.id, updates, {
@@ -142,21 +156,26 @@ exports.updateTask = async (req, res) => {
 exports.transitionTask = async (req, res) => {
   try {
     const { status, note = '', blockedReason = '', evidence = [] } = req.body;
-    if (!['todo', 'in_progress', 'blocked', 'done', 'cancelled'].includes(status)) {
+    const targetStatus = normalizedStatus(status);
+    if (!lifecycleStatuses.has(targetStatus)) {
       return res.status(422).json({ success: false, error: 'Invalid task status transition' });
     }
     const task = await Task.findById(req.params.id).populate('project');
     if (!task) return res.status(404).json({ success: false, error: 'Task not found' });
     if (!canAccessProject(task.project, req.user)) return res.status(403).json({ success: false, error: 'Not authorized to transition this task' });
     if (req.user.role === 'student' && task.assignedTo?.toString() !== req.user.id) return res.status(403).json({ success: false, error: 'Only the assignee may transition this task' });
-    if (status === 'blocked' && !blockedReason) return res.status(422).json({ success: false, error: 'Blocked tasks require a blockedReason' });
+    const fromStatus = normalizedStatus(task.status);
+    if (fromStatus !== targetStatus && !transitions[fromStatus]?.has(targetStatus)) return res.status(422).json({ success: false, error: `A ${fromStatus.replace('_', ' ')} task cannot move directly to ${targetStatus.replace('_', ' ')}` });
+    if (targetStatus === 'blocked' && !blockedReason) return res.status(422).json({ success: false, error: 'Blocked tasks require a blockedReason' });
+    if (['in_progress', 'review', 'done'].includes(targetStatus) && await hasOpenDependencies(task.dependencies)) return res.status(422).json({ success: false, error: 'Complete all prerequisite tasks before continuing this task' });
+    if (fromStatus === 'review' && targetStatus === 'done' && req.user.role === 'student') return res.status(403).json({ success: false, error: 'A supervisor must approve a task submitted for review' });
 
-    const fromStatus = task.status;
-    task.status = status;
-    task.blockedReason = status === 'blocked' ? blockedReason : '';
-    if (status === 'done') task.completedAt = new Date();
+    task.status = targetStatus;
+    task.blockedReason = targetStatus === 'blocked' ? blockedReason.trim() : '';
+    if (targetStatus === 'done') task.completedAt = new Date();
+    if (!completedStatuses.has(targetStatus)) task.completedAt = undefined;
     if (evidence.length) task.evidence = evidence;
-    task.history.push({ actor: req.user.id, action: 'transitioned', fromStatus, toStatus: status, note });
+    task.history.push({ actor: req.user.id, action: 'transitioned', fromStatus, toStatus: targetStatus, note: note.trim() });
     await task.save();
     res.json({ success: true, data: task });
   } catch (error) {
