@@ -40,7 +40,9 @@ export const apiFetch = async (path, options = {}) => {
   }
 
   if (!response.ok || data?.success === false) {
-    throw new Error(data?.error || `Request failed (${response.status})`);
+    const error = new Error(data?.error || `Request failed (${response.status})`);
+    error.data = data?.data;
+    throw error;
   }
 
   return data;

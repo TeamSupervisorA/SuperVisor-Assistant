@@ -91,7 +91,16 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
   const [utilityPanel, setUtilityPanel] = useState('');
   const [splitRatio, setSplitRatio] = useState(50);
   const [isSaving, setIsSaving] = useState(false);
+  const [compilerEngine, setCompilerEngine] = useState('pdflatex');
+  const [isCompiling, setIsCompiling] = useState(false);
+  const [autoCompile, setAutoCompile] = useState(false);
+  const [compiledPdf, setCompiledPdf] = useState('');
+  const [compiledPdfUrl, setCompiledPdfUrl] = useState('');
+  const [compileLog, setCompileLog] = useState('');
+  const [compileError, setCompileError] = useState('');
+  const [compiledVersion, setCompiledVersion] = useState('');
   const saveTimer = useRef(null);
+  const compileTimer = useRef(null);
   const selectedDocumentRef = useRef(null);
 
   const loadDocuments = useCallback(async (keepId) => {
@@ -124,8 +133,34 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
     else setLoading(false);
   }, [activeProject?._id, loadDocuments]);
 
-  useEffect(() => () => clearTimeout(saveTimer.current), []);
+  useEffect(() => () => {
+    clearTimeout(saveTimer.current);
+    clearTimeout(compileTimer.current);
+  }, []);
   useEffect(() => { selectedDocumentRef.current = selectedDocument; }, [selectedDocument]);
+  useEffect(() => {
+    setCompiledPdf('');
+    setCompileLog('');
+    setCompileError('');
+    setCompiledVersion('');
+  }, [selectedDocument?._id]);
+  useEffect(() => {
+    if (!compiledPdf) {
+      setCompiledPdfUrl('');
+      return undefined;
+    }
+    try {
+      const binary = window.atob(compiledPdf);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+      setCompiledPdfUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } catch {
+      setCompiledPdfUrl('');
+      return undefined;
+    }
+  }, [compiledPdf]);
 
   const selectDocument = async (documentId) => {
     if (!documentId || documentId === selectedDocument?._id) return;
@@ -202,10 +237,45 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
     setDirty(true);
   };
 
-  const saveAndRefreshPreview = async () => {
-    const saved = await saveDocument(selectedDocumentRef.current);
-    if (saved) setStatus('Saved and preview refreshed');
-  };
+  const compileDocument = useCallback(async ({ automatic = false } = {}) => {
+    let documentToCompile = selectedDocumentRef.current;
+    if (!documentToCompile?._id || documentToCompile.kind !== 'paper' || isCompiling) return;
+    setCompileError('');
+    setCompileLog('');
+    setIsCompiling(true);
+    if (!automatic) setStatus('Saving before compilation…');
+    try {
+      // Save exactly the source that will be passed to the isolated compiler.
+      const firstSave = await saveDocument(documentToCompile, true);
+      if (!firstSave) throw new Error('The paper could not be saved, so it was not sent to the compiler.');
+      if (selectedDocumentRef.current?._id === documentToCompile._id && selectedDocumentRef.current.content !== documentToCompile.content) {
+        documentToCompile = selectedDocumentRef.current;
+        const secondSave = await saveDocument(documentToCompile, true);
+        if (!secondSave) throw new Error('The newest paper changes could not be saved, so they were not compiled.');
+      }
+      const result = await apiFetch(`/api/workspace/documents/${documentToCompile._id}/compile`, {
+        method: 'POST',
+        body: JSON.stringify({ engine: compilerEngine })
+      });
+      setCompiledPdf(result.data.pdfBase64);
+      setCompileLog(result.data.log || 'Compilation completed successfully.');
+      setCompiledVersion(documentToCompile.content);
+      setStatus(`Compiled with ${compilerEngine}`);
+    } catch (requestError) {
+      setCompileError(requestError.message || 'Compilation failed. Review the compiler log and correct the source.');
+      setCompileLog(requestError.data?.log || 'No compiler log was returned.');
+      if (!automatic) setStatus('Compilation failed');
+    } finally {
+      setIsCompiling(false);
+    }
+  }, [compilerEngine, isCompiling, saveDocument]);
+
+  useEffect(() => {
+    if (!autoCompile || selectedDocument?.kind !== 'paper' || !selectedDocument?.content) return undefined;
+    clearTimeout(compileTimer.current);
+    compileTimer.current = setTimeout(() => compileDocument({ automatic: true }), 2000);
+    return () => clearTimeout(compileTimer.current);
+  }, [autoCompile, compileDocument, selectedDocument?.content, selectedDocument?.kind]);
 
   const createDocument = async (kind) => {
     if (!activeProject?._id) return;
@@ -387,7 +457,7 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
           <section className="min-w-0 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm dark:border-outline-variant/30 dark:bg-surface">
             {!selectedDocument && !loading ? <div className="grid min-h-[680px] place-items-center p-8 text-center"><div><span className="material-symbols-outlined text-[52px] text-indigo-500">edit_note</span><h2 className="mt-4 text-xl font-bold">Your research workspace is ready</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-slate-500 dark:text-secondary">Start a structured LaTeX paper, or keep experiments and implementation notes in a code lab.</p></div></div> : selectedDocument && <>
               <div className="flex min-h-[40px] items-end overflow-x-auto border-b border-slate-200 bg-slate-50 dark:border-outline-variant/30 dark:bg-surface-container-low">{documents.map((document) => <button key={document._id} onClick={() => selectDocument(document._id)} className={`inline-flex shrink-0 items-center gap-2 border-r border-slate-200 px-3 py-2 text-xs font-semibold dark:border-outline-variant/30 ${document._id === selectedDocument._id ? 'bg-white text-indigo-700 dark:bg-surface dark:text-primary' : 'text-slate-500 hover:bg-white/70 dark:text-secondary dark:hover:bg-surface'}`}><span className="material-symbols-outlined text-[16px]">{document.kind === 'paper' ? 'description' : 'code'}</span>{document.title}{document._id === selectedDocument._id && dirty && <span className="size-1.5 rounded-full bg-amber-500"/>}</button>)}</div>
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-2.5 dark:border-outline-variant/30"><div className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-secondary"><span className="material-symbols-outlined text-[16px] text-indigo-600 dark:text-primary">description</span>{selectedDocument.kind === 'paper' ? 'Paper document' : 'Implementation file'} · {dirty ? 'Unsaved changes' : status || relativeTime(selectedDocument.updatedAt)}<button onClick={() => { const title = window.prompt('Rename document', selectedDocument.title)?.trim(); if (title) updateSelected({ title }); }} title="Rename document" className="ml-1 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-surface-container"><span className="material-symbols-outlined text-[15px]">edit</span></button></div><div className="flex items-center gap-1.5"><button onClick={() => saveDocument(selectedDocument)} className="rounded-lg px-3 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-50 dark:text-primary dark:hover:bg-primary/10"><span className="material-symbols-outlined mr-1 align-[-3px] text-[16px]">save</span>Save</button><button onClick={downloadSource} title="Download source" className="grid size-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-secondary dark:hover:bg-surface-container"><span className="material-symbols-outlined text-[18px]">download</span></button><button onClick={deleteDocument} title="Delete document" className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 dark:text-secondary dark:hover:bg-error-container/30"><span className="material-symbols-outlined text-[18px]">delete</span></button></div></div>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-2.5 dark:border-outline-variant/30"><div className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-secondary"><span className="material-symbols-outlined text-[16px] text-indigo-600 dark:text-primary">description</span>{selectedDocument.kind === 'paper' ? 'Paper document' : 'Implementation file'} · {dirty ? 'Unsaved changes' : status || relativeTime(selectedDocument.updatedAt)}<button onClick={() => { const title = window.prompt('Rename document', selectedDocument.title)?.trim(); if (title) updateSelected({ title }); }} title="Rename document" className="ml-1 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-surface-container"><span className="material-symbols-outlined text-[15px]">edit</span></button></div><div className="flex items-center gap-1.5">{selectedDocument.kind === 'paper' && <><select value={compilerEngine} onChange={(event) => setCompilerEngine(event.target.value)} aria-label="LaTeX compiler" className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-bold text-slate-700 outline-none focus:border-indigo-400 dark:border-outline-variant/40 dark:bg-surface-container dark:text-on-surface"><option value="pdflatex">pdfLaTeX</option><option value="xelatex">XeLaTeX</option><option value="lualatex">LuaLaTeX</option></select><button onClick={() => compileDocument()} disabled={isCompiling} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60"><span className="material-symbols-outlined mr-1 align-[-3px] text-[16px]">play_arrow</span>{isCompiling ? 'Compiling…' : compiledPdf ? 'Recompile' : 'Compile'}</button></>}<button onClick={() => saveDocument(selectedDocument)} disabled={isSaving} className="rounded-lg px-3 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-50 disabled:opacity-60 dark:text-primary dark:hover:bg-primary/10"><span className="material-symbols-outlined mr-1 align-[-3px] text-[16px]">save</span>{isSaving ? 'Saving…' : 'Save'}</button><button onClick={downloadSource} title="Download source" className="grid size-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-secondary dark:hover:bg-surface-container"><span className="material-symbols-outlined text-[18px]">download</span></button><button onClick={deleteDocument} title="Delete document" className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 dark:text-secondary dark:hover:bg-error-container/30"><span className="material-symbols-outlined text-[18px]">delete</span></button></div></div>
               <div className="flex min-h-[calc(100vh-290px)] flex-col overflow-hidden xl:flex-row">
                 <section className="min-w-0 w-full bg-[#1e1e1e] xl:w-[var(--pane-width)] xl:shrink-0" style={{ '--pane-width': `${splitRatio}%` }}>
                   <div className="flex items-center justify-between border-b border-white/10 bg-[#252526] px-4 py-2.5 text-xs font-semibold text-slate-300"><span className="inline-flex items-center gap-2"><span className="material-symbols-outlined text-[16px] text-indigo-300">code</span>{selectedDocument.kind === 'paper' ? 'main.tex' : selectedDocument.language || 'source'}</span><span className="text-[10px] uppercase tracking-wider text-slate-500">Editable source</span></div>
@@ -395,7 +465,7 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
                 </section>
                 <div role="separator" aria-orientation="vertical" onMouseDown={startPaneResize} className="hidden w-2 shrink-0 cursor-col-resize bg-slate-200 transition hover:bg-indigo-500 dark:bg-outline-variant/40 dark:hover:bg-primary xl:block" title="Drag to resize panes" />
                 <section className="min-w-0 flex-1 bg-slate-100 p-3 dark:bg-surface-container-low">
-                  {selectedDocument.kind === 'paper' ? <div className="mx-auto flex h-[calc(100vh-390px)] min-h-[560px] max-w-[900px] flex-col overflow-hidden rounded-sm bg-white shadow-[0_4px_18px_rgba(15,23,42,.14)]"><div className="flex items-center justify-between border-b border-slate-200 px-5 py-3"><span className="inline-flex items-center gap-2 text-xs font-bold text-slate-700"><span className="material-symbols-outlined text-[16px] text-indigo-600">picture_as_pdf</span>Typeset reading preview</span><div className="flex items-center gap-2"><span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Live preview</span><button onClick={saveAndRefreshPreview} disabled={isSaving} className="rounded-md bg-indigo-600 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-60"><span className="material-symbols-outlined mr-1 align-[-3px] text-[14px]">save</span>{isSaving ? 'Saving…' : 'Save & refresh'}</button></div></div><article className="overflow-y-auto px-7 py-8 text-slate-800 sm:px-10"><h2 className="border-b border-slate-200 pb-5 text-center font-serif text-2xl font-bold leading-tight">{selectedDocument.title}</h2><p className="mb-8 mt-3 text-center text-xs text-slate-500">LaTeX draft reading view · updates while you type</p><div className="whitespace-pre-wrap font-serif text-[15px] leading-8 text-slate-700">{textPreview || 'Start writing to see the reading preview.'}</div></article></div> : <div className="flex h-[calc(100vh-390px)] min-h-[560px] flex-col overflow-hidden rounded-sm bg-[#111827] font-mono text-sm text-slate-200 shadow-[0_4px_18px_rgba(15,23,42,.14)]"><div className="flex items-center justify-between border-b border-white/10 px-4 py-3"><span className="inline-flex items-center gap-2 font-sans text-xs font-bold"><span className="material-symbols-outlined text-[16px] text-emerald-400">terminal</span>Development output</span><span className="font-sans text-[10px] uppercase tracking-wider text-slate-500">Safe workspace</span></div><pre className="flex-1 overflow-auto whitespace-pre-wrap p-5 text-xs leading-6 text-slate-300">$ project-notebook status\nFile: {selectedDocument.title}\nLanguage: {selectedDocument.language || 'javascript'}\nLines: {codeStats.lines}\nTODO markers: {codeStats.todos}\n\nRun code in your approved local or cloud development environment. This academic workspace intentionally does not execute arbitrary code in the browser.</pre><div className="border-t border-white/10 px-4 py-3 text-[11px] text-slate-500">Save source here, then download it for local execution or your institution’s approved compute environment.</div></div>}
+                  {selectedDocument.kind === 'paper' ? <div className="mx-auto flex h-[calc(100vh-390px)] min-h-[560px] max-w-none flex-col overflow-hidden rounded-sm bg-white shadow-[0_4px_18px_rgba(15,23,42,.14)]"><div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3"><span className="inline-flex items-center gap-2 text-xs font-bold text-slate-700"><span className="material-symbols-outlined text-[16px] text-indigo-600">picture_as_pdf</span>{compiledPdfUrl ? 'Compiled PDF preview' : 'PDF compiler'}</span><div className="flex items-center gap-2"><label className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-slate-500"><input type="checkbox" checked={autoCompile} onChange={(event) => setAutoCompile(event.target.checked)} className="size-3.5 accent-emerald-600"/>Auto compile</label><button onClick={() => compileDocument()} disabled={isCompiling} className="rounded-md bg-emerald-600 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60"><span className="material-symbols-outlined mr-1 align-[-3px] text-[14px]">play_arrow</span>{isCompiling ? 'Compiling…' : compiledPdf ? 'Recompile' : 'Compile PDF'}</button></div></div>{compiledVersion && compiledVersion !== selectedDocument.content && <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-800">The source has changed since the last successful compilation. Choose Recompile to update the PDF.</div>}{compileError && <div className="border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-800"><span className="font-bold">Compilation failed:</span> {compileError}</div>}{compiledPdfUrl ? <iframe title={`${selectedDocument.title} compiled PDF`} src={compiledPdfUrl} className="min-h-0 flex-1 bg-slate-100" /> : <div className="grid flex-1 place-items-center overflow-auto bg-slate-100 p-6"><div className="max-w-md rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm"><span className="material-symbols-outlined text-[40px] text-indigo-600">picture_as_pdf</span><h2 className="mt-3 text-lg font-extrabold text-slate-900">Ready for a real IEEE PDF</h2><p className="mt-2 text-sm leading-relaxed text-slate-600">Choose <strong>Compile PDF</strong> to run the saved <code>main.tex</code> source through {compilerEngine}. This panel only displays a true compiler result; it no longer pretends a text conversion is a typeset PDF.</p><p className="mt-3 text-xs leading-relaxed text-slate-500">Enable Auto compile to rebuild two seconds after you stop editing. It is off by default to avoid unnecessary compiler usage.</p>{compileLog && <details className="mt-4 text-left"><summary className="cursor-pointer text-xs font-bold text-indigo-700">View compiler log</summary><pre className="mt-2 max-h-40 overflow-auto rounded-lg bg-slate-950 p-3 text-[11px] leading-5 text-slate-200">{compileLog}</pre></details>}</div></div>}</div> : <div className="flex h-[calc(100vh-390px)] min-h-[560px] flex-col overflow-hidden rounded-sm bg-[#111827] font-mono text-sm text-slate-200 shadow-[0_4px_18px_rgba(15,23,42,.14)]"><div className="flex items-center justify-between border-b border-white/10 px-4 py-3"><span className="inline-flex items-center gap-2 font-sans text-xs font-bold"><span className="material-symbols-outlined text-[16px] text-emerald-400">terminal</span>Development output</span><span className="font-sans text-[10px] uppercase tracking-wider text-slate-500">Safe workspace</span></div><pre className="flex-1 overflow-auto whitespace-pre-wrap p-5 text-xs leading-6 text-slate-300">$ project-notebook status\nFile: {selectedDocument.title}\nLanguage: {selectedDocument.language || 'javascript'}\nLines: {codeStats.lines}\nTODO markers: {codeStats.todos}\n\nRun code in your approved local or cloud development environment. This academic workspace intentionally does not execute arbitrary code in the browser.</pre><div className="border-t border-white/10 px-4 py-3 text-[11px] text-slate-500">Save source here, then download it for local execution or your institution’s approved compute environment.</div></div>}
                 </section>
               </div>
               <section className="border-t border-slate-200 p-5 dark:border-outline-variant/30 md:p-6">

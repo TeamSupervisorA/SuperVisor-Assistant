@@ -1,0 +1,13 @@
+{
+  "name": "supervisor-latex-compiler",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Isolated LaTeX compiler for SuperVisor-Assistant paper workspaces",
+  "main": "server.js",
+  "engines": { "node": "22.x" },
+  "scripts": { "start": "node server.js", "check": "node --check server.js" },
+  "dependencies": {
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.6.0"
+  }
+}

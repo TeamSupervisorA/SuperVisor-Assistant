@@ -3,6 +3,7 @@ const { Project, canAccessProject } = require('../utils/projectAccess');
 
 const allowedKinds = new Set(['paper', 'code']);
 const allowedFields = ['title', 'kind', 'language', 'content', 'overleafUrl'];
+const allowedLatexEngines = new Set(['pdflatex', 'xelatex', 'lualatex']);
 
 const getAccessibleProject = async (projectId, user) => {
   const project = await Project.findById(projectId);
@@ -91,6 +92,79 @@ exports.updateDocument = async (req, res) => {
     res.json({ success: true, data: updated });
   } catch (error) {
     res.status(error.statusCode || 400).json({ success: false, error: error.message });
+  }
+};
+
+// TeX distributions are intentionally kept outside this API. A complete TeX
+// installation is large and executing untrusted TeX inside a Vercel function
+// would be both unreliable and unsafe. Instead, this authenticated endpoint
+// sends the saved source to an administrator-configured, isolated compiler.
+exports.compileDocument = async (req, res) => {
+  try {
+    const document = await WorkspaceDocument.findById(req.params.id);
+    if (!document) return res.status(404).json({ success: false, error: 'Workspace document not found' });
+    await getAccessibleProject(document.project, req.user);
+    if (document.kind !== 'paper') return res.status(422).json({ success: false, error: 'Only LaTeX paper documents can be compiled' });
+
+    const engine = req.body?.engine || 'pdflatex';
+    if (!allowedLatexEngines.has(engine)) {
+      return res.status(422).json({ success: false, error: 'Unsupported LaTeX engine' });
+    }
+    if (!process.env.LATEX_COMPILER_URL) {
+      return res.status(503).json({
+        success: false,
+        error: 'Paper compilation is not configured. Ask the administrator to configure the isolated LaTeX compiler service.'
+      });
+    }
+
+    let compilerUrl;
+    try {
+      compilerUrl = new URL(process.env.LATEX_COMPILER_URL);
+      if (compilerUrl.protocol !== 'https:' && process.env.NODE_ENV === 'production') throw new Error('HTTPS is required');
+    } catch {
+      return res.status(503).json({ success: false, error: 'The LaTeX compiler service is configured with an invalid URL' });
+    }
+
+    const headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
+    if (process.env.LATEX_COMPILER_SHARED_SECRET) headers['X-Compiler-Secret'] = process.env.LATEX_COMPILER_SHARED_SECRET;
+
+    let compilerResponse;
+    try {
+      compilerResponse = await fetch(compilerUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ source: document.content, engine, mainFile: 'main.tex' }),
+        signal: AbortSignal.timeout(55000)
+      });
+    } catch {
+      return res.status(502).json({ success: false, error: 'The LaTeX compiler service could not be reached. Please try again shortly.' });
+    }
+
+    let output;
+    try {
+      output = await compilerResponse.json();
+    } catch {
+      return res.status(502).json({ success: false, error: 'The LaTeX compiler returned an invalid response' });
+    }
+    const log = typeof output.log === 'string' ? output.log.slice(0, 50000) : '';
+    if (!compilerResponse.ok || !output.success) {
+      return res.status(422).json({ success: false, error: output.error || 'LaTeX compilation failed', data: { log } });
+    }
+    if (typeof output.pdfBase64 !== 'string' || output.pdfBase64.length > 16 * 1024 * 1024) {
+      return res.status(502).json({ success: false, error: 'The compiler returned an invalid or oversized PDF' });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        engine,
+        pdfBase64: output.pdfBase64,
+        log,
+        compiledAt: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false, error: error.message || 'Unable to compile this document' });
   }
 };
 

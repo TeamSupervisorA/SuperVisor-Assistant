@@ -10,8 +10,10 @@ Deploy `frontend` and `backend` as separate Vercel projects, with each project's
 - Vercel serverless storage is ephemeral and the app intentionally blocks local-file uploads in production. Configure a private object-storage provider with authenticated downloads before enabling production uploads.
 - `FRONTEND_URL` is an exact allow-list, not a wildcard. Add each permitted production or preview origin explicitly, comma-separated.
 
-## Research Studio
+## Paper Editor and real LaTeX compilation
 
-The project workspace at `/research-studio` stores project-scoped LaTeX drafts and implementation notes, includes a Monaco editor, source download, a readable draft preview, and a literature search that combines OpenAlex and Crossref metadata. Search results are discovery aids: authors must read, verify, and cite the original work.
+The Paper Editor stores project-scoped LaTeX drafts, provides a Monaco source editor, Ctrl/Cmd+S and autosave, PDF compilation controls, compiler logs, a resizable source/PDF layout, and a literature search that combines OpenAlex and Crossref metadata. Search results are discovery aids: authors must read, verify, and cite the original work.
 
-The Overleaf button opens a user-owned Overleaf project rather than embedding it. This preserves Overleaf's native editor, compiler, permissions, and collaboration model. Users can link an Overleaf project URL and download the `.tex` source for transfer; teams with eligible Overleaf plans can use its Git integration for a fuller synchronisation workflow.
+Real IEEE-format PDF output is compiled by the separate Docker service in [`latex-compiler`](./latex-compiler), not by the browser or Vercel function. It provides `pdfLaTeX`, `XeLaTeX`, and `LuaLaTeX`, common IEEE/TeX Live packages, per-request isolation, timeouts, shell-escape disabled, and compiler authentication. Deploy that folder to a container host, configure its URL and matching shared secret in the backend Vercel project, then redeploy the backend. Detailed instructions are in [`latex-compiler/README.md`](./latex-compiler/README.md).
+
+The Overleaf button remains useful for external collaboration and its own native tooling. It opens a user-owned Overleaf project rather than embedding it, preserving Overleaf's editor, compiler, permissions, and collaboration model. Eligible Overleaf plans can use its Git integration for fuller synchronization.
