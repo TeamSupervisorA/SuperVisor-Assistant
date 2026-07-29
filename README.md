@@ -17,3 +17,11 @@ The Paper Editor stores project-scoped LaTeX drafts, provides a Monaco source ed
 Real IEEE-format PDF output is compiled by the separate Docker service in [`latex-compiler`](./latex-compiler), not by the browser or Vercel function. It provides `pdfLaTeX`, `XeLaTeX`, and `LuaLaTeX`, common IEEE/TeX Live packages, per-request isolation, timeouts, shell-escape disabled, and compiler authentication. Deploy that folder to a container host, configure its URL and matching shared secret in the backend Vercel project, then redeploy the backend. Detailed instructions are in [`latex-compiler/README.md`](./latex-compiler/README.md).
 
 The Overleaf button remains useful for external collaboration and its own native tooling. It opens a user-owned Overleaf project rather than embedding it, preserving Overleaf's editor, compiler, permissions, and collaboration model. Eligible Overleaf plans can use its Git integration for fuller synchronization.
+
+## Code IDE runtime
+
+The Code IDE uses the Monaco editor (the editor core used by VS Code) and includes language selection, starter templates, output at the bottom, a fullscreen workspace, Ctrl/Cmd+S saving, and a hover-expandable navigation rail. JavaScript runs in a four-second browser worker for immediate, isolated feedback.
+
+Other languages are deliberately executed only through an isolated, self-hosted Piston-compatible runner. Configure `CODE_RUNNER_URL` in the backend environment to its `/api/v2/execute` endpoint, optionally set the same `CODE_RUNNER_SHARED_SECRET` on the backend and a protecting proxy, then redeploy the backend. Do not send private academic code to an untrusted public execution service. Libraries are limited to the vetted runtimes and packages installed by the runner administrator; the application does not download arbitrary packages at execution time.
+
+The Monaco editor is distributed under the MIT license: https://github.com/microsoft/monaco-editor. Piston is also MIT-licensed and provides the isolated multi-language runner interface: https://github.com/engineer-man/piston.

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopNavbar from './TopNavbar';
@@ -7,8 +7,19 @@ import { useTheme } from './ThemeContext';
 
 const DashboardLayout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
+  const [isDesktopPinnedOpen, setIsDesktopPinnedOpen] = useState(false);
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches);
   const { isDark, toggleDark } = useTheme();
+  const isDesktopCollapsed = isDesktop && !isDesktopPinnedOpen && !isSidebarHovered;
+
+  useEffect(() => {
+    const query = window.matchMedia('(min-width: 768px)');
+    const update = () => setIsDesktop(query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
 
   return (
     <div className="bg-background text-on-surface font-body-md antialiased min-h-screen flex overflow-hidden">
@@ -26,10 +37,10 @@ const DashboardLayout = () => {
       </AnimatePresence>
       
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition-transform duration-300 ease-in-out z-50 md:flex flex-shrink-0`}>
+      <div onMouseEnter={() => setIsSidebarHovered(true)} onMouseLeave={() => setIsSidebarHovered(false)} className={`fixed inset-y-0 left-0 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition-transform duration-300 ease-in-out z-50 md:flex flex-shrink-0`}>
         <Sidebar 
           isCollapsed={isDesktopCollapsed} 
-          toggleCollapse={() => setIsDesktopCollapsed(!isDesktopCollapsed)} 
+          toggleCollapse={() => setIsDesktopPinnedOpen(!isDesktopPinnedOpen)}
           closeMobile={() => setIsMobileMenuOpen(false)}
         />
       </div>

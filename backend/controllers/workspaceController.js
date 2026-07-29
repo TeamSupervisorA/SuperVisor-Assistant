@@ -4,6 +4,7 @@ const { Project, canAccessProject } = require('../utils/projectAccess');
 const allowedKinds = new Set(['paper', 'code']);
 const allowedFields = ['title', 'kind', 'language', 'content', 'overleafUrl'];
 const allowedLatexEngines = new Set(['pdflatex', 'xelatex', 'lualatex']);
+const allowedCodeLanguages = new Set(['javascript', 'typescript', 'python', 'java', 'c', 'cpp', 'csharp', 'go', 'rust', 'r', 'julia', 'php', 'ruby', 'sql', 'bash']);
 
 const getAccessibleProject = async (projectId, user) => {
   const project = await Project.findById(projectId);
@@ -28,6 +29,11 @@ const validateDocument = (data, partial = false) => {
   }
   if (data.kind && !allowedKinds.has(data.kind)) {
     const error = new Error('kind must be paper or code');
+    error.statusCode = 422;
+    throw error;
+  }
+  if (data.language && data.kind === 'code' && !allowedCodeLanguages.has(data.language)) {
+    const error = new Error('Unsupported code language');
     error.statusCode = 422;
     throw error;
   }
@@ -87,7 +93,7 @@ exports.updateDocument = async (req, res) => {
     await getAccessibleProject(document.project, req.user);
     const updates = {};
     allowedFields.forEach((field) => { if (req.body[field] !== undefined) updates[field] = req.body[field]; });
-    validateDocument(updates, true);
+    validateDocument({ ...document.toObject(), ...updates }, true);
     const updated = await WorkspaceDocument.findByIdAndUpdate(req.params.id, updates, { returnDocument: 'after', runValidators: true });
     res.json({ success: true, data: updated });
   } catch (error) {
@@ -165,6 +171,56 @@ exports.compileDocument = async (req, res) => {
     });
   } catch (error) {
     res.status(error.statusCode || 500).json({ success: false, error: error.message || 'Unable to compile this document' });
+  }
+};
+
+// Multi-language execution must happen in an isolated runner, never in the
+// web server or a Vercel function. The runner contract is compatible with
+// self-hosted Piston-style services.
+exports.runDocument = async (req, res) => {
+  try {
+    const document = await WorkspaceDocument.findById(req.params.id);
+    if (!document) return res.status(404).json({ success: false, error: 'Workspace document not found' });
+    await getAccessibleProject(document.project, req.user);
+    if (document.kind !== 'code') return res.status(422).json({ success: false, error: 'Only code documents can be executed' });
+    if (!allowedCodeLanguages.has(document.language)) return res.status(422).json({ success: false, error: 'Unsupported code language' });
+    if (!process.env.CODE_RUNNER_URL) {
+      return res.status(503).json({ success: false, error: 'This language needs the isolated code runner. Ask the administrator to configure CODE_RUNNER_URL.' });
+    }
+
+    let runnerUrl;
+    try {
+      runnerUrl = new URL(process.env.CODE_RUNNER_URL);
+      if (runnerUrl.protocol !== 'https:' && process.env.NODE_ENV === 'production') throw new Error('HTTPS is required');
+    } catch {
+      return res.status(503).json({ success: false, error: 'The code runner is configured with an invalid URL' });
+    }
+    const headers = { 'Content-Type': 'application/json', Accept: 'application/json' };
+    if (process.env.CODE_RUNNER_SHARED_SECRET) headers['X-Runner-Secret'] = process.env.CODE_RUNNER_SHARED_SECRET;
+
+    let runnerResponse;
+    try {
+      runnerResponse = await fetch(runnerUrl, {
+        method: 'POST', headers,
+        body: JSON.stringify({ language: document.language, version: '*', files: [{ content: document.content }], stdin: '' }),
+        signal: AbortSignal.timeout(15000)
+      });
+    } catch {
+      return res.status(502).json({ success: false, error: 'The isolated code runner could not be reached. Please try again shortly.' });
+    }
+    let output;
+    try { output = await runnerResponse.json(); } catch { return res.status(502).json({ success: false, error: 'The code runner returned an invalid response' }); }
+    if (!runnerResponse.ok) return res.status(422).json({ success: false, error: output.message || output.error || 'Code execution failed' });
+    const compile = output.compile || {};
+    const run = output.run || output;
+    res.json({ success: true, data: {
+      compileOutput: `${compile.stdout || ''}${compile.stderr || ''}`.slice(-30000),
+      output: `${run.stdout || ''}${run.stderr || run.output || ''}`.slice(-30000),
+      exitCode: run.code ?? null,
+      signal: run.signal || null
+    } });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ success: false, error: error.message || 'Unable to run this code' });
   }
 };
 

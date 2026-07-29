@@ -16,6 +16,13 @@ router.post('/documents/:id/compile', rateLimit({
   legacyHeaders: false,
   message: { success: false, error: 'Too many compile requests. Please wait before compiling again.' }
 }), workspace.compileDocument);
+router.post('/documents/:id/run', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many code execution requests. Please wait before running again.' }
+}), workspace.runDocument);
 router.route('/documents/:id')
   .get(workspace.getDocument)
   .put(workspace.updateDocument)
