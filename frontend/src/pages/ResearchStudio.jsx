@@ -90,7 +90,9 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
   const [error, setError] = useState('');
   const [utilityPanel, setUtilityPanel] = useState('');
   const [splitRatio, setSplitRatio] = useState(50);
+  const [isSaving, setIsSaving] = useState(false);
   const saveTimer = useRef(null);
+  const selectedDocumentRef = useRef(null);
 
   const loadDocuments = useCallback(async (keepId) => {
     if (!activeProject?._id) return;
@@ -123,6 +125,7 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
   }, [activeProject?._id, loadDocuments]);
 
   useEffect(() => () => clearTimeout(saveTimer.current), []);
+  useEffect(() => { selectedDocumentRef.current = selectedDocument; }, [selectedDocument]);
 
   const selectDocument = async (documentId) => {
     if (!documentId || documentId === selectedDocument?._id) return;
@@ -142,6 +145,7 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
     if (!documentToSave?._id) return;
     try {
       if (!silent) setStatus('Saving…');
+      setIsSaving(true);
       const result = await apiFetch(`/api/workspace/documents/${documentToSave._id}`, {
         method: 'PUT',
         body: JSON.stringify({
@@ -153,14 +157,26 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
         })
       });
       setDocuments((current) => current.map((item) => item._id === result.data._id ? { ...item, ...result.data } : item));
-      if (selectedDocument?._id === result.data._id) setSelectedDocument(result.data);
-      setDirty(false);
+      const currentDocument = selectedDocumentRef.current;
+      const changedWhileSaving = currentDocument?._id === result.data._id && (
+        currentDocument.content !== documentToSave.content ||
+        currentDocument.title !== documentToSave.title ||
+        currentDocument.overleafUrl !== documentToSave.overleafUrl
+      );
+      if (currentDocument?._id === result.data._id && !changedWhileSaving) {
+        setSelectedDocument(result.data);
+        setDirty(false);
+      }
       setStatus(relativeTime(result.data.updatedAt));
+      return result.data;
     } catch (requestError) {
       setStatus('Save failed');
       setError(requestError.message || 'Your changes could not be saved.');
+      return null;
+    } finally {
+      setIsSaving(false);
     }
-  }, [selectedDocument?._id]);
+  }, []);
 
   useEffect(() => {
     if (!dirty || !selectedDocument?._id) return undefined;
@@ -169,9 +185,26 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
     return () => clearTimeout(saveTimer.current);
   }, [selectedDocument, dirty, saveDocument]);
 
+  useEffect(() => {
+    const handleSaveShortcut = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        const currentDocument = selectedDocumentRef.current;
+        if (currentDocument) saveDocument(currentDocument);
+      }
+    };
+    window.addEventListener('keydown', handleSaveShortcut);
+    return () => window.removeEventListener('keydown', handleSaveShortcut);
+  }, [saveDocument]);
+
   const updateSelected = (updates) => {
     setSelectedDocument((current) => current ? { ...current, ...updates } : current);
     setDirty(true);
+  };
+
+  const saveAndRefreshPreview = async () => {
+    const saved = await saveDocument(selectedDocumentRef.current);
+    if (saved) setStatus('Saved and preview refreshed');
   };
 
   const createDocument = async (kind) => {
@@ -285,7 +318,9 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
 
   const sections = useMemo(() => latexSections(selectedDocument?.content), [selectedDocument?.content]);
   const textPreview = useMemo(() => (selectedDocument?.content || '')
-    .replace(/\\(?:documentclass|usepackage|begin|end|title|author|date|maketitle|bibliographystyle|bibliography)\{[^}]*\}/g, '')
+    .replace(/\\documentclass(?:\[[^\]]*\])?\{[^}]*\}/g, '')
+    .replace(/\\usepackage(?:\[[^\]]*\])?\{[^}]*\}/g, '')
+    .replace(/\\(?:begin|end|title|author|date|maketitle|bibliographystyle|bibliography)\{[^}]*\}/g, '')
     .replace(/\\section\*?\{([^}]+)\}/g, '\n$1\n')
     .replace(/\\cite\{([^}]+)\}/g, '[$1]')
     .replace(/\\[a-zA-Z]+(?:\{([^}]*)\})?/g, '$1')
@@ -360,7 +395,7 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
                 </section>
                 <div role="separator" aria-orientation="vertical" onMouseDown={startPaneResize} className="hidden w-2 shrink-0 cursor-col-resize bg-slate-200 transition hover:bg-indigo-500 dark:bg-outline-variant/40 dark:hover:bg-primary xl:block" title="Drag to resize panes" />
                 <section className="min-w-0 flex-1 bg-slate-100 p-3 dark:bg-surface-container-low">
-                  {selectedDocument.kind === 'paper' ? <div className="mx-auto flex h-[calc(100vh-390px)] min-h-[560px] max-w-[900px] flex-col overflow-hidden rounded-sm bg-white shadow-[0_4px_18px_rgba(15,23,42,.14)]"><div className="flex items-center justify-between border-b border-slate-200 px-5 py-3"><span className="inline-flex items-center gap-2 text-xs font-bold text-slate-700"><span className="material-symbols-outlined text-[16px] text-indigo-600">picture_as_pdf</span>Typeset reading preview</span><span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Source-aware</span></div><article className="overflow-y-auto px-7 py-8 text-slate-800 sm:px-10"><h2 className="border-b border-slate-200 pb-5 text-center font-serif text-2xl font-bold leading-tight">{selectedDocument.title}</h2><p className="mb-8 mt-3 text-center text-xs text-slate-500">LaTeX draft reading view</p><div className="whitespace-pre-wrap font-serif text-[15px] leading-8 text-slate-700">{textPreview || 'Start writing to see the reading preview.'}</div></article></div> : <div className="flex h-[calc(100vh-390px)] min-h-[560px] flex-col overflow-hidden rounded-sm bg-[#111827] font-mono text-sm text-slate-200 shadow-[0_4px_18px_rgba(15,23,42,.14)]"><div className="flex items-center justify-between border-b border-white/10 px-4 py-3"><span className="inline-flex items-center gap-2 font-sans text-xs font-bold"><span className="material-symbols-outlined text-[16px] text-emerald-400">terminal</span>Development output</span><span className="font-sans text-[10px] uppercase tracking-wider text-slate-500">Safe workspace</span></div><pre className="flex-1 overflow-auto whitespace-pre-wrap p-5 text-xs leading-6 text-slate-300">$ project-notebook status\nFile: {selectedDocument.title}\nLanguage: {selectedDocument.language || 'javascript'}\nLines: {codeStats.lines}\nTODO markers: {codeStats.todos}\n\nRun code in your approved local or cloud development environment. This academic workspace intentionally does not execute arbitrary code in the browser.</pre><div className="border-t border-white/10 px-4 py-3 text-[11px] text-slate-500">Save source here, then download it for local execution or your institution’s approved compute environment.</div></div>}
+                  {selectedDocument.kind === 'paper' ? <div className="mx-auto flex h-[calc(100vh-390px)] min-h-[560px] max-w-[900px] flex-col overflow-hidden rounded-sm bg-white shadow-[0_4px_18px_rgba(15,23,42,.14)]"><div className="flex items-center justify-between border-b border-slate-200 px-5 py-3"><span className="inline-flex items-center gap-2 text-xs font-bold text-slate-700"><span className="material-symbols-outlined text-[16px] text-indigo-600">picture_as_pdf</span>Typeset reading preview</span><div className="flex items-center gap-2"><span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Live preview</span><button onClick={saveAndRefreshPreview} disabled={isSaving} className="rounded-md bg-indigo-600 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-60"><span className="material-symbols-outlined mr-1 align-[-3px] text-[14px]">save</span>{isSaving ? 'Saving…' : 'Save & refresh'}</button></div></div><article className="overflow-y-auto px-7 py-8 text-slate-800 sm:px-10"><h2 className="border-b border-slate-200 pb-5 text-center font-serif text-2xl font-bold leading-tight">{selectedDocument.title}</h2><p className="mb-8 mt-3 text-center text-xs text-slate-500">LaTeX draft reading view · updates while you type</p><div className="whitespace-pre-wrap font-serif text-[15px] leading-8 text-slate-700">{textPreview || 'Start writing to see the reading preview.'}</div></article></div> : <div className="flex h-[calc(100vh-390px)] min-h-[560px] flex-col overflow-hidden rounded-sm bg-[#111827] font-mono text-sm text-slate-200 shadow-[0_4px_18px_rgba(15,23,42,.14)]"><div className="flex items-center justify-between border-b border-white/10 px-4 py-3"><span className="inline-flex items-center gap-2 font-sans text-xs font-bold"><span className="material-symbols-outlined text-[16px] text-emerald-400">terminal</span>Development output</span><span className="font-sans text-[10px] uppercase tracking-wider text-slate-500">Safe workspace</span></div><pre className="flex-1 overflow-auto whitespace-pre-wrap p-5 text-xs leading-6 text-slate-300">$ project-notebook status\nFile: {selectedDocument.title}\nLanguage: {selectedDocument.language || 'javascript'}\nLines: {codeStats.lines}\nTODO markers: {codeStats.todos}\n\nRun code in your approved local or cloud development environment. This academic workspace intentionally does not execute arbitrary code in the browser.</pre><div className="border-t border-white/10 px-4 py-3 text-[11px] text-slate-500">Save source here, then download it for local execution or your institution’s approved compute environment.</div></div>}
                 </section>
               </div>
               <section className="border-t border-slate-200 p-5 dark:border-outline-variant/30 md:p-6">
