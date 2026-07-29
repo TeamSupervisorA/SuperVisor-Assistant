@@ -6,14 +6,14 @@ const getApiBaseUrl = () => {
   throw new Error('The API is not configured. Set VITE_API_URL in the frontend Vercel project and redeploy.');
 };
 
-const fetchWithTimeout = async (url, options = {}) => {
+const fetchWithTimeout = async (url, { timeoutMs = 15000, ...options } = {}) => {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(url, { ...options, signal: controller.signal });
   } catch (error) {
     if (error.name === 'AbortError') {
-      throw new Error('The server did not respond within 15 seconds. Check VITE_API_URL and the backend Vercel deployment.');
+      throw new Error(`The server did not respond within ${Math.round(timeoutMs / 1000)} seconds. Check the API and compiler deployment.`);
     }
     throw error;
   } finally {

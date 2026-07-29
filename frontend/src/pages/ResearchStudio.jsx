@@ -255,6 +255,7 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
       }
       const result = await apiFetch(`/api/workspace/documents/${documentToCompile._id}/compile`, {
         method: 'POST',
+        timeoutMs: 70000,
         body: JSON.stringify({ engine: compilerEngine })
       });
       setCompiledPdf(result.data.pdfBase64);
