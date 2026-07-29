@@ -1,311 +1,60 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext';
 import { apiFetch } from '../lib/api';
-import { useNavigate } from 'react-router-dom';
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1, delayChildren: 0.1 }
-  }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 15 },
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
-};
+const ActionCard = ({ icon, label, value, detail, tone = 'primary', onClick }) => (
+  <button onClick={onClick} className="group min-h-40 rounded-2xl border border-outline-variant/30 bg-surface p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md">
+    <div className="flex items-start justify-between gap-3"><div className={`grid size-10 place-items-center rounded-xl ${tone === 'error' ? 'bg-error/10 text-error' : tone === 'success' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-primary/10 text-primary'}`}><span className="material-symbols-outlined">{icon}</span></div><span className="material-symbols-outlined text-secondary transition group-hover:translate-x-0.5 group-hover:text-primary">arrow_forward</span></div>
+    <p className="mt-5 text-xs font-bold uppercase tracking-wider text-secondary">{label}</p><p className="mt-1 text-3xl font-black text-on-surface">{value}</p><p className="mt-1 text-sm text-secondary">{detail}</p>
+  </button>
+);
 
 const StudentDashboard = () => {
-  const { user } = useAuth();
+  const { user, activeProject, setActiveProject } = useAuth();
   const navigate = useNavigate();
-  const [metrics, setMetrics] = useState({
-    activeProjects: 0,
-    completedTasks: 0,
-    totalTasks: 0,
-    pendingFeedback: 0,
-    daysUntilDeadline: null,
-    nextMilestone: null
-  });
+  const [metrics, setMetrics] = useState(null);
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [aiInsight, setAiInsight] = useState(null);
-  const [loadingInsight, setLoadingInsight] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchMetrics = async () => {
+    const load = async () => {
+      setLoading(true);
+      setError('');
       try {
-        const data = await apiFetch('/api/dashboard/student').catch(() => ({ data: null }));
-        if (data.data) {
-          setMetrics(data.data);
-        } else {
-          // Mock data if API fails to show layout perfectly
-          setMetrics({
-            activeProjects: 1,
-            completedTasks: 5,
-            totalTasks: 12,
-            pendingFeedback: 2,
-            daysUntilDeadline: 14,
-            nextMilestone: "Mid-term Defense Prep"
-          });
-        }
-      } catch (err) {
-        console.error('Failed to fetch student metrics', err);
+        const [metricResult, projectResult] = await Promise.all([
+          apiFetch('/api/dashboard/student'),
+          apiFetch('/api/projects')
+        ]);
+        const nextProjects = projectResult.data || [];
+        setMetrics(metricResult.data);
+        setProjects(nextProjects);
+      } catch (requestError) {
+        setError(requestError.message || 'Unable to load your workspace right now.');
       } finally {
         setLoading(false);
       }
     };
-    fetchMetrics();
+    load();
   }, []);
 
-  useEffect(() => {
-    if (metrics.activeProjects > 0) {
-      const fetchInsight = async () => {
-        setLoadingInsight(true);
-        try {
-          const res = await apiFetch('/api/ai/recommend-task', {
-            method: 'POST',
-            body: JSON.stringify({
-              currentStatus: metrics.nextMilestone || 'In Progress',
-              pastTasks: ['Initial Setup', 'Literature Review Draft']
-            })
-          }).catch(() => ({ data: null }));
-          
-          if (res.data) {
-            setAiInsight(res.data);
-          } else {
-            // Mock AI Insight based on proposal 4.9
-            setAiInsight({
-              taskTitle: "Create Figma wireframes and design database schema",
-              explanation: "Based on your completed requirement analysis, focusing on UI layouts and data structure is the optimal next step."
-            });
-          }
-        } catch (e) {
-          console.error(e);
-        } finally {
-          setLoadingInsight(false);
-        }
-      };
-      fetchInsight();
-    }
-  }, [metrics.activeProjects, metrics.nextMilestone]);
+  const currentProject = useMemo(() => projects.find((project) => project._id === activeProject?._id) || projects[0] || null, [activeProject?._id, projects]);
+  const totalTasks = metrics?.totalTasks || 0;
+  const completedTasks = metrics?.completedTasks || 0;
+  const progress = totalTasks ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  const chooseProject = (project, destination = '/tasks-milestones') => { setActiveProject(project); navigate(destination); };
+  const needsProject = (destination) => currentProject ? chooseProject(currentProject, destination) : navigate('/create-new-work');
 
-  const progress = metrics.totalTasks > 0
-    ? Math.round((metrics.completedTasks / metrics.totalTasks) * 100)
-    : Math.round((5 / 12) * 100); // Default mock
-
-  return (
-    <div className="w-full min-h-screen bg-background relative overflow-hidden">
-      {/* Subtle Background Mesh for Premium SaaS Vibe */}
-      <div className="absolute top-0 right-1/4 w-[800px] h-[600px] bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
-      <div className="absolute bottom-0 left-1/4 w-[600px] h-[500px] bg-tertiary-container/5 rounded-full blur-[80px] pointer-events-none z-0"></div>
-
-      <motion.div 
-        initial="hidden" 
-        animate="show" 
-        variants={containerVariants}
-        className="relative z-10 p-6 md:p-8 lg:p-10 w-full max-w-[1600px] mx-auto h-[calc(100vh-80px)] flex flex-col"
-      >
-        {/* Header */}
-        <motion.div variants={itemVariants} className="mb-8 flex justify-between items-end">
-          <div>
-            <h1 className="font-display text-[28px] md:text-[36px] font-black text-on-surface tracking-tight leading-none mb-2">My Workspace</h1>
-            <p className="font-body-md text-[16px] text-on-surface-variant font-light">Welcome back, {user?.name || 'Student'}. Track your progress and deadlines.</p>
-          </div>
-          <div className="hidden md:flex items-center gap-2 bg-surface-container/50 p-1.5 rounded-full border border-outline-variant/20 backdrop-blur-md">
-             <button className="px-4 py-2 rounded-full font-label-sm font-bold bg-surface shadow-sm text-on-surface">Dashboard</button>
-             <button onClick={() => navigate('/tasks-milestones')} className="px-4 py-2 rounded-full font-label-sm font-bold text-on-surface-variant hover:text-on-surface transition-colors">My Tasks</button>
-          </div>
-        </motion.div>
-
-        {/* 4 Metric Cards */}
-        <motion.div variants={containerVariants} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-6 lg:mb-8">
-          
-          <motion.div variants={itemVariants} className="bg-surface/80 backdrop-blur-xl rounded-[32px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-outline-variant/30 hover:border-primary/30 transition-all hover:-translate-y-1 group">
-            <div className="flex justify-between items-start mb-4">
-              <span className="font-label-md text-[13px] font-bold text-on-surface uppercase tracking-wider">Active Works</span>
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
-                <span className="material-symbols-outlined text-[20px]">edit_document</span>
-              </div>
-            </div>
-            <div className="flex items-end gap-3">
-              <span className="font-display text-[42px] font-bold text-on-surface leading-none">
-                {loading ? '—' : metrics.activeProjects}
-              </span>
-              <span className="font-body-sm text-[14px] text-secondary mb-1">in progress</span>
-            </div>
-          </motion.div>
-
-          <motion.div variants={itemVariants} className="bg-surface/80 backdrop-blur-xl rounded-[32px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-outline-variant/30 hover:border-tertiary/30 transition-all hover:-translate-y-1 group">
-            <div className="flex justify-between items-start mb-4">
-              <span className="font-label-md text-[13px] font-bold text-on-surface uppercase tracking-wider">Completed</span>
-              <div className="w-10 h-10 rounded-xl bg-tertiary/10 flex items-center justify-center text-tertiary group-hover:bg-tertiary group-hover:text-on-tertiary transition-colors">
-                <span className="material-symbols-outlined text-[20px]">task_alt</span>
-              </div>
-            </div>
-            <div className="flex items-end gap-3">
-              <span className="font-display text-[42px] font-bold text-on-surface leading-none">
-                {loading ? '—' : metrics.completedTasks}
-              </span>
-              <span className="font-body-sm text-[14px] text-secondary mb-1">tasks done</span>
-            </div>
-          </motion.div>
-
-          <motion.div variants={itemVariants} className="bg-surface/80 backdrop-blur-xl rounded-[32px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-outline-variant/30 hover:border-error/30 transition-all hover:-translate-y-1 group relative overflow-hidden">
-             {metrics.pendingFeedback > 0 && <div className="absolute top-0 right-0 w-2 h-full bg-error"></div>}
-            <div className="flex justify-between items-start mb-4 relative z-10">
-              <span className="font-label-md text-[13px] font-bold text-on-surface uppercase tracking-wider">Feedback</span>
-              <div className="w-10 h-10 rounded-xl bg-error/10 flex items-center justify-center text-error group-hover:bg-error group-hover:text-on-error transition-colors">
-                <span className="material-symbols-outlined text-[20px]">rate_review</span>
-              </div>
-            </div>
-            <div className="flex items-end gap-3 relative z-10">
-              <span className="font-display text-[42px] font-bold text-on-surface leading-none">
-                {loading ? '—' : metrics.pendingFeedback}
-              </span>
-              <span className="font-body-sm text-[14px] text-secondary mb-1">awaiting review</span>
-            </div>
-          </motion.div>
-
-          <motion.div variants={itemVariants} className="bg-surface/80 backdrop-blur-xl rounded-[32px] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-outline-variant/30 hover:border-secondary/50 transition-all hover:-translate-y-1 group">
-            <div className="flex justify-between items-start mb-4">
-              <span className="font-label-md text-[13px] font-bold text-on-surface uppercase tracking-wider">Deadline</span>
-              <div className="w-10 h-10 rounded-xl bg-surface-variant flex items-center justify-center text-on-surface-variant group-hover:bg-on-surface-variant group-hover:text-surface-variant transition-colors">
-                <span className="material-symbols-outlined text-[20px]">event</span>
-              </div>
-            </div>
-            <div className="flex items-end gap-3">
-              <span className="font-display text-[42px] font-bold text-on-surface leading-none">
-                {loading ? '—' : (metrics.daysUntilDeadline !== null ? metrics.daysUntilDeadline : '∞')}
-              </span>
-              <span className="font-body-sm text-[14px] text-secondary mb-1">days left</span>
-            </div>
-          </motion.div>
-
-        </motion.div>
-
-        {/* Bottom Area Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 flex-1 min-h-0">
-          
-          {/* Main Project Details Panel (8 cols) */}
-          <motion.div variants={itemVariants} className="lg:col-span-8 bg-surface-container-lowest/80 backdrop-blur-xl border border-outline-variant/30 rounded-[32px] shadow-[0_8px_40px_rgba(0,0,0,0.04)] flex flex-col p-6 md:p-8">
-            <div className="flex flex-col sm:flex-row justify-between items-start mb-8 gap-4">
-              <div>
-                <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary font-label-md text-[12px] font-bold mb-3 border border-primary/20 uppercase tracking-wide">Current Project</span>
-                <h3 className="font-title-lg text-[24px] font-black text-on-surface tracking-tight">
-                  {metrics.nextMilestone ? `SDP: ${metrics.nextMilestone}` : 'Project Workspace'}
-                </h3>
-              </div>
-              <button onClick={() => navigate('/tasks-milestones')} className="shrink-0 bg-surface text-secondary hover:text-primary px-4 py-2 rounded-full font-label-md text-[13px] font-bold border border-outline-variant/30 hover:border-primary/50 transition-all flex items-center gap-2">
-                Open Workspace <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-              </button>
-            </div>
-            
-            {/* Progress Bar */}
-            <div className="mb-10 bg-surface p-6 rounded-3xl border border-outline-variant/20 shadow-sm">
-              <div className="flex justify-between items-end mb-3">
-                <span className="font-label-md text-[13px] font-bold text-secondary uppercase tracking-wider">Overall Progress</span>
-                <span className="font-display text-[28px] text-primary font-bold leading-none">{progress}%</span>
-              </div>
-              <div className="w-full h-3 bg-secondary-container rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
-                  transition={{ duration: 1.5, delay: 0.2, ease: "easeOut" }}
-                  className="h-full bg-primary rounded-full relative overflow-hidden"
-                >
-                  <div className="absolute inset-0 bg-white/20 w-full h-full" style={{ backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent)', backgroundSize: '1rem 1rem' }}></div>
-                </motion.div>
-              </div>
-            </div>
-            
-            {/* Quick Actions & Status */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-auto">
-              <div className="bg-surface/50 p-5 rounded-2xl border border-outline-variant/20 flex flex-col justify-center">
-                <span className="block font-label-sm text-[11px] font-bold text-secondary mb-1 uppercase tracking-wider">Next Milestone Deadline</span>
-                <span className="font-title-lg text-[18px] font-bold text-on-surface flex items-center gap-2">
-                  <span className="material-symbols-outlined text-error text-[20px]">timer</span>
-                  {metrics.daysUntilDeadline !== null ? `${metrics.daysUntilDeadline} Days Remaining` : 'No upcoming deadlines'}
-                </span>
-              </div>
-              
-              <div className="flex flex-col gap-3">
-                 <button className="w-full bg-primary text-on-primary py-3 rounded-xl font-label-md text-[14px] font-bold hover:bg-primary-fixed-variant transition-colors shadow-sm flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0">
-                    <span className="material-symbols-outlined text-[18px]">add_task</span>
-                    Submit Weekly Log
-                 </button>
-                 <button onClick={() => navigate('/tasks-milestones')} className="w-full bg-surface-container-lowest text-on-surface py-3 rounded-xl font-label-md text-[14px] font-bold hover:bg-surface-container transition-colors border border-outline-variant/30 flex items-center justify-center gap-2">
-                    <span className="material-symbols-outlined text-[18px]">rule</span>
-                    Update Task Status
-                 </button>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* AI Insight Panel (4 cols) */}
-          <motion.div variants={itemVariants} className="lg:col-span-4 bg-surface-container-lowest/80 backdrop-blur-xl border-l-4 border-l-primary border-y border-r border-y-outline-variant/30 border-r-outline-variant/30 rounded-[32px] p-6 md:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col relative overflow-hidden group hover:shadow-lg transition-all">
-            <div className="absolute -right-20 -top-20 w-64 h-64 bg-primary/5 rounded-full blur-[60px] pointer-events-none group-hover:bg-primary/10 transition-colors"></div>
-            
-            <div className="flex items-center gap-3 mb-6 relative z-10">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                <span className="material-symbols-outlined text-[20px] animate-pulse">auto_awesome</span>
-              </div>
-              <h3 className="font-label-md text-[14px] font-bold uppercase tracking-wider text-on-surface">AI Task Suggestion</h3>
-            </div>
-            
-            <div className="flex-1 relative z-10 flex flex-col justify-center mb-6">
-              <AnimatePresence mode="wait">
-                {loadingInsight ? (
-                  <motion.div 
-                    key="loading"
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="flex flex-col items-center justify-center text-primary gap-4 py-8"
-                  >
-                    <span className="material-symbols-outlined animate-spin text-[32px]">sync</span>
-                    <span className="font-label-md font-bold uppercase tracking-wider">Analyzing Project State...</span>
-                  </motion.div>
-                ) : aiInsight ? (
-                  <motion.div 
-                    key="content"
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                    className="flex flex-col h-full"
-                  >
-                    <p className="font-title-md text-[18px] font-bold text-on-surface mb-4 leading-tight">
-                      {aiInsight.taskTitle}
-                    </p>
-                    <div className="p-4 rounded-2xl bg-surface/60 border border-outline-variant/20 backdrop-blur-sm">
-                      <p className="font-body-sm text-[14px] text-on-surface-variant leading-relaxed">
-                        <strong className="text-secondary mr-1">Why?</strong>
-                        {aiInsight.explanation}
-                      </p>
-                    </div>
-                  </motion.div>
-                ) : (
-                  <motion.div 
-                    key="empty"
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    className="text-center text-secondary opacity-60 flex flex-col items-center gap-2 py-8"
-                  >
-                     <span className="material-symbols-outlined text-[32px]">lightbulb</span>
-                     <p className="font-body-sm text-[14px]">Add tasks to your project to receive intelligent next-step recommendations.</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-            
-            <button 
-              className="w-full py-3.5 rounded-xl border-2 border-primary/20 text-primary bg-primary/5 font-label-md text-[14px] font-bold hover:bg-primary hover:text-on-primary hover:border-primary transition-all flex items-center justify-center gap-2 relative z-10 disabled:opacity-50 disabled:hover:bg-primary/5 disabled:hover:text-primary" 
-              disabled={loadingInsight}
-            >
-              {aiInsight ? 'Apply Suggestion' : 'View AI Features'}
-              <span className="material-symbols-outlined text-[18px]">add_circle</span>
-            </button>
-          </motion.div>
-
-        </div>
-      </motion.div>
+  return <main className="min-h-[calc(100vh-80px)] bg-background p-5 md:p-8 lg:p-10">
+    <div className="mx-auto max-w-7xl space-y-6">
+      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-sm font-bold uppercase tracking-widest text-primary">Student workspace</p><h1 className="mt-1 text-3xl font-black tracking-tight text-on-surface md:text-4xl">Welcome back, {user?.name || 'Student'}</h1><p className="mt-2 text-secondary">Your next actions, project progress, and supervision work in one place.</p></div><div className="flex flex-wrap gap-2"><button onClick={() => navigate('/create-new-work')} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary">New project</button><button onClick={() => needsProject('/paper-editor')} className="rounded-xl border border-outline-variant/50 bg-surface px-4 py-2.5 text-sm font-bold text-on-surface">Open paper editor</button></div></header>
+      {error && <div role="alert" className="rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">{error}</div>}
+      <section className="rounded-2xl border border-primary/20 bg-primary/5 p-5"><div className="flex flex-col justify-between gap-4 md:flex-row md:items-center"><div><p className="text-xs font-bold uppercase tracking-wider text-primary">Next action</p><h2 className="mt-1 text-xl font-extrabold text-on-surface">{loading ? 'Loading your work…' : metrics?.nextTask ? metrics.nextTask.title : currentProject ? 'Set your first task or milestone' : 'Create your first project'}</h2><p className="mt-1 text-sm text-secondary">{metrics?.nextTask?.dueDate ? `Due ${new Date(metrics.nextTask.dueDate).toLocaleDateString()}${metrics.nextTask.projectTitle ? ` · ${metrics.nextTask.projectTitle}` : ''}` : currentProject ? 'Keep the project moving by planning the next concrete task.' : 'Start with a project proposal, then add your team and milestones.'}</p></div><button onClick={() => metrics?.nextTask ? needsProject('/tasks-milestones') : currentProject ? needsProject('/tasks-milestones') : navigate('/create-new-work')} className="shrink-0 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary">{metrics?.nextTask ? 'Open task' : currentProject ? 'Plan tasks' : 'Create project'}</button></div></section>
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><ActionCard icon="folder_open" label="Active projects" value={loading ? '—' : metrics?.activeProjects || 0} detail="Choose a project workspace" onClick={() => navigate('/explore')} /><ActionCard icon="task_alt" label="Task progress" value={loading ? '—' : `${progress}%`} detail={`${completedTasks} of ${totalTasks} tasks complete`} tone="success" onClick={() => needsProject('/tasks-milestones')} /><ActionCard icon="rate_review" label="Awaiting review" value={loading ? '—' : metrics?.pendingFeedback || 0} detail="Open submissions and feedback" tone={(metrics?.pendingFeedback || 0) ? 'error' : 'primary'} onClick={() => needsProject('/student-submissions')} /><ActionCard icon="event" label="Next deadline" value={loading ? '—' : metrics?.daysUntilDeadline ?? '—'} detail={metrics?.daysUntilDeadline === null ? 'No dated task yet' : 'days remaining'} onClick={() => needsProject('/tasks-milestones')} /></section>
+      <section className="grid gap-6 lg:grid-cols-[1.35fr_.65fr]"><div className="rounded-2xl border border-outline-variant/30 bg-surface p-5 shadow-sm"><div className="flex items-center justify-between gap-3"><div><h2 className="text-lg font-extrabold text-on-surface">My projects</h2><p className="mt-1 text-sm text-secondary">Select a project before opening its tasks, papers, meetings, or team.</p></div><button onClick={() => navigate('/create-new-work')} className="text-sm font-bold text-primary">New project</button></div><div className="mt-4 grid gap-3">{!loading && projects.length === 0 && <div className="rounded-xl bg-surface-container-low p-5 text-sm text-secondary">No project yet. Create one to unlock the rest of your workspace.</div>}{projects.map((project) => <div key={project._id} className={`flex flex-col justify-between gap-4 rounded-xl border p-4 sm:flex-row sm:items-center ${currentProject?._id === project._id ? 'border-primary/40 bg-primary/5' : 'border-outline-variant/30 bg-surface-container-lowest'}`}><div className="min-w-0"><p className="truncate font-bold text-on-surface">{project.title}</p><p className="mt-1 text-sm capitalize text-secondary">{project.status?.replace('_', ' ') || 'active'} · {project.supervisor?.name || 'Supervisor not assigned'}</p></div><div className="flex shrink-0 gap-2"><button onClick={() => setActiveProject(project)} className="rounded-lg border border-outline-variant/50 px-3 py-2 text-xs font-bold text-on-surface">Select</button><button onClick={() => chooseProject(project)} className="rounded-lg bg-primary px-3 py-2 text-xs font-bold text-on-primary">Open tasks</button></div></div>)}</div></div><aside className="rounded-2xl border border-outline-variant/30 bg-surface p-5 shadow-sm"><h2 className="text-lg font-extrabold text-on-surface">Quick actions</h2><div className="mt-4 grid gap-2">{[{ label: 'Record weekly progress', icon: 'timeline', path: '/progress-logs' }, { label: 'Submit deliverable', icon: 'upload_file', path: '/student-submissions' }, { label: 'Schedule a meeting', icon: 'event', path: '/meeting-management' }, { label: 'Open team space', icon: 'groups', path: '/team-management' }].map((action) => <button key={action.path} onClick={() => needsProject(action.path)} className="flex items-center justify-between rounded-xl bg-surface-container-low px-4 py-3 text-left text-sm font-bold text-on-surface hover:bg-primary/10 hover:text-primary"><span className="inline-flex items-center gap-3"><span className="material-symbols-outlined text-[19px]">{action.icon}</span>{action.label}</span><span className="material-symbols-outlined text-[18px]">arrow_forward</span></button>)}</div></aside></section>
     </div>
-  );
+  </main>;
 };
 
 export default StudentDashboard;
