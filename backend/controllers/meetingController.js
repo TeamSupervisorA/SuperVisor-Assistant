@@ -66,7 +66,7 @@ exports.updateMeeting = async (req, res) => {
       return res.status(422).json({ success: false, error: 'Meeting attendees must belong to the project' });
     }
 
-    meeting = await Meeting.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
+    meeting = await Meeting.findByIdAndUpdate(req.params.id, updates, { returnDocument: 'after', runValidators: true });
     res.status(200).json({ success: true, data: meeting });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });

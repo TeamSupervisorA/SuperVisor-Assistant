@@ -87,7 +87,7 @@ exports.updateDocument = async (req, res) => {
     const updates = {};
     allowedFields.forEach((field) => { if (req.body[field] !== undefined) updates[field] = req.body[field]; });
     validateDocument(updates, true);
-    const updated = await WorkspaceDocument.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
+    const updated = await WorkspaceDocument.findByIdAndUpdate(req.params.id, updates, { returnDocument: 'after', runValidators: true });
     res.json({ success: true, data: updated });
   } catch (error) {
     res.status(error.statusCode || 400).json({ success: false, error: error.message });

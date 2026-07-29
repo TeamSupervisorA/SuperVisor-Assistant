@@ -24,7 +24,6 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
     { name: 'Resources', icon: 'library_books', path: '/project-resource-library' },
     { name: 'Research Studio', icon: 'code_blocks', path: '/research-studio' },
     { name: 'Report', icon: 'summarize', path: '/project-report' },
-    { name: 'Research Studio', icon: 'code_blocks', path: '/research-studio' },
     { name: 'Proposals', icon: 'article', path: '/proposals' },
     { name: 'Reviews', icon: 'rate_review', path: '/reviews' },
     ...commonItems,
@@ -33,12 +32,14 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
 
   const supervisorItems = [
     { name: 'Dashboard', icon: 'dashboard', path: '/supervisor-dashboard' },
+    { name: 'New Project', icon: 'add_circle', path: '/create-new-work' },
     { name: 'Tasks & Milestones', icon: 'checklist', path: '/tasks-milestones' },
     { name: 'Progress Logs', icon: 'timeline', path: '/progress-logs' },
     { name: 'Evaluations', icon: 'grading', path: '/evaluations' },
     { name: 'Plagiarism', icon: 'policy', path: '/plagiarism-checker' },
     { name: 'Feedback', icon: 'rate_review', path: '/detailed-feedback' },
     { name: 'Meetings', icon: 'event', path: '/meeting-management' },
+    { name: 'Research Studio', icon: 'code_blocks', path: '/research-studio' },
     { name: 'Report', icon: 'summarize', path: '/project-report' },
     { name: 'Proposals', icon: 'article', path: '/proposals' },
     { name: 'Reviews', icon: 'rate_review', path: '/reviews' },

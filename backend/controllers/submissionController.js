@@ -80,7 +80,7 @@ exports.updateSubmission = async (req, res) => {
     }
 
     const wasGraded = req.user.role !== 'student' && (updates.grade || updates.feedback || updates.status === 'Needs Revision');
-    submission = await Submission.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
+    submission = await Submission.findByIdAndUpdate(req.params.id, updates, { returnDocument: 'after', runValidators: true });
 
     if (wasGraded) {
       await notify({

@@ -153,7 +153,7 @@ exports.updateTeam = async (req, res) => {
     if (updates.members && !(await hasOnlyProjectStudents(updates.members, project))) {
       return res.status(422).json({ success: false, error: 'Team members must be students assigned to this project' });
     }
-    team = await Team.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
+    team = await Team.findByIdAndUpdate(req.params.id, updates, { returnDocument: 'after', runValidators: true });
     res.status(200).json({ success: true, data: team });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });

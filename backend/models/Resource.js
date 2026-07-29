@@ -25,7 +25,7 @@ const resourceSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['Research', 'Methodology', 'Implementation', 'General'],
+    enum: ['Research', 'Methodology', 'Implementation', 'Dataset', 'Design', 'General'],
     default: 'General'
   },
   size: {

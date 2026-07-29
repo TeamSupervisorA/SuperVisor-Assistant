@@ -90,7 +90,7 @@ exports.updateEvaluation = async (req, res) => {
     }
 
     evaluation = await Evaluation.findByIdAndUpdate(req.params.id, updates, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true
     });
 

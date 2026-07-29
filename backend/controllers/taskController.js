@@ -128,7 +128,7 @@ exports.updateTask = async (req, res) => {
     }];
 
     task = await Task.findByIdAndUpdate(req.params.id, updates, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true
     });
 
