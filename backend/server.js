@@ -10,7 +10,11 @@ if (isProduction) {
   const missing = [];
   if (!process.env.MONGODB_URI) missing.push('MONGODB_URI');
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) missing.push('JWT_SECRET (at least 32 characters)');
-  if (missing.length) throw new Error(`Missing required production environment variables: ${missing.join(', ')}`);
+  if (missing.length) {
+    const message = `Missing required production environment variables: ${missing.join(', ')}`;
+    console.error(message);
+    throw new Error(message);
+  }
 }
 
 // Connect to database
