@@ -2,9 +2,12 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Ensure uploads directory exists
+// Local disk uploads are only supported during development. Vercel's function
+// filesystem is read-only, so creating this directory at module-load time would
+// crash every API route, even routes that do not upload a file.
+const usesServerlessFilesystem = process.env.NODE_ENV === 'production' || process.env.VERCEL;
 const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
+if (!usesServerlessFilesystem && !fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
@@ -51,7 +54,7 @@ const upload = multer({
 }).single('file');
 
 exports.uploadFile = (req, res) => {
-  if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+  if (usesServerlessFilesystem) {
     return res.status(503).json({ success: false, error: 'File uploads require a configured private object-storage provider in production.' });
   }
   upload(req, res, function (err) {
