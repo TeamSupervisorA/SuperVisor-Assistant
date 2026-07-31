@@ -17,6 +17,7 @@ const ExploreProjects = () => {
   const location = useLocation();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   
   // Extract search query from URL
   const queryParams = new URLSearchParams(location.search);
@@ -26,30 +27,17 @@ const ExploreProjects = () => {
     const fetchProjects = async () => {
       setLoading(true);
       try {
-        const res = await apiFetch('/api/projects').catch(() => ({ data: [] }));
+        const search = searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : '';
+        const res = await apiFetch(`/api/projects/explore${search}`);
         if (res && res.data) {
           let loadedProjects = res.data;
-          
-          if (loadedProjects.length === 0) {
-             // Mock some data if empty just to show the UI
-             loadedProjects = [
-               { _id: '1', title: 'AI-Driven Healthcare Diagnostics', description: 'Investigating the use of convolutional neural networks for early detection of diabetic retinopathy in low-resource settings.', status: 'IN_PROGRESS', createdAt: new Date().toISOString() },
-               { _id: '2', title: 'Sustainable Supply Chain Analytics', description: 'A comprehensive study on reducing carbon footprint using blockchain technology across global supply chain networks.', status: 'COMPLETED', createdAt: new Date(Date.now() - 86400000 * 30).toISOString() },
-               { _id: '3', title: 'Quantum Computing Cryptography', description: 'Exploring post-quantum cryptographic algorithms and their viability in standard secure web protocols.', status: 'PROPOSAL', createdAt: new Date(Date.now() - 86400000 * 5).toISOString() }
-             ];
-          }
 
-          if (searchQuery) {
-            setProjects(loadedProjects.filter(p => 
-              p.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-              p.description.toLowerCase().includes(searchQuery.toLowerCase())
-            ));
-          } else {
-            setProjects(loadedProjects);
-          }
+          setProjects(loadedProjects);
         }
       } catch (e) {
         console.error(e);
+        setProjects([]);
+        setError(e.message || 'Unable to load projects. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -93,6 +81,8 @@ const ExploreProjects = () => {
             />
           </div>
         </motion.div>
+
+        {error && <div role="alert" className="rounded-2xl border border-error/30 bg-error/10 px-5 py-3 text-sm font-medium text-error">{error}</div>}
 
         {loading ? (
           <div className="flex-1 flex justify-center items-center py-20">

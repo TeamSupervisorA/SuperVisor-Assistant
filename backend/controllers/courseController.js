@@ -11,7 +11,8 @@ exports.getAllCourses = async (req, res) => {
 
 exports.createCourse = async (req, res) => {
   try {
-    const course = await Course.create(req.body);
+    const { code, name, department, sections, leadInstructor } = req.body;
+    const course = await Course.create({ code, name, department, sections, leadInstructor });
     res.status(201).json({ success: true, data: course });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
@@ -20,7 +21,16 @@ exports.createCourse = async (req, res) => {
 
 exports.updateCourse = async (req, res) => {
   try {
-    const course = await Course.findByIdAndUpdate(req.params.id, req.body, {
+    const permittedFields = ['code', 'name', 'department', 'sections', 'leadInstructor'];
+    const updates = Object.fromEntries(
+      permittedFields
+        .filter((field) => Object.prototype.hasOwnProperty.call(req.body, field))
+        .map((field) => [field, req.body[field]])
+    );
+    if (Object.keys(updates).length === 0) {
+      return res.status(422).json({ success: false, error: 'No supported course fields were provided' });
+    }
+    const course = await Course.findByIdAndUpdate(req.params.id, updates, {
       returnDocument: 'after',
       runValidators: true
     });

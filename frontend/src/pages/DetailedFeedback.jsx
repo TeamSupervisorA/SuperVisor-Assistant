@@ -17,6 +17,7 @@ const DetailedFeedback = () => {
   const { activeProject, user } = useAuth();
   const [evaluation, setEvaluation] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   
   useEffect(() => {
     if (activeProject) {
@@ -29,20 +30,16 @@ const DetailedFeedback = () => {
   const loadEvaluation = async () => {
     setLoading(true);
     try {
-      const res = await apiFetch(`/api/evaluations?project=${activeProject._id}`).catch(() => ({ data: [] }));
+      const res = await apiFetch(`/api/evaluations?project=${activeProject._id}`);
       if (res.data && res.data.length > 0) {
         setEvaluation(res.data[0]);
       } else {
-        // Mock data for visual demonstration
-        setEvaluation({
-          totalScore: 82,
-          scores: { problemUnderstanding: 8, methodology: 16, implementation: 24, documentation: 34 },
-          feedback: "The project shows great promise. The core architecture is solid, and the AI integration approach is well thought out.\n\nHowever, the documentation regarding the database schema needs to be more comprehensive before we can move to the final build phase. Please revise the 'Schema Details' section.",
-          status: 'revision_requested' // 'approved', 'revision_requested'
-        });
+        setEvaluation(null);
       }
     } catch (e) {
       console.error(e);
+      setEvaluation(null);
+      setError(e.message || 'Unable to load feedback. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -75,7 +72,7 @@ const DetailedFeedback = () => {
         <div className="relative z-10 text-center bg-surface/80 backdrop-blur-xl border border-outline-variant/30 p-12 rounded-[32px] shadow-lg max-w-md w-full">
           <span className="material-symbols-outlined text-6xl text-secondary mb-4 opacity-50">pending_actions</span>
           <h2 className="font-display text-[24px] font-bold text-on-surface mb-2 tracking-tight">No Evaluations Yet</h2>
-          <p className="font-body-md text-on-surface-variant">There is no feedback available for "{activeProject.title}" yet.</p>
+          <p className="font-body-md text-on-surface-variant">{error || `There is no feedback available for "${activeProject.title}" yet.`}</p>
         </div>
       </div>
     );

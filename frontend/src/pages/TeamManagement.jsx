@@ -61,10 +61,10 @@ const TeamManagement = () => {
       const events = [
         ...(taskRes.data || []).map(t => ({
           who: t.assignedTo?.name || 'Team',
-          action: t.status === 'completed' ? 'completed task' : t.status === 'delayed' ? 'has a delayed task' : 'is working on',
+          action: ['done', 'completed'].includes(t.status) ? 'completed task' : t.status === 'blocked' ? 'has a blocked task' : 'is working on',
           target: t.title,
           date: t.createdAt,
-          color: t.status === 'completed' ? 'border-primary' : t.status === 'delayed' ? 'border-error' : 'border-outline-variant'
+          color: ['done', 'completed'].includes(t.status) ? 'border-primary' : t.status === 'blocked' ? 'border-error' : 'border-outline-variant'
         })),
         ...(subRes.data || []).map(s => ({
           who: s.student?.name || 'A student',
@@ -155,7 +155,7 @@ const TeamManagement = () => {
   // Real per-member task stats instead of a made-up "contribution" number
   const memberStats = (memberId) => {
     const assigned = tasks.filter(t => (t.assignedTo?._id || t.assignedTo) === memberId);
-    const completed = assigned.filter(t => t.status === 'completed').length;
+    const completed = assigned.filter(t => ['done', 'completed'].includes(t.status)).length;
     return { assigned: assigned.length, completed, pct: assigned.length ? Math.round((completed / assigned.length) * 100) : 0 };
   };
 

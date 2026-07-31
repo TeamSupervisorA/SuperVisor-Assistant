@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
-import API_BASE_URL from '../lib/api';
+import API_BASE_URL, { apiFetch } from '../lib/api';
 import { useAuth } from '../components/AuthContext';
 import { motion } from 'framer-motion';
 
@@ -20,6 +20,7 @@ const ProjectChat = () => {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
+  const [aiError, setAiError] = useState('');
   
   const messagesEndRef = useRef(null);
   const projectId = activeProject?._id;
@@ -94,28 +95,28 @@ const ProjectChat = () => {
         console.error('Failed to send message', err);
       }
     } else {
-      // AI Tab Logic (Mocking AI Response for Idea Suggestion / Feedback)
       setAiMessages(prev => [...prev, newMessage]);
+      setAiError('');
       setIsAiTyping(true);
-      
-      // Simulate network delay for AI response
-      setTimeout(() => {
-        setIsAiTyping(false);
-        let aiResponse = "I can certainly help with that. Could you provide a bit more detail?";
-        
-        const lowerInput = currentInput.toLowerCase();
-        if (lowerInput.includes('idea') || lowerInput.includes('suggest')) {
-          aiResponse = "**Here are 3 project ideas based on current trends:**\n1. AI-Driven Academic Progress Predictor\n2. Blockchain-based Degree Verification System\n3. IoT Smart Classroom Attendance Tracker\n\nWhich of these interests you the most?";
-        } else if (lowerInput.includes('feedback') || lowerInput.includes('review') || lowerInput.includes('proposal')) {
-          aiResponse = "**Proposal Feedback:**\nYour problem statement is clear, but your *objectives* need to be more measurable. Instead of 'Build a web app', try 'Develop a web application capable of handling 500 concurrent users with <200ms latency'.";
-        }
-
+      try {
+        const response = await apiFetch('/api/ai/feedback', {
+          method: 'POST',
+          body: JSON.stringify({
+            text: currentInput,
+            criteria: 'Helpful academic research assistance. Be concise, evidence-aware, and do not invent sources.'
+          })
+        });
+        const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2);
         setAiMessages(prev => [...prev, {
           sender: { _id: 'ai', name: 'Supervisor AI' },
-          content: aiResponse,
+          content,
           createdAt: new Date().toISOString()
         }]);
-      }, 1500);
+      } catch (err) {
+        setAiError(err.message || 'The AI service is unavailable. No response was generated.');
+      } finally {
+        setIsAiTyping(false);
+      }
     }
   };
 
@@ -168,6 +169,8 @@ const ProjectChat = () => {
             </button>
           </div>
         </div>
+
+        {activeTab === 'ai' && aiError && <div role="alert" className="mx-6 mt-4 rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">{aiError}</div>}
 
         {/* Chat Area */}
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 custom-scrollbar bg-surface-container-lowest/30">

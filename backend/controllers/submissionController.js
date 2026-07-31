@@ -1,4 +1,5 @@
 const Submission = require('../models/Submission');
+const Task = require('../models/Task');
 const { Project, canAccessProject, projectIdsForUser } = require('../utils/projectAccess');
 const Notification = require('../models/Notification');
 
@@ -39,8 +40,20 @@ exports.createSubmission = async (req, res) => {
       return res.status(403).json({ success: false, error: 'Not authorized to submit to this project' });
     }
 
-    req.body.student = req.user.id;
-    const submission = await Submission.create(req.body);
+    const { title, task, fileUrl } = req.body;
+    if (task) {
+      const projectTask = await Task.findOne({ _id: task, project: project._id });
+      if (!projectTask) return res.status(422).json({ success: false, error: 'The selected task does not belong to this project' });
+    }
+    // Submission metadata is owned by the server: a student must never be able
+    // to pre-grade a submission, submit as another user, or change its project.
+    const submission = await Submission.create({
+      title,
+      task,
+      fileUrl,
+      project: project._id,
+      student: req.user.id
+    });
 
     // Let the supervisor know a new deliverable is waiting for review
     if (project.supervisor) {
@@ -69,17 +82,29 @@ exports.updateSubmission = async (req, res) => {
       return res.status(403).json({ success: false, error: 'Not authorized to update this submission' });
     }
 
-    let updates = req.body;
+    let updates;
     if (req.user.role === 'student') {
       // Students may only edit their own submission, and never grading fields
       if (submission.student.toString() !== req.user.id) {
         return res.status(403).json({ success: false, error: 'Not authorized to update this submission' });
       }
-      const { grade, feedback, status, student, ...allowed } = updates;
-      updates = allowed;
+      const studentFields = ['title', 'task', 'fileUrl'];
+      updates = Object.fromEntries(Object.entries(req.body).filter(([field]) => studentFields.includes(field)));
+    } else {
+      const reviewerFields = ['grade', 'feedback', 'status'];
+      updates = Object.fromEntries(Object.entries(req.body).filter(([field]) => reviewerFields.includes(field)));
+    }
+    if (Object.keys(updates).length === 0) {
+      return res.status(422).json({ success: false, error: 'No supported submission fields were provided' });
+    }
+    if (updates.task) {
+      const projectTask = await Task.findOne({ _id: updates.task, project: submission.project });
+      if (!projectTask) return res.status(422).json({ success: false, error: 'The selected task does not belong to this project' });
     }
 
-    const wasGraded = req.user.role !== 'student' && (updates.grade || updates.feedback || updates.status === 'Needs Revision');
+    const wasGraded = req.user.role !== 'student' && (
+      updates.grade || updates.feedback || ['Graded', 'Needs Revision'].includes(updates.status)
+    );
     submission = await Submission.findByIdAndUpdate(req.params.id, updates, { returnDocument: 'after', runValidators: true });
 
     if (wasGraded) {

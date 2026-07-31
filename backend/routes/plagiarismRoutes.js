@@ -49,24 +49,14 @@ router.post('/', protect, authorize('supervisor', 'admin'), async (req, res) => 
       return res.status(403).json({ success: false, error: 'Not authorized to check this project' });
     }
 
+    // Do not invent a similarity score or sources. A failed provider check must
+    // be visible to the user so it cannot be mistaken for an academic result.
     let aiResult;
     try {
-      // Try to use real AI
       aiResult = await geminiService.checkPlagiarism(`Title: ${sub.title}. Note: Full text parsing is simulated. Assume this represents a full student submission.`);
     } catch (aiError) {
-      console.warn("AI Plagiarism check failed or no API key, falling back to mock.", aiError.message);
-      // Mock fallback
-      const mockSimilarity = Math.floor(Math.random() * 40) + 5;
-      aiResult = {
-        overallSimilarity: mockSimilarity,
-        matchedSources: [
-          {
-            sourceName: 'Journal of Educational Technology, 2023',
-            sourceUrl: 'https://example.com/journal',
-            matchPercentage: Math.floor(mockSimilarity * 0.6)
-          }
-        ]
-      };
+      console.error('Plagiarism check failed:', aiError.message);
+      return res.status(503).json({ success: false, error: 'Similarity checking is temporarily unavailable. No report was created.' });
     }
 
     const report = await PlagiarismReport.create({

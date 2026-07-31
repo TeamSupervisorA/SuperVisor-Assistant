@@ -125,7 +125,20 @@ exports.updateProject = async (req, res) => {
       return res.status(403).json({ success: false, error: 'Not authorized to update this project' });
     }
 
-    project = await Project.findByIdAndUpdate(req.params.id, req.body, {
+    const permittedFields = ['title', 'description', 'status'];
+    // Membership and ownership are deliberately immutable through this general
+    // update route; the dedicated, authorization-checked membership workflow
+    // is the only way to change a project team.
+    const updates = Object.fromEntries(
+      permittedFields
+        .filter((field) => Object.prototype.hasOwnProperty.call(req.body, field))
+        .map((field) => [field, req.body[field]])
+    );
+    if (Object.keys(updates).length === 0) {
+      return res.status(422).json({ success: false, error: 'No supported project fields were provided' });
+    }
+
+    project = await Project.findByIdAndUpdate(req.params.id, updates, {
       returnDocument: 'after',
       runValidators: true
     });

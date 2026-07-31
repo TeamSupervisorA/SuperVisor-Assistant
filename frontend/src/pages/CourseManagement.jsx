@@ -17,6 +17,7 @@ const CourseManagement = () => {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newCourse, setNewCourse] = useState({ code: '', name: '', department: 'Computer Science', sections: 1 });
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetchCourses();
@@ -24,19 +25,12 @@ const CourseManagement = () => {
 
   const fetchCourses = async () => {
     try {
-      const res = await apiFetch('/api/courses').catch(() => ({ data: [] }));
-      // Mock data if API fails to ensure UI renders
-      if (res && res.data && res.data.length > 0) {
-        setCourses(res.data);
-      } else {
-        setCourses([
-          { _id: '1', code: 'CS101', name: 'Intro to Computer Science', department: 'Computer Science', sections: 4 },
-          { _id: '2', code: 'EE201', name: 'Circuits and Systems', department: 'Electrical Engineering', sections: 2 },
-          { _id: '3', code: 'MGT301', name: 'Business Administration', department: 'Business Admin', sections: 3 }
-        ]);
-      }
+      const res = await apiFetch('/api/courses');
+      setCourses(res.data || []);
     } catch (err) {
       console.error('Failed to fetch courses:', err);
+      setCourses([]);
+      setError(err.message || 'Unable to load courses. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -45,16 +39,17 @@ const CourseManagement = () => {
   const handleCreateCourse = async (e) => {
     e.preventDefault();
     try {
+      setError('');
       const res = await apiFetch('/api/courses', {
         method: 'POST',
         body: JSON.stringify(newCourse)
-      }).catch(() => ({ data: { ...newCourse, _id: Date.now().toString() } }));
+      });
       
       setCourses([...courses, res.data]);
       setShowAddModal(false);
       setNewCourse({ code: '', name: '', department: 'Computer Science', sections: 1 });
     } catch (err) {
-      alert('Failed to create course: ' + err.message);
+      setError(err.message || 'Unable to create the course.');
     }
   };
 
@@ -94,14 +89,13 @@ const CourseManagement = () => {
             <p className="font-title-md text-[16px] text-on-surface-variant font-medium">Organize university departments, courses, and sections.</p>
           </div>
           <div className="flex gap-3">
-            <button className="px-5 py-2.5 rounded-xl border border-outline-variant/50 bg-surface/50 backdrop-blur-md text-on-surface font-label-md text-[13px] font-bold hover:bg-surface-container hover:border-primary/50 transition-all shadow-sm flex items-center gap-2 group">
-              <span className="material-symbols-outlined text-[18px] group-hover:text-primary transition-colors">add_box</span> Add Section
-            </button>
             <button onClick={() => setShowAddModal(true)} className="px-5 py-2.5 rounded-xl bg-primary text-on-primary font-label-md text-[13px] font-bold hover:bg-primary-fixed-variant transition-colors shadow-sm flex items-center gap-2 group">
               <span className="material-symbols-outlined text-[18px] group-hover:-translate-y-0.5 transition-transform">library_add</span> Add Course
             </button>
           </div>
         </motion.div>
+
+        {error && <div role="alert" className="rounded-2xl border border-error/30 bg-error/10 px-5 py-3 text-sm font-medium text-error">{error}</div>}
 
         {/* Department Overview Bento Grid */}
         <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
