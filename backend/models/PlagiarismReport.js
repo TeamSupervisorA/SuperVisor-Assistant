@@ -16,6 +16,10 @@ const plagiarismReportSchema = new mongoose.Schema({
     required: true,
     default: 0
   },
+  summary: { type: String, default: '' },
+  method: { type: String, default: 'Gemini Google Search-grounded integrity screen' },
+  disclaimer: { type: String, default: '' },
+  sourcesSearched: [{ sourceName: String, sourceUrl: String }],
   status: {
     type: String,
     enum: ['Pending', 'Completed', 'Failed'],
@@ -24,7 +28,8 @@ const plagiarismReportSchema = new mongoose.Schema({
   matchedSources: [{
     sourceName: String,
     sourceUrl: String,
-    matchPercentage: Number
+    matchPercentage: Number,
+    reason: String
   }],
   createdAt: {
     type: Date,

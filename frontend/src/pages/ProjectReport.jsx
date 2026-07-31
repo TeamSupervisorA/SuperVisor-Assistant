@@ -27,6 +27,8 @@ const ProjectReport = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [versions, setVersions] = useState([]);
+  const [aiDraft, setAiDraft] = useState('');
+  const [drafting, setDrafting] = useState(false);
 
   useEffect(() => {
     if (activeProject) {
@@ -68,6 +70,19 @@ const ProjectReport = () => {
     }
   };
 
+  const generateAiDraft = async () => {
+    setError('');
+    setDrafting(true);
+    try {
+      const response = await apiFetch(`/api/ai/projects/${activeProject._id}/report-draft`, { method: 'POST' });
+      setAiDraft(response.data?.draft || 'No draft was returned.');
+    } catch (e) {
+      setError(e.message || 'Unable to generate an AI report draft.');
+    } finally {
+      setDrafting(false);
+    }
+  };
+
   if (!activeProject) {
     return (
       <div className="w-full min-h-screen bg-background relative flex items-center justify-center p-6">
@@ -89,7 +104,7 @@ const ProjectReport = () => {
     );
   }
 
-  if (error || !report) {
+  if (!report) {
     return (
       <div className="w-full min-h-[calc(100vh-80px)] flex items-center justify-center p-6">
         <div className="text-center bg-surface/80 border border-outline-variant/30 p-12 rounded-[32px] shadow-lg max-w-md w-full">
@@ -131,13 +146,16 @@ const ProjectReport = () => {
             <button onClick={loadReport} className="px-5 py-2.5 rounded-xl border border-outline-variant/50 bg-surface/50 backdrop-blur-md text-on-surface font-label-md text-[13px] font-bold hover:bg-surface-container transition-colors shadow-sm flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px]">refresh</span> Refresh
             </button>
+            <button onClick={generateAiDraft} disabled={drafting} className="px-5 py-2.5 rounded-xl border border-primary/30 bg-primary/10 text-primary font-label-md text-[13px] font-bold hover:bg-primary/20 transition-colors shadow-sm disabled:opacity-60">{drafting ? 'Drafting…' : 'AI narrative draft'}</button>
             <button onClick={() => window.print()} className="px-5 py-2.5 rounded-xl bg-primary text-on-primary font-label-md text-[13px] font-bold hover:bg-primary-fixed-variant transition-colors shadow-sm flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span> Download / Print
             </button>
             <button onClick={saveVersion} className="px-5 py-2.5 rounded-xl bg-primary text-on-primary font-label-md text-[13px] font-bold hover:bg-primary-fixed-variant transition-colors shadow-sm">Save report version</button>
           </div>
         </motion.div>
+        {error && <div role="alert" className="rounded-2xl border border-error/30 bg-error/10 px-5 py-3 text-sm font-medium text-error">{error}</div>}
         {versions.length > 0 && <motion.div variants={itemVariants} className="rounded-2xl border border-outline-variant/30 bg-surface p-5"><h2 className="font-bold text-on-surface mb-2">Saved report versions</h2><div className="flex flex-wrap gap-2">{versions.map((version) => <span key={version._id} className="rounded-full bg-surface-container px-3 py-1 text-sm">{version.type} v{version.version} · {version.status}</span>)}</div></motion.div>}
+        {aiDraft && <motion.section variants={itemVariants} className="rounded-[28px] border border-primary/25 bg-primary/5 p-6"><div className="flex items-center gap-3"><span className="material-symbols-outlined text-primary">auto_awesome</span><h2 className="font-bold text-on-surface">AI report narrative draft</h2></div><p className="mt-2 text-sm text-secondary">Generated from this project’s stored tasks, submissions, and progress logs. Review and edit before using it in a formal report.</p><pre className="mt-4 whitespace-pre-wrap font-sans text-sm leading-relaxed text-on-surface">{aiDraft}</pre></motion.section>}
 
         {/* Executive Summary */}
         <motion.section variants={itemVariants} className="bg-surface/80 backdrop-blur-xl rounded-[32px] p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border-l-4 border-l-primary border-y border-r border-outline-variant/30">

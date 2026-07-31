@@ -8,6 +8,7 @@ const ProposalLifecycle = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
+  const [outlineLoading, setOutlineLoading] = useState(false);
   const [message, setMessage] = useState('');
 
   const isSupervisor = ['supervisor', 'admin'].includes(user?.role);
@@ -39,6 +40,30 @@ const ProposalLifecycle = () => {
       setContent('');
       setMessage(`Draft version ${response.data.versionNo} created.`);
     } catch (error) { setMessage(error.message); }
+  };
+
+  const generateOutline = async () => {
+    const topic = title || content;
+    if (!topic.trim()) { setMessage('Enter a proposal topic or a short problem description first.'); return; }
+    setOutlineLoading(true);
+    setMessage('');
+    try {
+      const response = await apiFetch('/api/ai/proposal-outline', {
+        method: 'POST', body: JSON.stringify({ topic, constraints: content })
+      });
+      const outline = response.data;
+      setTitle(outline.title || title);
+      setContent([
+        `Problem statement\n${outline.problemStatement || ''}`,
+        `Objectives\n${(outline.objectives || []).map((item, index) => `${index + 1}. ${item}`).join('\n')}`,
+        `Methodology\n${outline.methodology || ''}`,
+        `Evaluation plan\n${outline.evaluationPlan || ''}`,
+        `Ethical considerations\n${outline.ethicalConsiderations || ''}`,
+        `Timeline\n${(outline.timeline || []).map((item) => `- ${typeof item === 'string' ? item : JSON.stringify(item)}`).join('\n')}`,
+        `Limitations\n${outline.limitations || ''}`
+      ].filter(Boolean).join('\n\n'));
+      setMessage('Planning outline generated. Review and edit it before saving your draft.');
+    } catch (error) { setMessage(error.message); } finally { setOutlineLoading(false); }
   };
 
   const submit = async (versionId) => {
@@ -73,7 +98,7 @@ const ProposalLifecycle = () => {
           <h2 className="font-bold text-lg">Create a new draft version</h2>
           <input required value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Proposal title" className="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3" />
           <textarea required value={content} onChange={(event) => setContent(event.target.value)} placeholder="Describe the problem, objectives, method and expected outcome." rows="8" className="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3" />
-          <button className="rounded-xl bg-primary text-on-primary px-5 py-3 font-semibold">Save draft</button>
+          <div className="flex flex-wrap gap-3"><button type="button" onClick={generateOutline} disabled={outlineLoading} className="rounded-xl border border-primary/30 bg-primary/10 px-5 py-3 font-semibold text-primary disabled:opacity-60">{outlineLoading ? 'Generating outline…' : 'AI planning outline'}</button><button className="rounded-xl bg-primary text-on-primary px-5 py-3 font-semibold">Save draft</button></div>
         </form>
       )}
       <section className="space-y-4">

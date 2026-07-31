@@ -1,12 +1,25 @@
 const geminiService = require('../services/geminiService');
 const AIInteraction = require('../models/AIInteraction');
+const Task = require('../models/Task');
+const Submission = require('../models/Submission');
+const ProgressLog = require('../models/ProgressLog');
+const { Project, canAccessProject } = require('../utils/projectAccess');
+
+const aiErrorStatus = (error) => {
+  const status = Number(error?.status || error?.statusCode || error?.error?.code);
+  return status === 429 || /RESOURCE_EXHAUSTED|quota|\b429\b/i.test(error?.message) ? 429 : 503;
+};
+const aiErrorMessage = (error) => aiErrorStatus(error) === 429
+  ? 'The AI service quota has been reached. Please try again later or ask an administrator to review Gemini billing and rate limits.'
+  : 'The AI service is temporarily unavailable. Please try again later.';
+const userGuidance = (req) => req.user?.settings?.systemPrompt || '';
 
 const recordInteraction = async (req, feature, input, result) => {
   try {
     await AIInteraction.create({
       feature,
       actor: req.user.id,
-      project: req.body.project || undefined,
+      project: req.body?.project || undefined,
       model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
       input,
       ...result
@@ -23,6 +36,11 @@ exports.getInteractions = async (req, res) => {
     const interactions = await AIInteraction.find(query).sort({ createdAt: -1 }).limit(50);
     res.json({ success: true, data: interactions });
   } catch (error) { res.status(400).json({ success: false, error: error.message }); }
+};
+
+exports.getStatus = (req, res) => {
+  const status = geminiService.getStatus();
+  res.json({ success: true, data: status });
 };
 
 exports.rateInteraction = async (req, res) => {
@@ -46,7 +64,7 @@ exports.generateFeedback = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Please provide submission text' });
     }
 
-    const feedback = await geminiService.generateFeedback(text, criteria || 'General academic quality and clarity');
+    const feedback = await geminiService.generateFeedback(text, criteria || 'General academic quality and clarity', userGuidance(req));
 
     await recordInteraction(req, 'feedback', { criteria: criteria || 'General academic quality and clarity', textLength: text.length }, { output: feedback, status: 'succeeded' });
 
@@ -56,7 +74,7 @@ exports.generateFeedback = async (req, res) => {
     });
   } catch (error) {
     await recordInteraction(req, 'feedback', { textLength: req.body?.text?.length || 0 }, { status: 'failed', error: error.message });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(aiErrorStatus(error)).json({ success: false, error: aiErrorMessage(error) });
   }
 };
 
@@ -81,7 +99,7 @@ exports.checkPlagiarism = async (req, res) => {
     });
   } catch (error) {
     await recordInteraction(req, 'plagiarism', { textLength: req.body?.text?.length || 0 }, { status: 'failed', error: error.message });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(aiErrorStatus(error)).json({ success: false, error: aiErrorMessage(error) });
   }
 };
 
@@ -94,12 +112,12 @@ exports.suggestIdeas = async (req, res) => {
     if (!interests || !department) {
       return res.status(400).json({ success: false, error: 'Please provide interests and department' });
     }
-    const suggestions = await geminiService.suggestProjectIdeas(interests, department);
+    const suggestions = await geminiService.suggestProjectIdeas(interests, department, userGuidance(req));
     await recordInteraction(req, 'project_ideas', { interests, department }, { output: suggestions, status: 'succeeded' });
     res.status(200).json({ success: true, data: suggestions });
   } catch (error) {
     await recordInteraction(req, 'project_ideas', { interests: req.body?.interests, department: req.body?.department }, { status: 'failed', error: error.message });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(aiErrorStatus(error)).json({ success: false, error: aiErrorMessage(error) });
   }
 };
 
@@ -112,12 +130,58 @@ exports.reviewProposal = async (req, res) => {
     if (!proposalText) {
       return res.status(400).json({ success: false, error: 'Please provide proposalText' });
     }
-    const feedback = await geminiService.generateProposalFeedback(proposalText);
+    const feedback = await geminiService.generateProposalFeedback(proposalText, userGuidance(req));
     await recordInteraction(req, 'proposal_feedback', { proposalText }, { output: feedback, status: 'succeeded' });
     res.status(200).json({ success: true, data: feedback });
   } catch (error) {
     await recordInteraction(req, 'proposal_feedback', { proposalText: req.body?.proposalText }, { status: 'failed', error: error.message });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(aiErrorStatus(error)).json({ success: false, error: aiErrorMessage(error) });
+  }
+};
+
+// Produce a planning outline, not a finished proposal. The student remains the
+// author and can revise the result before saving a proposal version.
+exports.generateProposalOutline = async (req, res) => {
+  try {
+    const outline = await geminiService.generateProposalOutline({
+      topic: req.body?.topic,
+      department: req.user.department || req.body?.department || 'General Studies',
+      constraints: req.body?.constraints,
+      guidance: userGuidance(req)
+    });
+    await recordInteraction(req, 'proposal_outline', { topic: req.body?.topic, department: req.user.department || req.body?.department }, { output: outline, status: 'succeeded' });
+    res.json({ success: true, data: outline });
+  } catch (error) {
+    await recordInteraction(req, 'proposal_outline', { topic: req.body?.topic }, { status: 'failed', error: error.message });
+    res.status(aiErrorStatus(error) === 503 && /required|too long/i.test(error.message) ? 422 : aiErrorStatus(error)).json({ success: false, error: /required|too long/i.test(error.message) ? error.message : aiErrorMessage(error) });
+  }
+};
+
+// The report draft is generated from the server's project records, not arbitrary
+// browser-supplied metrics. Both students and the assigned supervisor see the
+// same factual context for the shared project.
+exports.generateProjectReportDraft = async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.projectId).populate('supervisor', 'name').populate('students', 'name');
+    if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
+    if (!canAccessProject(project, req.user)) return res.status(403).json({ success: false, error: 'Not authorized to generate a report draft for this project' });
+    const [tasks, submissions, logs] = await Promise.all([
+      Task.find({ project: project._id }).select('title status dueDate').lean(),
+      Submission.find({ project: project._id }).select('title status grade submittedAt').lean(),
+      ProgressLog.find({ project: project._id }).select('summary blockers state weekStart').sort({ weekStart: -1 }).limit(12).lean()
+    ]);
+    const context = {
+      project: { title: project.title, description: project.description, status: project.status, supervisor: project.supervisor?.name || null, students: project.students.map((student) => student.name) },
+      tasks,
+      submissions,
+      progressLogs: logs
+    };
+    const draft = await geminiService.generateReportNarrative(context, userGuidance(req));
+    await recordInteraction(req, 'report_draft', { project: project._id, taskCount: tasks.length, submissionCount: submissions.length, progressLogCount: logs.length }, { output: draft, status: 'succeeded' });
+    res.json({ success: true, data: { draft, generatedFrom: { tasks: tasks.length, submissions: submissions.length, progressLogs: logs.length } } });
+  } catch (error) {
+    await recordInteraction(req, 'report_draft', { project: req.params.projectId }, { status: 'failed', error: error.message });
+    res.status(error?.statusCode || aiErrorStatus(error)).json({ success: false, error: aiErrorMessage(error) });
   }
 };
 
@@ -130,11 +194,11 @@ exports.recommendTask = async (req, res) => {
     if (!currentStatus || !pastTasks || !Array.isArray(pastTasks)) {
       return res.status(400).json({ success: false, error: 'Please provide currentStatus and an array of pastTasks' });
     }
-    const recommendation = await geminiService.recommendNextTask(currentStatus, pastTasks);
+    const recommendation = await geminiService.recommendNextTask(currentStatus, pastTasks, userGuidance(req));
     await recordInteraction(req, 'next_task', { currentStatus, pastTasks }, { output: recommendation, status: 'succeeded' });
     res.status(200).json({ success: true, data: recommendation });
   } catch (error) {
     await recordInteraction(req, 'next_task', { currentStatus: req.body?.currentStatus, pastTasks: req.body?.pastTasks }, { status: 'failed', error: error.message });
-    res.status(500).json({ success: false, error: error.message });
+    res.status(aiErrorStatus(error)).json({ success: false, error: aiErrorMessage(error) });
   }
 };

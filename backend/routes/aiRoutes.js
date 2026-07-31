@@ -1,16 +1,30 @@
 const express = require('express');
-const { generateFeedback, checkPlagiarism, suggestIdeas, reviewProposal, recommendTask, getInteractions, rateInteraction } = require('../controllers/aiController');
+const rateLimit = require('express-rate-limit');
+const { generateFeedback, checkPlagiarism, suggestIdeas, reviewProposal, generateProposalOutline, generateProjectReportDraft, recommendTask, getInteractions, rateInteraction, getStatus } = require('../controllers/aiController');
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/interactions', protect, getInteractions);
-router.put('/interactions/:id/rating', protect, rateInteraction);
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many AI requests. Please wait before trying again.' }
+});
 
-router.post('/feedback', protect, generateFeedback);
-router.post('/plagiarism', protect, authorize('supervisor', 'admin'), checkPlagiarism);
-router.post('/suggest-ideas', protect, suggestIdeas);
-router.post('/review-proposal', protect, reviewProposal);
-router.post('/recommend-task', protect, recommendTask);
+router.use(protect, aiLimiter);
+
+router.get('/status', getStatus);
+router.get('/interactions', getInteractions);
+router.put('/interactions/:id/rating', rateInteraction);
+
+router.post('/feedback', generateFeedback);
+router.post('/plagiarism', authorize('supervisor', 'admin'), checkPlagiarism);
+router.post('/suggest-ideas', suggestIdeas);
+router.post('/review-proposal', reviewProposal);
+router.post('/proposal-outline', generateProposalOutline);
+router.post('/projects/:projectId/report-draft', generateProjectReportDraft);
+router.post('/recommend-task', recommendTask);
 
 module.exports = router;

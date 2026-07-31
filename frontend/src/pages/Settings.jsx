@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { apiFetch } from '../lib/api';
+import { useAuth } from '../components/AuthContext';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -13,6 +14,7 @@ const itemVariants = {
 };
 
 const Settings = () => {
+  const { user } = useAuth();
   const [settings, setSettings] = useState({
     aiChatbot: true,
     ideaGenerator: true,
@@ -25,6 +27,7 @@ const Settings = () => {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
+  const canConfigureIntegrity = ['supervisor', 'admin'].includes(user?.role);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -84,9 +87,9 @@ const Settings = () => {
         className="relative z-10 pt-6 px-6 md:px-10 pb-12 w-full max-w-[1440px] mx-auto flex flex-col gap-8"
       >
         <motion.div variants={itemVariants} className="mb-2">
-          <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary font-label-md text-[12px] font-bold mb-3 border border-primary/20 uppercase tracking-wide">System Configuration</span>
-          <h2 className="font-display text-[32px] md:text-[42px] font-black text-on-surface tracking-tight leading-none mb-2">AI & Plagiarism Settings</h2>
-          <p className="font-title-md text-[16px] text-on-surface-variant font-medium max-w-xl">Configure institutional safeguards and artificial intelligence parameters for the supervision suite.</p>
+          <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary font-label-md text-[12px] font-bold mb-3 border border-primary/20 uppercase tracking-wide">Workspace Settings</span>
+          <h2 className="font-display text-[32px] md:text-[42px] font-black text-on-surface tracking-tight leading-none mb-2">AI & Integrity Settings</h2>
+          <p className="font-title-md text-[16px] text-on-surface-variant font-medium max-w-xl">Manage your workspace assistance preferences. Integrity automation is available only to supervisors and administrators.</p>
         </motion.div>
         {notice && <div role="status" className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">{notice}</div>}
         {error && <div role="alert" className="rounded-xl border border-error/25 bg-error/10 px-4 py-3 text-sm text-error">{error}</div>}
@@ -111,8 +114,8 @@ const Settings = () => {
                   { id: 'aiChatbot', label: 'AI Supervisor Chatbot', desc: 'Enable the 24/7 student query assistant.' },
                   { id: 'ideaGenerator', label: 'Project Idea Generator', desc: 'Allow students to generate research topics.' },
                   { id: 'proposalFeedback', label: 'Proposal Feedback', desc: 'Automated critique on initial draft submissions.' },
-                  { id: 'plagiarismAutoCheck', label: 'Plagiarism Auto-Check', desc: 'Run similarity reports on all document uploads automatically.', color: 'tertiary' }
-                ].map((feature) => (
+                  { id: 'plagiarismAutoCheck', label: 'Automatic Integrity Screen', desc: 'Run a grounded similarity screen when a student submits at least 200 characters of text.', color: 'tertiary', supervisorOnly: true }
+                ].filter((feature) => !feature.supervisorOnly || canConfigureIntegrity).map((feature) => (
                   <div key={feature.id} className="flex items-center justify-between p-5 bg-surface-container-lowest/50 border border-outline-variant/40 rounded-[20px] hover:border-outline-variant/80 hover:shadow-sm transition-all group">
                     <div>
                       <h4 className="font-title-md text-[18px] font-bold text-on-surface mb-1">{feature.label}</h4>
@@ -149,7 +152,7 @@ const Settings = () => {
                   <span className="material-symbols-outlined text-[16px]">restart_alt</span> Reset Default
                 </button>
               </div>
-              <p className="font-body-sm text-[14px] text-secondary mb-6">Define the systemic persona and constraints for the AI Supervisor. This will govern how it responds to students.</p>
+              <p className="font-body-sm text-[14px] text-secondary mb-6">Set a personal guidance preference for AI assistance. Core academic-integrity safeguards always take priority.</p>
               
               <div className="relative group">
                 <textarea 

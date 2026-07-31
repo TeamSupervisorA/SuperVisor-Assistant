@@ -12,6 +12,17 @@ Deploy `frontend` and `backend` as separate Vercel projects, with each project's
 - `FRONTEND_URL` is an exact allow-list, not a wildcard. Add each permitted production or preview origin explicitly, comma-separated.
 - To enable password-reset email, set `RESEND_API_KEY` and `EMAIL_FROM` (a verified Resend sender) in the backend project, then redeploy. Reset links use the first origin in `FRONTEND_URL`.
 
+## Gemini academic-assistance workflows
+
+Set `GEMINI_API_KEY` and, if needed, a Gemini model available to that key in `GEMINI_MODEL`. The backend keeps the key private and exposes only a configured/not-configured status at `/api/ai/status`. It rate-limits AI requests and records user-scoped interaction history for accountability.
+
+- Students can generate a proposal planning outline, edit it, and save it as their own draft. They can also request project ideas and formative feedback.
+- Students and the assigned supervisor can generate a report narrative draft from the project’s stored tasks, submissions, and progress logs. The draft explicitly requires review before formal use.
+- Supervisors and administrators can run an integrity screen for a submission that includes at least 200 characters of pasted text. It uses Gemini Google Search grounding and stores only grounded source metadata. It is a similarity-screening aid, **not** a plagiarism verdict; review the original sources and follow institutional policy before acting.
+- A supervisor may opt into automatic integrity screening in Settings. It runs only when submitted text is available; an AI/provider failure never blocks submission.
+
+Gemini use is subject to Google’s policies and data handling terms. Do not submit sensitive personal, unpublished, or restricted research data unless your institution has approved that use. The app prompts Gemini not to invent citations, sources, findings, or grades, but students and supervisors must verify all output.
+
 ## Paper Editor and real LaTeX compilation
 
 The Paper Editor stores project-scoped LaTeX drafts, provides a Monaco source editor, Ctrl/Cmd+S and autosave, PDF compilation controls, compiler logs, a resizable source/PDF layout, and a literature search that combines OpenAlex and Crossref metadata. Search results are discovery aids: authors must read, verify, and cite the original work.

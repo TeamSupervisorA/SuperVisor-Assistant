@@ -14,12 +14,14 @@ const itemVariants = {
 };
 
 const PlagiarismChecker = () => {
-  const { activeProject } = useAuth();
+  const { activeProject, user } = useAuth();
   const [reports, setReports] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedSub, setSelectedSub] = useState('');
   const [running, setRunning] = useState(false);
+  const [error, setError] = useState('');
+  const canRunChecks = ['supervisor', 'admin'].includes(user?.role);
 
   useEffect(() => {
     if (activeProject) {
@@ -33,20 +35,23 @@ const PlagiarismChecker = () => {
     setLoading(true);
     try {
       const [repRes, subRes] = await Promise.all([
-        apiFetch(`/api/plagiarism?project=${activeProject._id}`).catch(() => ({ data: [] })),
-        apiFetch(`/api/submissions?project=${activeProject._id}`).catch(() => ({ data: [] }))
+        apiFetch(`/api/plagiarism?project=${activeProject._id}`),
+        apiFetch(`/api/submissions?project=${activeProject._id}`)
       ]);
       if (repRes.data) setReports(repRes.data);
       if (subRes.data) setSubmissions(subRes.data);
     } catch (e) {
       console.error(e);
+      setError(e.message || 'Unable to load integrity data.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleRunCheck = async () => {
-    if (!selectedSub) return alert("Select a submission first");
+    if (!canRunChecks) { setError('Only the assigned supervisor or an administrator can run an integrity screen. Students can view shared reports.'); return; }
+    if (!selectedSub) { setError('Select a submission first.'); return; }
+    setError('');
     setRunning(true);
     try {
       // No client-side mock fallback here: fabricating a similarity score for an
@@ -62,7 +67,7 @@ const PlagiarismChecker = () => {
         setReports([{ ...res.data, submission: res.data.submission?.title ? res.data.submission : submissionDoc }, ...reports]);
       }
     } catch (e) {
-      alert('Plagiarism check failed: ' + e.message);
+      setError(e.message || 'Integrity screening failed.');
     } finally {
       setRunning(false);
     }
@@ -96,8 +101,8 @@ const PlagiarismChecker = () => {
         <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-2">
           <div>
             <span className="inline-block px-3 py-1 rounded-full bg-tertiary/10 text-tertiary font-label-md text-[12px] font-bold mb-3 border border-tertiary/20 uppercase tracking-wide">Integrity</span>
-            <h1 className="font-display text-[32px] md:text-[42px] font-black text-on-surface tracking-tight leading-none mb-2">Plagiarism Checker</h1>
-            <p className="font-title-md text-[16px] text-on-surface-variant font-medium">Scan student submissions for originality against external sources.</p>
+            <h1 className="font-display text-[32px] md:text-[42px] font-black text-on-surface tracking-tight leading-none mb-2">Integrity Screen</h1>
+            <p className="font-title-md text-[16px] text-on-surface-variant font-medium">Gemini uses grounded web search to flag possible overlap for human review; it is not a plagiarism verdict.</p>
           </div>
           
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-surface/80 backdrop-blur-xl p-2 rounded-[20px] border border-outline-variant/50 shadow-sm w-full md:w-auto">
@@ -113,9 +118,9 @@ const PlagiarismChecker = () => {
             </select>
             <button 
               onClick={handleRunCheck}
-              disabled={running || !selectedSub}
+              disabled={running || !selectedSub || !canRunChecks}
               className={`px-6 py-3 rounded-xl font-title-sm text-[14px] font-bold flex items-center justify-center gap-2 transition-all flex-shrink-0
-                ${running || !selectedSub ? 'bg-surface-variant text-on-surface-variant cursor-not-allowed opacity-70' : 'bg-tertiary text-on-tertiary hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 shadow-sm'}`}
+                ${running || !selectedSub || !canRunChecks ? 'bg-surface-variant text-on-surface-variant cursor-not-allowed opacity-70' : 'bg-tertiary text-on-tertiary hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 shadow-sm'}`}
             >
               {running ? (
                 <><motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="material-symbols-outlined text-[18px]">sync</motion.span> Scanning...</>
@@ -125,6 +130,10 @@ const PlagiarismChecker = () => {
             </button>
           </div>
         </motion.div>
+
+        {!canRunChecks && <div className="rounded-2xl border border-primary/25 bg-primary/5 px-5 py-3 text-sm text-on-surface-variant">Students can view integrity reports shared for this project. The assigned supervisor or an administrator runs the screen after reviewing a submission.</div>}
+
+        {error && <div role="alert" className="rounded-2xl border border-error/30 bg-error/10 px-5 py-3 text-sm font-medium text-error">{error}</div>}
 
         {loading ? (
           <div className="flex-1 flex justify-center items-center py-20">
@@ -178,6 +187,7 @@ const PlagiarismChecker = () => {
                       {isDanger ? 'High Risk' : isWarning ? 'Moderate' : 'Low Risk'}
                     </div>
                     <span className="font-label-sm text-[11px] font-semibold text-secondary uppercase tracking-widest mt-6">Checked: {new Date(report.createdAt).toLocaleDateString()}</span>
+                    <p className="mt-4 text-center text-xs leading-relaxed text-secondary">{report.disclaimer || 'Review the underlying sources and follow your institution’s policy before making a decision.'}</p>
                   </div>
 
                   {/* Sources Section */}
@@ -199,6 +209,7 @@ const PlagiarismChecker = () => {
                               </span>
                             </div>
                             <h5 className="font-title-sm text-[15px] font-bold text-on-surface line-clamp-2 mb-2 leading-tight">{source.sourceName}</h5>
+                            {source.reason && <p className="mb-2 text-xs leading-relaxed text-secondary">{source.reason}</p>}
                             <a href={source.sourceUrl} target="_blank" rel="noreferrer" className="text-[13px] font-medium text-primary hover:text-primary-fixed-variant hover:underline truncate inline-flex items-center gap-1 mt-auto mt-2">
                               {source.sourceUrl}
                               <span className="material-symbols-outlined text-[14px]">open_in_new</span>
@@ -212,6 +223,7 @@ const PlagiarismChecker = () => {
                         <p className="font-body-lg text-secondary">No significant matches found.</p>
                       </div>
                     )}
+                    {report.summary && <div className="mt-6 rounded-xl border border-outline-variant/30 bg-surface-container-low p-4 text-sm leading-relaxed text-on-surface-variant"><strong className="text-on-surface">Screening summary:</strong> {report.summary}</div>}
                   </div>
                 </motion.div>
               );

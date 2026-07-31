@@ -2,12 +2,48 @@ const Submission = require('../models/Submission');
 const Task = require('../models/Task');
 const { Project, canAccessProject, projectIdsForUser } = require('../utils/projectAccess');
 const Notification = require('../models/Notification');
+const User = require('../models/User');
+const PlagiarismReport = require('../models/PlagiarismReport');
+const geminiService = require('../services/geminiService');
 
 // Notifications are best-effort — never fail the main operation over one
 const notify = async (fields) => {
   try {
     await Notification.create(fields);
   } catch (e) { /* non-fatal */ }
+};
+
+// Automatic checks are opt-in per supervisor and only run when the student has
+// supplied enough text. A provider error never rejects the academic submission.
+const runAutomaticIntegrityScreen = async (submission, project) => {
+  if (!project.supervisor || submission.content.trim().length < 200) return;
+  const supervisor = await User.findById(project.supervisor).select('settings.plagiarismAutoCheck settings.plagiarismTolerance');
+  if (!supervisor?.settings?.plagiarismAutoCheck) return;
+  try {
+    const result = await geminiService.checkPlagiarism(submission.content);
+    await PlagiarismReport.create({
+      submission: submission._id,
+      project: project._id,
+      overallSimilarity: result.overallSimilarity,
+      summary: result.summary,
+      method: result.method,
+      disclaimer: result.disclaimer,
+      sourcesSearched: result.sourcesSearched,
+      matchedSources: result.matchedSources,
+      status: 'Completed'
+    });
+    const threshold = Number.isFinite(supervisor.settings?.plagiarismTolerance) ? supervisor.settings.plagiarismTolerance : 20;
+    const needsReview = result.overallSimilarity > threshold;
+    await notify({
+      user: project.supervisor,
+      title: needsReview ? 'Integrity screen needs review' : 'Automatic integrity screen ready',
+      message: `An integrity screen is ready for "${submission.title}" (${result.overallSimilarity}% screening indicator; your review threshold: ${threshold}%). Review the source evidence before taking action.`,
+      type: needsReview ? 'warning' : 'info',
+      link: '/plagiarism-checker'
+    });
+  } catch (error) {
+    console.warn('Automatic integrity screen unavailable:', error.message);
+  }
 };
 
 exports.getAllSubmissions = async (req, res) => {
@@ -40,7 +76,7 @@ exports.createSubmission = async (req, res) => {
       return res.status(403).json({ success: false, error: 'Not authorized to submit to this project' });
     }
 
-    const { title, task, fileUrl } = req.body;
+    const { title, task, fileUrl, content } = req.body;
     if (task) {
       const projectTask = await Task.findOne({ _id: task, project: project._id });
       if (!projectTask) return res.status(422).json({ success: false, error: 'The selected task does not belong to this project' });
@@ -51,6 +87,7 @@ exports.createSubmission = async (req, res) => {
       title,
       task,
       fileUrl,
+      content,
       project: project._id,
       student: req.user.id
     });
@@ -65,6 +102,7 @@ exports.createSubmission = async (req, res) => {
         link: '/evaluations'
       });
     }
+    await runAutomaticIntegrityScreen(submission, project);
 
     res.status(201).json({ success: true, data: submission });
   } catch (error) {
@@ -88,7 +126,7 @@ exports.updateSubmission = async (req, res) => {
       if (submission.student.toString() !== req.user.id) {
         return res.status(403).json({ success: false, error: 'Not authorized to update this submission' });
       }
-      const studentFields = ['title', 'task', 'fileUrl'];
+      const studentFields = ['title', 'task', 'fileUrl', 'content'];
       updates = Object.fromEntries(Object.entries(req.body).filter(([field]) => studentFields.includes(field)));
     } else {
       const reviewerFields = ['grade', 'feedback', 'status'];

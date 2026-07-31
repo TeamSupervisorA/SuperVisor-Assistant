@@ -18,7 +18,7 @@ const StudentSubmissions = () => {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [newSub, setNewSub] = useState({ title: '', file: null });
+  const [newSub, setNewSub] = useState({ title: '', file: null, content: '' });
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
@@ -57,13 +57,14 @@ const StudentSubmissions = () => {
         body: JSON.stringify({
           title: newSub.title,
           fileUrl: uploaded.fileUrl,
+          content: newSub.content,
           project: activeProject._id
         })
       });
 
       if (res.success) {
         setShowModal(false);
-        setNewSub({ title: '', file: null });
+        setNewSub({ title: '', file: null, content: '' });
         setSubmissions([res.data, ...submissions]);
       }
     } catch (e) {
@@ -191,6 +192,11 @@ const StudentSubmissions = () => {
                   <div className="space-y-2">
                     <label className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">Select File</label>
                     <input required type="file" onChange={e => setNewSub({...newSub, file: e.target.files[0]})} className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">Text for integrity screening <span className="normal-case font-medium">(optional)</span></label>
+                    <textarea value={newSub.content} onChange={e => setNewSub({...newSub, content: e.target.value})} maxLength="60000" rows="5" className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" placeholder="Paste the submitted text to enable the grounded similarity screen. Your original file remains the official deliverable." />
+                    <p className="text-xs text-secondary">The integrity screen needs at least 200 characters and is an aid for human review, not a plagiarism verdict.</p>
                   </div>
                   <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-outline-variant/30">
                     <button type="button" onClick={() => setShowModal(false)} className="px-6 py-3 rounded-xl font-title-sm text-[14px] font-bold text-on-surface border border-outline-variant hover:bg-surface-container transition-colors">Cancel</button>

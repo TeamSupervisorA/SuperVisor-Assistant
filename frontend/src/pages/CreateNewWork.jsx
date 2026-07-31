@@ -31,7 +31,7 @@ const CreateNewWork = () => {
   const [error, setError] = useState('');
   
   const navigate = useNavigate();
-  const { setActiveProject, getDashboardPath } = useAuth();
+  const { setActiveProject, getDashboardPath, user } = useAuth();
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -72,24 +72,26 @@ const CreateNewWork = () => {
   };
 
   const handleSuggestIdeas = async () => {
-    if (!aiIdeaInterest) return alert('Please enter an area of interest');
+    if (!aiIdeaInterest) { setError('Enter an area of research interest first.'); return; }
+    setError('');
     setAiLoading(true);
     setAiFeedback(null);
     try {
       const res = await apiFetch('/api/ai/suggest-ideas', {
         method: 'POST',
-        body: JSON.stringify({ interests: aiIdeaInterest, department: 'Computer Science' }) // hardcoded dept for now
+        body: JSON.stringify({ interests: aiIdeaInterest, department: user?.department || 'General Studies' })
       });
       if (res.success) setAiFeedback(res.data);
     } catch (error) {
-      alert(`Error fetching AI suggestions: ${error.message}`);
+      setError(error.message || 'Unable to generate ideas.');
     } finally {
       setAiLoading(false);
     }
   };
 
   const handleReviewProposal = async () => {
-    if (!formData.title || !formData.problemStatement) return alert('Please fill in title and problem statement first.');
+    if (!formData.title || !formData.problemStatement) { setError('Fill in the title and problem statement before requesting a review.'); return; }
+    setError('');
     setAiLoading(true);
     setAiFeedback(null);
     try {
@@ -100,7 +102,7 @@ const CreateNewWork = () => {
       });
       if (res.success) setAiFeedback(res.data);
     } catch (error) {
-      alert(`Error fetching AI review: ${error.message}`);
+      setError(error.message || 'Unable to generate a proposal review.');
     } finally {
       setAiLoading(false);
     }

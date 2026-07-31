@@ -52,6 +52,16 @@ const run = async () => {
   check('supervisor creates a project', proj.status === 201);
   const pid = proj.data.data._id;
 
+  const membershipPatch = await api(`/api/projects/${pid}`, { method: 'PUT', token: sup.token, body: { students: [eve.user.id] } });
+  check('general project update cannot alter team membership', membershipPatch.status === 422);
+
+  const aiStatus = await api('/api/ai/status', { token: alice.token });
+  check('AI status is authenticated and does not expose secrets', aiStatus.status === 200 && typeof aiStatus.data.data.configured === 'boolean' && !JSON.stringify(aiStatus.data).includes(process.env.GEMINI_API_KEY || '__no_key__'));
+  const invalidOutline = await api('/api/ai/proposal-outline', { method: 'POST', token: alice.token, body: {} });
+  check('proposal outline validates its topic without calling the provider', invalidOutline.status === 422);
+  const outsiderReportDraft = await api(`/api/ai/projects/${pid}/report-draft`, { method: 'POST', token: eve.token });
+  check('outsider cannot generate a project report narrative (403)', outsiderReportDraft.status === 403);
+
   // ---- member management
   const add = await api(`/api/projects/${pid}/members`, { method: 'POST', token: alice.token, body: { email: 'bob@test.com' } });
   check('member adds teammate by email', add.status === 200 && add.data.data.students.length === 2);
@@ -183,8 +193,9 @@ const run = async () => {
   delete process.env.VERCEL;
 
   // ---- submission + grading notifications
-  const sub = await api('/api/submissions', { method: 'POST', token: alice.token, body: { title: 'Draft 1', project: pid, fileUrl: upData.data.fileUrl } });
-  check('submission created with uploaded file', sub.status === 201);
+  const sub = await api('/api/submissions', { method: 'POST', token: alice.token, body: { title: 'Draft 1', project: pid, fileUrl: upData.data.fileUrl, content: 'This is a sufficiently detailed research submission text used to preserve the original work for an integrity screen. It describes the study design, evaluation criteria, ethical safeguards, and limitations without asserting that any automated screen is a plagiarism verdict.', status: 'Graded', grade: 'A+', student: eve.user.id } });
+  check('submission created with uploaded file and text', sub.status === 201 && sub.data.data.content.length >= 200);
+  check('student cannot pre-grade or impersonate a submission', sub.data.data.status === 'Submitted' && !sub.data.data.grade && sub.data.data.student === alice.user.id);
 
   const grade = await api(`/api/submissions/${sub.data.data._id}`, { method: 'PUT', token: sup.token, body: { grade: 'A', feedback: 'Nice work', status: 'Graded' } });
   check('supervisor grades submission', grade.status === 200 && grade.data.data.grade === 'A');

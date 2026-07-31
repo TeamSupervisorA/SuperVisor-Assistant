@@ -74,6 +74,41 @@ async function runTests() {
       console.log('✅ AI Idea Generation successful:', JSON.stringify(aiIdeaData.data).substring(0, 50) + '...');
     }
 
+    // 5. Verify the configured AI service and the student planning workflow.
+    const statusRes = await fetch(`${API_BASE}/ai/status`, { headers: { 'Authorization': `Bearer ${studentToken}` } });
+    const statusData = await statusRes.json();
+    if (!statusData.success) throw new Error(statusData.error);
+    console.log(`✅ AI service status retrieved (configured: ${statusData.data.configured})`);
+
+    const outlineRes = await fetch(`${API_BASE}/ai/proposal-outline`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${studentToken}` },
+      body: JSON.stringify({ topic: 'A privacy-preserving learning analytics tool for student engagement' })
+    });
+    const outlineData = await outlineRes.json();
+    // Provider outages/quota can occur after a previously successful call. The
+    // server must surface them cleanly without invalidating core workflows.
+    console.log(outlineData.success ? '✅ AI proposal outline generated' : `⚠️ Proposal outline unavailable: ${outlineData.error}`);
+
+    // 6. The report draft is available to the assigned supervisor and uses
+    // server-side project records rather than metrics supplied by the browser.
+    const draftRes = await fetch(`${API_BASE}/ai/projects/${projectId}/report-draft`, {
+      method: 'POST', headers: { 'Authorization': `Bearer ${supervisorToken}` }
+    });
+    const draftData = await draftRes.json();
+    console.log(draftData.success ? '✅ AI report narrative generated from project records' : `⚠️ Report narrative unavailable: ${draftData.error}`);
+
+    // 7. Verify the grounded integrity-screen contract without treating its
+    // output as a plagiarism decision.
+    const integrityText = 'Academic integrity requires students to acknowledge the sources that shaped their work. This sample describes a small research study with a clear question, a reproducible method, ethical safeguards, and a transparent discussion of limitations. The report is prepared for an integration test and must be reviewed by a human before any academic decision is made.';
+    const integrityRes = await fetch(`${API_BASE}/ai/plagiarism`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supervisorToken}` },
+      body: JSON.stringify({ text: integrityText })
+    });
+    const integrityData = await integrityRes.json();
+    console.log(integrityData.success ? '✅ Grounded integrity screen generated a review aid' : `⚠️ Integrity screen unavailable: ${integrityData.error}`);
+
     console.log('\n--- All Tests Finished ---');
   } catch (error) {
     console.error('❌ Test Failed:', error.message);

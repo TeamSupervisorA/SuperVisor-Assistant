@@ -23,6 +23,11 @@ const submissionSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please provide the file URL']
   },
+  content: {
+    type: String,
+    default: '',
+    maxlength: [60000, 'Submission text cannot exceed 60,000 characters']
+  },
   status: {
     type: String,
     enum: ['Submitted', 'Under Review', 'Graded', 'Needs Revision'],
