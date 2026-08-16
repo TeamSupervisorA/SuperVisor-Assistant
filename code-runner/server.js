@@ -57,7 +57,9 @@ app.use(rateLimit({
 }));
 
 const hasValidSecret = (provided) => {
-  if (!sharedSecret) return process.env.NODE_ENV !== 'production';
+  // Do not fail open when a deployment is missing its secret. The gateway
+  // forwards arbitrary source code and must always require authentication.
+  if (!sharedSecret) return false;
   const candidate = Buffer.from(provided || '');
   const expected = Buffer.from(sharedSecret);
   return candidate.length === expected.length && crypto.timingSafeEqual(candidate, expected);
@@ -89,6 +91,10 @@ app.get('/health', async (_req, res) => {
   try {
     const pistonResponse = await fetch(pistonRuntimesUrl, {
       headers: { Accept: 'application/json' },
+      // PISTON_URL is validated at startup. Refusing redirects prevents a
+      // compromised or misconfigured private service from redirecting health
+      // checks or source code to another host.
+      redirect: 'error',
       signal: AbortSignal.timeout(5000)
     });
     const runtimes = pistonResponse.ok ? await pistonResponse.json() : null;
@@ -156,6 +162,7 @@ app.post('/execute', async (req, res) => {
         compile_memory_limit: 256 * 1024 * 1024,
         run_memory_limit: 128 * 1024 * 1024
       }),
+      redirect: 'error',
       signal: controller.signal
     });
     let output;

@@ -11,6 +11,7 @@ process.env.CODE_RUNNER_URL = '';
 process.env.CODE_RUNNER_SHARED_SECRET = 'smoke-code-runner-secret-do-not-expose';
 
 require('./server');
+const User = require('./models/User');
 
 const BASE = 'http://localhost:5099';
 let passed = 0, failed = 0;
@@ -36,6 +37,16 @@ const api = async (path, { method = 'GET', token, body, raw } = {}) => {
 const run = async () => {
   await new Promise(r => setTimeout(r, 2500)); // wait for server + in-memory db
 
+  const invalidJsonResponse = await fetch(`${BASE}/api/does-not-exist`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{'
+  });
+  const invalidJson = await invalidJsonResponse.json();
+  check('malformed JSON receives a safe API error response', invalidJsonResponse.status === 400 && invalidJson.error === 'Invalid JSON request body');
+  const missingRoute = await api('/api/does-not-exist');
+  check('unknown API routes return JSON rather than an HTML error page', missingRoute.status === 404 && missingRoute.data?.error === 'API endpoint not found');
+
   // ---- users
   const reg = async (name, email, role) =>
     (await api('/api/auth/register', { method: 'POST', body: { name, email, password: 'pass1234', role } })).data;
@@ -43,6 +54,10 @@ const run = async () => {
   const bob = await reg('Bob', 'bob@test.com', 'student');
   const eve = await reg('Eve', 'eve@test.com', 'student');
   const sup = await reg('Dr. Sup', 'sup@test.com', 'supervisor');
+  const modernDomain = await api('/api/auth/register', { method: 'POST', body: { name: 'Modern Domain', email: 'modern@research.technology', password: 'pass1234' } });
+  check('registration accepts a valid modern top-level domain', modernDomain.status === 201);
+  const inactiveStudent = await reg('Inactive Student', 'inactive@test.com', 'student');
+  await User.findByIdAndUpdate(inactiveStudent.user.id, { status: 'inactive' });
   const duplicateRegistration = await api('/api/auth/register', { method: 'POST', body: { name: 'Alice Again', email: 'alice@test.com', password: 'pass1234' } });
   check('duplicate registration returns a safe sign-in message', duplicateRegistration.status === 409 && /account already exists/i.test(duplicateRegistration.data.error));
   const unknownReset = await api('/api/auth/forgot-password', { method: 'POST', body: { email: 'unknown@test.com' } });
@@ -87,6 +102,9 @@ const run = async () => {
 
   const add = await api(`/api/projects/${pid}/members`, { method: 'POST', token: sup.token, body: { email: 'bob@test.com' } });
   check('assigned supervisor adds teammate by email', add.status === 200 && add.data.data.students.length === 2);
+
+  const inactiveAdd = await api(`/api/projects/${pid}/members`, { method: 'POST', token: sup.token, body: { email: 'inactive@test.com' } });
+  check('inactive students cannot be added to an active project team', inactiveAdd.status === 400 && /active student/i.test(inactiveAdd.data.error));
 
   const dup = await api(`/api/projects/${pid}/members`, { method: 'POST', token: sup.token, body: { email: 'bob@test.com' } });
   check('duplicate member rejected', dup.status === 400);

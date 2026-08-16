@@ -10,10 +10,24 @@ const close = (server) => new Promise((resolve) => {
 
 (async () => {
   let forwarded = null;
+  let redirectRequest = false;
+  let redirectFollowed = false;
   const piston = http.createServer((req, res) => {
     if (req.method === 'GET' && req.url === '/api/v2/runtimes') {
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify([{ language: 'python' }, { language: 'c' }]));
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/api/v2/execute' && redirectRequest) {
+      res.statusCode = 307;
+      res.setHeader('Location', '/redirect-target');
+      res.end();
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/redirect-target') {
+      redirectFollowed = true;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ run: { stdout: 'should not be reached' } }));
       return;
     }
     let body = '';
@@ -30,12 +44,30 @@ const close = (server) => new Promise((resolve) => {
   await listen(piston);
   const pistonPort = piston.address().port;
   process.env.PISTON_URL = `http://127.0.0.1:${pistonPort}/api/v2/execute`;
-  process.env.RUNNER_SHARED_SECRET = '0123456789abcdef0123456789abcdef';
   process.env.VERCEL = '1'; // prevent the module's production listener in this test
-  const app = require('./server');
-  const gateway = app.listen(0, '127.0.0.1');
+  process.env.RUNNER_SHARED_SECRET = '';
+  let app = require('./server');
+  let gateway = app.listen(0, '127.0.0.1');
   await new Promise((resolve) => gateway.once('listening', resolve));
-  const base = `http://127.0.0.1:${gateway.address().port}`;
+  let base = `http://127.0.0.1:${gateway.address().port}`;
+
+  try {
+    const missingSecret = await fetch(`${base}/execute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language: 'c', version: '*', files: [{ name: 'main.c', content: 'int main(void) {}' }] })
+    });
+    assert.equal(missingSecret.status, 401);
+  } finally {
+    await close(gateway);
+  }
+
+  delete require.cache[require.resolve('./server')];
+  process.env.RUNNER_SHARED_SECRET = '0123456789abcdef0123456789abcdef';
+  app = require('./server');
+  gateway = app.listen(0, '127.0.0.1');
+  await new Promise((resolve) => gateway.once('listening', resolve));
+  base = `http://127.0.0.1:${gateway.address().port}`;
 
   try {
     const health = await fetch(`${base}/health`);
@@ -77,6 +109,15 @@ const close = (server) => new Promise((resolve) => {
     assert.equal(cExecuted.status, 200);
     assert.equal(forwarded.language, 'c');
     assert.equal(forwarded.files[0].name, 'main.c');
+
+    redirectRequest = true;
+    const redirectAttempt = await fetch(`${base}/execute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Runner-Secret': process.env.RUNNER_SHARED_SECRET },
+      body: JSON.stringify({ language: 'c', version: '*', files: [{ name: 'main.c', content: 'int main(void) {}' }], stdin: '' })
+    });
+    assert.equal(redirectAttempt.status, 502);
+    assert.equal(redirectFollowed, false);
     console.log('Code runner gateway tests passed');
   } finally {
     await close(gateway);

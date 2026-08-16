@@ -24,6 +24,12 @@ if (process.env.NODE_ENV === 'production' && sharedSecret.length < 32) {
 if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
 app.disable('x-powered-by');
 app.use(express.json({ limit: '650kb' }));
+// A compilation response can contain an unpublished paper and its compiler
+// log. Explicitly prevent intermediary caches from retaining either.
+app.use((_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
   // The backend has tighter user-facing compile limits. This protects the
@@ -35,7 +41,10 @@ app.use(rateLimit({
 }));
 
 const hasValidSecret = (provided) => {
-  if (!sharedSecret) return process.env.NODE_ENV !== 'production';
+  // Never let an accidentally omitted secret turn a deployed compiler into a
+  // public TeX execution endpoint. Local development must set the same
+  // explicit secret as production.
+  if (!sharedSecret) return false;
   const candidate = Buffer.from(provided || '');
   const expected = Buffer.from(sharedSecret);
   return candidate.length === expected.length && crypto.timingSafeEqual(candidate, expected);

@@ -56,6 +56,27 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 
+// Rate-limit before anything that waits on MongoDB. This prevents a burst of
+// unauthenticated traffic from consuming database connection capacity before
+// it is rejected.
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many requests from this IP, please try again later' }
+});
+
+// Specific stricter limit for authentication routes. It is mounted before the
+// database readiness middleware for the same reason as the general limiter.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many authentication attempts, please try again later' }
+});
+
 // Readiness must wait for the shared connection promise. On a serverless cold
 // start, merely reading Mongoose's immediate state can briefly report 503 even
 // though the database connection is already in progress and will succeed.
@@ -66,6 +87,35 @@ app.get('/api/health', async (req, res) => {
   } catch {
     res.status(503).json({ success: false, database: getDatabaseStatus() });
   }
+});
+
+app.use(limiter);
+app.use('/api/auth/', authLimiter);
+
+// A generic Mongo sanitizer that mutates req.query breaks Express 5 because
+// that property is read-only. Sanitize JSON request bodies without touching
+// Express-owned request properties. Iterative traversal avoids a request with
+// deeply nested JSON exhausting the JavaScript call stack.
+const sanitizeObject = (root) => {
+  if (!root || typeof root !== 'object') return;
+  const stack = [root];
+  const visited = new WeakSet();
+  while (stack.length) {
+    const value = stack.pop();
+    if (!value || typeof value !== 'object' || visited.has(value)) continue;
+    visited.add(value);
+    for (const key of Object.keys(value)) {
+      if (key.startsWith('$') || key.includes('.') || ['__proto__', 'prototype', 'constructor'].includes(key)) {
+        delete value[key];
+      } else if (value[key] && typeof value[key] === 'object') {
+        stack.push(value[key]);
+      }
+    }
+  }
+};
+app.use((req, res, next) => {
+  sanitizeObject(req.body);
+  next();
 });
 
 app.use('/api', async (req, res, next) => {
@@ -79,44 +129,6 @@ app.use('/api', async (req, res, next) => {
     });
   }
 });
-
-// A generic Mongo sanitizer that mutates `req.query` breaks Express 5 because
-// that property is read-only. Sanitize JSON request bodies without touching
-// Express-owned request properties.
-const sanitizeObject = (value) => {
-  if (!value || typeof value !== 'object') return;
-  for (const key of Object.keys(value)) {
-    if (key.startsWith('$') || key.includes('.') || ['__proto__', 'prototype', 'constructor'].includes(key)) {
-      delete value[key];
-    } else {
-      sanitizeObject(value[key]);
-    }
-  }
-};
-app.use((req, res, next) => {
-  sanitizeObject(req.body);
-  next();
-});
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300,
-  standardHeaders: 'draft-8',
-  legacyHeaders: false,
-  message: { success: false, error: 'Too many requests from this IP, please try again later' }
-});
-app.use(limiter);
-
-// Specific stricter limit for auth routes
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  standardHeaders: 'draft-8',
-  legacyHeaders: false,
-  message: { success: false, error: 'Too many authentication attempts, please try again later' }
-});
-app.use('/api/auth/', authLimiter);
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
@@ -159,6 +171,24 @@ if (!isProduction) {
 app.use('/api/messages', require('./routes/messageRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/plagiarism', require('./routes/plagiarismRoutes'));
+
+// Keep API failures machine-readable for the frontend. In particular, Express
+// otherwise returns an HTML page for malformed JSON and unknown API paths.
+app.use('/api', (req, res) => {
+  res.status(404).json({ success: false, error: 'API endpoint not found' });
+});
+
+app.use((error, req, res, next) => {
+  if (res.headersSent) return next(error);
+  if (error?.type === 'entity.parse.failed') {
+    return res.status(400).json({ success: false, error: 'Invalid JSON request body' });
+  }
+  if (error?.type === 'entity.too.large') {
+    return res.status(413).json({ success: false, error: 'Request body is too large' });
+  }
+  console.error('Unhandled request error:', error?.message || error);
+  return res.status(500).json({ success: false, error: 'An unexpected server error occurred' });
+});
 
 const PORT = process.env.PORT || 5000;
 

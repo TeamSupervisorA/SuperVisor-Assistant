@@ -446,8 +446,8 @@ exports.addProjectMember = async (req, res) => {
     if (!newMember) {
       return res.status(404).json({ success: false, error: 'No user found with that email' });
     }
-    if (newMember.role !== 'student') {
-      return res.status(400).json({ success: false, error: 'Only students can be added as team members' });
+    if (newMember.role !== 'student' || newMember.status !== 'active') {
+      return res.status(400).json({ success: false, error: 'Only active student accounts can be added as team members' });
     }
     if (project.students.some(s => idOf(s) === newMember.id)) {
       return res.status(400).json({ success: false, error: 'This student is already on the team' });
