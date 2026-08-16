@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopNavbar from './TopNavbar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../hooks/useTheme';
 
 const DashboardLayout = () => {
+  const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDesktopPinnedOpen, setIsDesktopPinnedOpen] = useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches);
   const { isDark, toggleDark } = useTheme();
   const isDesktopCollapsed = isDesktop && !isDesktopPinnedOpen && !isSidebarHovered;
+  const isPaperEditor = location.pathname.startsWith('/paper-editor');
 
   useEffect(() => {
     const query = window.matchMedia('(min-width: 768px)');
@@ -22,7 +24,7 @@ const DashboardLayout = () => {
   }, []);
 
   return (
-    <div className="bg-background text-on-surface font-body-md antialiased min-h-screen flex overflow-hidden">
+    <div className="bg-background text-on-surface font-body-md antialiased flex h-dvh min-h-0 overflow-hidden">
       {/* Mobile Menu Overlay */}
       <AnimatePresence>
         {isMobileMenuOpen && (
@@ -45,14 +47,14 @@ const DashboardLayout = () => {
         />
       </div>
 
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+      <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <TopNavbar
           onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           isDark={isDark}
           toggleDark={toggleDark}
         />
 
-        <main className="flex-1 overflow-y-auto w-full relative">
+        <main className={`relative min-h-0 w-full flex-1 ${isPaperEditor ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           <Outlet />
         </main>
       </div>

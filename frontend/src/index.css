@@ -168,18 +168,63 @@
   }
 }
 
-/* Overleaf-style paper workbench. The two panes share one bounded desktop
-   height, while their editor/PDF viewers own their scroll positions. */
+/* Overleaf-style paper workbench. The page owns a bounded desktop height;
+   Monaco and the browser PDF viewer are the only vertical scrollers. */
+.paper-editor-page {
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.paper-editor-page__content,
+.paper-editor-workbench-shell,
+.paper-editor-workbench {
+  min-width: 0;
+  min-height: 0;
+}
+
+.paper-editor-page__content {
+  height: 100%;
+}
+
+.paper-editor-page__header,
+.paper-editor-page__alert,
+.paper-editor-page__utility,
+.paper-editor-page__utility-panel,
+.paper-editor-page__literature,
+.paper-editor-workbench > :not(.paper-workspace) {
+  flex: 0 0 auto;
+}
+
+.paper-editor-workbench-shell {
+  display: flex;
+  width: 100%;
+  flex: 1 1 0;
+  overflow: hidden;
+}
+
+.paper-editor-workbench {
+  display: flex;
+  width: 100%;
+  height: auto;
+  flex: 1 1 0;
+}
+
 .paper-workspace {
   display: grid;
   grid-template-columns: minmax(320px, var(--paper-source-width, 50%)) 14px minmax(320px, 1fr);
-  flex: 1 1 auto;
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1 1 0;
+  height: auto;
   min-height: 0;
   overflow: hidden;
   background: #f1f5f9;
 }
 
 .paper-workspace__pane {
+  height: 100%;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -192,9 +237,15 @@
 }
 
 .paper-workspace__editor {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-height: 0;
   overflow: hidden;
+}
+
+.paper-workspace__editor > div,
+.paper-workspace__editor .monaco-editor,
+.paper-workspace__editor .monaco-editor .overflow-guard {
+  height: 100%;
 }
 
 .paper-workspace .monaco-scrollable-element {
@@ -220,11 +271,13 @@
 .paper-preview-empty {
   min-width: 0;
   min-height: 0;
-  flex: 1 1 auto;
+  flex: 1 1 0;
 }
 
 .paper-preview-frame {
+  display: block;
   width: 100%;
+  height: 100%;
   border: 0;
   overscroll-behavior: contain;
 }
@@ -241,6 +294,7 @@
   cursor: col-resize;
   touch-action: none;
   user-select: none;
+  align-self: stretch;
   place-items: center;
   background: #e2e8f0;
   transition: background-color 140ms ease, box-shadow 140ms ease;
@@ -290,12 +344,21 @@
     overflow: visible;
   }
 
+  .paper-editor-workbench {
+    height: auto;
+    flex: none;
+  }
+
   .paper-workspace {
     display: flex;
     min-height: 0;
     flex: none;
     flex-direction: column;
     overflow: visible;
+  }
+
+  .paper-workspace__pane {
+    height: auto;
   }
 
   .paper-workspace__source {
@@ -309,6 +372,47 @@
   .paper-splitter {
     display: none;
   }
+}
+
+/* Focus mode recreates the fixed workbench from desktop LaTeX editors. It
+   intentionally removes dashboard chrome while keeping the document tabs and
+   compiler controls available above the two independently scrollable panes. */
+.paper-editor-page--focus {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  height: 100dvh !important;
+  max-height: 100dvh;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.paper-editor-page--focus .paper-editor-page__content {
+  height: 100%;
+  padding: 0;
+}
+
+.paper-editor-page--focus .paper-editor-page__header,
+.paper-editor-page--focus .paper-editor-page__alert,
+.paper-editor-page--focus .paper-editor-page__utility,
+.paper-editor-page--focus .paper-editor-page__utility-panel,
+.paper-editor-page--focus .paper-editor-page__literature {
+  display: none;
+}
+
+.paper-editor-page--focus .paper-editor-workbench-shell,
+.paper-editor-page--focus .paper-editor-workbench {
+  height: 100%;
+}
+
+.paper-editor-page--focus .paper-editor-workbench {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.paper-editor-page--focus .paper-workspace__preview {
+  padding: 8px;
 }
 
 /* Print styles — used by the Project Report "Download / Print" action */
