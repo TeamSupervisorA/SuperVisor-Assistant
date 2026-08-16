@@ -3,6 +3,7 @@ const router = express.Router();
 const Message = require('../models/Message');
 const Project = require('../models/Project');
 const { protect } = require('../middleware/auth');
+const { sendServerError } = require('../utils/errorResponse');
 
 // Only project members (students/supervisor) or admins may access a project's chat
 const canAccessProject = async (projectId, user) => {
@@ -24,13 +25,19 @@ router.get('/:projectId', protect, async (req, res) => {
       .sort('createdAt');
     res.json({ success: true, data: messages });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    return sendServerError(res, error, 'Unable to load project messages');
   }
 });
 
 router.post('/', protect, async (req, res) => {
   try {
     const { project, content } = req.body;
+    if (typeof content !== 'string' || !content.trim()) {
+      return res.status(422).json({ success: false, error: 'A chat message cannot be empty' });
+    }
+    if (content.trim().length > 5000) {
+      return res.status(422).json({ success: false, error: 'A chat message cannot exceed 5,000 characters' });
+    }
 
     if (!(await canAccessProject(project, req.user))) {
       return res.status(403).json({ success: false, error: 'Not authorized to post in this project chat' });
@@ -38,18 +45,15 @@ router.post('/', protect, async (req, res) => {
 
     const message = await Message.create({
       project,
-      content,
+      content: content.trim(),
       sender: req.user._id
     });
     
     await message.populate('sender', 'name email role');
     
-    // We already emit via socket on the client, but if we wanted to emit from server:
-    // req.app.get('io').to(project).emit('receive_message', message);
-    
     res.status(201).json({ success: true, data: message });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    return sendServerError(res, error, 'Unable to send this message');
   }
 });
 

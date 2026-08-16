@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../lib/api';
-import { useAuth } from '../components/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 
 const statusMeta = {
   todo: { label: 'Planned', icon: 'list_alt', tone: 'bg-slate-100 text-slate-700 dark:bg-surface-container dark:text-on-surface' },

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 
 const AuthContext = createContext(null);
 
@@ -81,14 +81,14 @@ export const AuthProvider = ({ children }) => {
     setActiveProject(null);
   };
 
-  const handleSetActiveProject = (project) => {
+  const handleSetActiveProject = useCallback((project) => {
     if (project) {
       localStorage.setItem('activeProject', JSON.stringify(project));
     } else {
       localStorage.removeItem('activeProject');
     }
     setActiveProject(project);
-  };
+  }, []);
 
   const getDashboardPath = () => {
     if (!user) return '/login';
@@ -111,14 +111,6 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };
 
 export default AuthContext;

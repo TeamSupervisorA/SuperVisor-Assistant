@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from './AuthContext';
-import API_BASE_URL, { apiFetch } from '../lib/api';
+import { useAuth } from '../hooks/useAuth';
+import { apiFetch } from '../lib/api';
 
 const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -15,6 +15,8 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
 
   const navigate = useNavigate();
   const { user, token, logout, activeProject, setActiveProject } = useAuth();
+  const activeProjectId = activeProject?._id;
+  const canCreateProject = user?.role === 'student' || user?.role === 'supervisor';
 
   const notifRef = useRef(null);
   const userMenuRef = useRef(null);
@@ -23,11 +25,8 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
     const loadNotifications = async () => {
       try {
         if (!token) return;
-        const res = await fetch(`${API_BASE_URL}/api/notifications`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const json = await res.json();
-        if (json.success) setNotifications(json.data);
+        const response = await apiFetch('/api/notifications');
+        setNotifications(response.data || []);
       } catch {
         // Silent fail — notifications are non-critical
       }
@@ -40,11 +39,11 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
         if (res.data) {
           setMyProjects(res.data);
           // Auto-select first project if none is active
-          if (res.data.length > 0 && !activeProject) {
+          if (res.data.length > 0 && !activeProjectId) {
             setActiveProject(res.data[0]);
-          } else if (activeProject) {
+          } else if (activeProjectId) {
             // Update active project with fresh data if it exists in the list
-            const updatedProject = res.data.find(p => p._id === activeProject._id);
+            const updatedProject = res.data.find(p => p._id === activeProjectId);
             if (updatedProject) setActiveProject(updatedProject);
             else setActiveProject(null);
           }
@@ -56,7 +55,7 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
 
     loadNotifications();
     loadProjects();
-  }, [token]);
+  }, [token, activeProjectId, setActiveProject]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -82,14 +81,25 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
     try {
       await apiFetch(`/api/notifications/${notifId}/read`, { method: 'PUT' });
       setNotifications(prev => prev.map(n => n._id === notifId ? { ...n, isRead: true } : n));
+      return true;
+    } catch { return false; }
+  };
+
+  const markAllRead = async () => {
+    try {
+      await apiFetch('/api/notifications/read-all', { method: 'PUT' });
+      setNotifications((current) => current.map((notification) => ({ ...notification, isRead: true })));
     } catch {
-      // Optimistic — just mark locally
-      setNotifications(prev => prev.map(n => n._id === notifId ? { ...n, isRead: true } : n));
+      // Leave state untouched if the server could not persist the read state.
     }
   };
 
-  const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  const openNotification = async (notification) => {
+    const marked = notification.isRead || await markAsRead(notification._id);
+    if (marked && notification.link) {
+      setShowNotifPanel(false);
+      navigate(notification.link);
+    }
   };
 
   const handleLogout = () => {
@@ -154,7 +164,7 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
               className="absolute left-0 top-full mt-2 w-72 bg-surface border border-outline-variant/30 rounded-2xl shadow-2xl overflow-hidden z-50 flex flex-col max-h-96"
             >
               <div className="px-4 py-3 border-b border-outline-variant/20 bg-surface-container-lowest">
-                <h3 className="font-label-md font-bold text-on-surface">Your Projects</h3>
+                <h3 className="font-label-md font-bold text-on-surface">{user?.role === 'admin' ? 'Project contexts' : 'Your projects'}</h3>
               </div>
               <div className="overflow-y-auto p-2 space-y-1">
                 {myProjects.length === 0 ? (
@@ -179,11 +189,11 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
               </div>
               <div className="px-2 py-2 border-t border-outline-variant/20 bg-surface-container-lowest">
                 <button
-                  onClick={() => { setShowProjectSelector(false); navigate('/create-new-work'); }}
+                  onClick={() => { setShowProjectSelector(false); navigate(canCreateProject ? '/create-new-work' : '/explore'); }}
                   className="w-full text-left px-3 py-2 rounded-xl flex items-center gap-3 hover:bg-surface-container-low transition-colors text-primary"
                 >
-                  <span className="material-symbols-outlined text-[18px]">add</span>
-                  <span className="font-label-md text-[13px] font-semibold">Propose New Work</span>
+                  <span className="material-symbols-outlined text-[18px]">{canCreateProject ? 'add' : 'folder_open'}</span>
+                  <span className="font-label-md text-[13px] font-semibold">{canCreateProject ? 'Propose new work' : 'Open project directory'}</span>
                 </button>
               </div>
             </motion.div>
@@ -196,7 +206,7 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
         <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[20px]">search</span>
         <input 
           className="h-10 pl-11 pr-4 rounded-full bg-surface-container-highest/60 border border-transparent text-[14px] focus:outline-none focus:bg-surface focus:border-primary/30 w-64 lg:w-80 transition-all focus:ring-2 focus:ring-primary/10 placeholder:text-outline" 
-          placeholder="Search projects, tasks..." 
+          placeholder="Search accessible projects..."
           type="text" 
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -252,7 +262,7 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
                     notifications.slice(0, 8).map((notif, idx) => (
                       <button
                         key={notif._id || idx}
-                        onClick={() => { markAsRead(notif._id); }}
+                        onClick={() => { openNotification(notif); }}
                         className={`w-full text-left px-5 py-3.5 flex items-start gap-3 hover:bg-surface-container-low transition-colors border-b border-outline-variant/10 last:border-none ${!notif.isRead ? 'bg-primary/3' : ''}`}
                       >
                         <span className={`material-symbols-outlined text-[20px] mt-0.5 shrink-0 ${!notif.isRead ? 'text-primary' : 'text-outline'}`}>
@@ -271,16 +281,7 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
                     ))
                   )}
                 </div>
-                {notifications.length > 0 && (
-                  <div className="px-5 py-3 border-t border-outline-variant/20 text-center">
-                    <button
-                      onClick={() => { setShowNotifPanel(false); navigate('/settings'); }}
-                      className="font-label-md text-[13px] font-semibold text-primary hover:text-surface-tint transition-colors"
-                    >
-                      View All Notifications
-                    </button>
-                  </div>
-                )}
+                {notifications.length > 8 && <p className="border-t border-outline-variant/20 px-5 py-3 text-center text-xs text-secondary">Showing the latest 8 notifications.</p>}
               </motion.div>
             )}
           </AnimatePresence>

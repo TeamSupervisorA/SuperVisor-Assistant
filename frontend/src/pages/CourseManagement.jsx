@@ -18,6 +18,7 @@ const CourseManagement = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newCourse, setNewCourse] = useState({ code: '', name: '', department: 'Computer Science', sections: 1 });
   const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     fetchCourses();
@@ -62,6 +63,7 @@ const CourseManagement = () => {
   const csStats = getDeptStats('Computer Science');
   const eeeStats = getDeptStats('Electrical Engineering');
   const baStats = getDeptStats('Business Admin');
+  const filteredCourses = courses.filter((course) => `${course.code} ${course.name} ${course.department}`.toLowerCase().includes(query.toLowerCase()));
 
   if (loading) {
     return (
@@ -142,7 +144,7 @@ const CourseManagement = () => {
             
             <div className="relative">
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-secondary text-[20px]">search</span>
-              <input type="text" placeholder="Search courses..." className="pl-12 pr-4 py-2.5 bg-surface-container-lowest/50 border border-outline-variant/50 rounded-xl font-body-md text-[14px] text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-full sm:w-64 transition-all" />
+              <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search courses..." className="pl-12 pr-4 py-2.5 bg-surface-container-lowest/50 border border-outline-variant/50 rounded-xl font-body-md text-[14px] text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-full sm:w-64 transition-all" />
             </div>
           </div>
           
@@ -154,19 +156,18 @@ const CourseManagement = () => {
                   <th className="font-label-sm text-[11px] font-bold text-secondary py-5 px-6 uppercase tracking-widest">Course Name</th>
                   <th className="font-label-sm text-[11px] font-bold text-secondary py-5 px-6 uppercase tracking-widest">Department</th>
                   <th className="font-label-sm text-[11px] font-bold text-secondary py-5 px-6 uppercase tracking-widest">Sections</th>
-                  <th className="font-label-sm text-[11px] font-bold text-secondary py-5 px-8 uppercase tracking-widest text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-container/50 bg-surface/30">
-                {courses.length === 0 ? (
+                {filteredCourses.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="py-12 text-center text-secondary font-body-md">No courses found. Add a course to get started.</td>
+                    <td colSpan="4" className="py-12 text-center text-secondary font-body-md">{courses.length ? 'No courses match your search.' : 'No courses found. Add a course to get started.'}</td>
                   </tr>
                 ) : (
-                  courses.map((course, idx) => (
+                  filteredCourses.map((course, idx) => (
                     <motion.tr 
                       key={course._id || idx} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + idx * 0.1 }}
-                      className="hover:bg-surface-container-lowest transition-colors group cursor-pointer"
+                      className="hover:bg-surface-container-lowest transition-colors group"
                     >
                       <td className="py-5 px-8">
                         <span className="font-label-md text-[13px] font-bold text-on-surface bg-surface-container px-3 py-1.5 rounded-lg border border-outline-variant/30">{course.code}</span>
@@ -178,16 +179,6 @@ const CourseManagement = () => {
                       <td className="py-5 px-6">
                         <div className="flex items-center gap-2">
                            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[13px]">{course.sections || 1}</div>
-                        </div>
-                      </td>
-                      <td className="py-5 px-8 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="w-8 h-8 rounded-lg flex items-center justify-center text-secondary hover:bg-surface-variant hover:text-primary transition-colors">
-                            <span className="material-symbols-outlined text-[18px]">edit</span>
-                          </button>
-                          <button className="w-8 h-8 rounded-lg flex items-center justify-center text-secondary hover:bg-error/10 hover:text-error transition-colors">
-                            <span className="material-symbols-outlined text-[18px]">delete</span>
-                          </button>
                         </div>
                       </td>
                     </motion.tr>

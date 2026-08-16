@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
-import { useAuth } from '../components/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 
 const AdminCard = ({ icon, label, value, detail, tone = 'primary', onClick }) => <button onClick={onClick} className="group min-h-40 rounded-2xl border border-outline-variant/30 bg-surface p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md"><div className="flex items-start justify-between"><span className={`grid size-10 place-items-center rounded-xl ${tone === 'error' ? 'bg-error/10 text-error' : tone === 'success' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-primary/10 text-primary'}`}><span className="material-symbols-outlined">{icon}</span></span><span className="material-symbols-outlined text-secondary transition group-hover:translate-x-0.5 group-hover:text-primary">arrow_forward</span></div><p className="mt-5 text-xs font-bold uppercase tracking-wider text-secondary">{label}</p><p className="mt-1 text-3xl font-black text-on-surface">{value}</p><p className="mt-1 text-sm text-secondary">{detail}</p></button>;
 
@@ -14,7 +14,9 @@ const AdminDashboard = () => {
   useEffect(() => { Promise.all([apiFetch('/api/dashboard/admin'), apiFetch('/api/projects')]).then(([metricResult, projectResult]) => { setMetrics(metricResult.data); setProjects(projectResult.data || []); }).catch((requestError) => setError(requestError.message || 'Unable to load platform metrics.')); }, []);
   const openProjectTool = (path) => {
     const project = activeProject || projects[0];
-    if (!project) return navigate('/create-new-work');
+    // Administrators assign/oversee projects rather than becoming their
+    // supervisor through the student/supervisor creation workflow.
+    if (!project) return navigate('/explore');
     setActiveProject(project);
     navigate(path);
   };

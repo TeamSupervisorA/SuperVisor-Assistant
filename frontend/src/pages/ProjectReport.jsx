@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../components/AuthContext';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../hooks/useAuth';
 import { apiFetch } from '../lib/api';
 import { motion } from 'framer-motion';
 
@@ -29,37 +29,42 @@ const ProjectReport = () => {
   const [versions, setVersions] = useState([]);
   const [aiDraft, setAiDraft] = useState('');
   const [drafting, setDrafting] = useState(false);
+  const projectId = activeProject?._id;
 
-  useEffect(() => {
-    if (activeProject) {
-      loadReport();
-      loadVersions();
-    } else {
-      setLoading(false);
-    }
-  }, [activeProject?._id]);
-
-  const loadReport = async () => {
+  const loadReport = useCallback(async () => {
+    if (!projectId) return;
     setLoading(true);
     setError('');
     try {
-      const res = await apiFetch(`/api/projects/${activeProject._id}/report`);
+      const res = await apiFetch(`/api/projects/${projectId}/report`);
       setReport(res.data);
     } catch (e) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
 
-  const loadVersions = async () => {
+  const loadVersions = useCallback(async () => {
+    if (!projectId) return;
     try {
-      const res = await apiFetch(`/api/projects/${activeProject._id}/reports`);
+      const res = await apiFetch(`/api/projects/${projectId}/reports`);
       setVersions(res.data || []);
     } catch {
       setVersions([]);
     }
-  };
+  }, [projectId]);
+
+  useEffect(() => {
+    if (projectId) {
+      loadReport();
+      loadVersions();
+    } else {
+      setReport(null);
+      setVersions([]);
+      setLoading(false);
+    }
+  }, [projectId, loadReport, loadVersions]);
 
   const saveVersion = async () => {
     try {

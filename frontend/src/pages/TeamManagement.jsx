@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../components/AuthContext';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../hooks/useAuth';
 import { apiFetch } from '../lib/api';
 import { motion } from 'framer-motion';
 
@@ -36,23 +36,16 @@ const TeamManagement = () => {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  const canManage = user?.role === 'admin' || user?.role === 'supervisor';
+  const projectId = activeProject?._id;
 
-  useEffect(() => {
-    if (activeProject) {
-      loadData();
-    } else {
-      setLoading(false);
-    }
-  }, [activeProject?._id]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    if (!projectId) return;
     setLoading(true);
     try {
       const [projRes, taskRes, subRes] = await Promise.all([
-        apiFetch(`/api/projects/${activeProject._id}`),
-        apiFetch(`/api/tasks?project=${activeProject._id}`).catch(() => ({ data: [] })),
-        apiFetch(`/api/submissions?project=${activeProject._id}`).catch(() => ({ data: [] }))
+        apiFetch(`/api/projects/${projectId}`),
+        apiFetch(`/api/tasks?project=${projectId}`).catch(() => ({ data: [] })),
+        apiFetch(`/api/submissions?project=${projectId}`).catch(() => ({ data: [] }))
       ]);
       setProject(projRes.data);
       setTasks(taskRes.data || []);
@@ -81,7 +74,18 @@ const TeamManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
+
+  useEffect(() => {
+    if (projectId) loadData();
+    else { setProject(null); setTasks([]); setActivity([]); setLoading(false); }
+  }, [projectId, loadData]);
+
+  const currentUserId = String(user?._id || user?.id || '');
+  const assignedSupervisorId = String(project?.supervisor?._id || project?.supervisor || '');
+  // A supervisor may manage only the roster for their own project.  Keeping
+  // this check in the UI avoids presenting controls that the API must reject.
+  const canManage = user?.role === 'admin' || (user?.role === 'supervisor' && currentUserId === assignedSupervisorId);
 
   const handleInvite = async (e) => {
     e.preventDefault();
@@ -143,12 +147,14 @@ const TeamManagement = () => {
   if (project?.supervisor) {
     roster.push({ id: project.supervisor._id, role: 'Supervisor', user: project.supervisor, removable: false });
   }
-  (project?.students || []).forEach((student, idx) => {
+  (project?.students || []).forEach((student) => {
     roster.push({
       id: student._id,
-      role: idx === 0 ? 'Team Leader' : 'Member',
+      // Project membership does not expose a confirmed Team record here, so do
+      // not invent a leader designation based on array position.
+      role: 'Student member',
       user: student,
-      removable: canManage || student._id === user?.id
+      removable: canManage || String(student._id) === currentUserId
     });
   });
 
@@ -198,8 +204,8 @@ const TeamManagement = () => {
           {/* Left Column (Main Content - 8 cols) */}
           <div className="lg:col-span-8 flex flex-col gap-6 lg:gap-8">
 
-            {/* Add Member Card */}
-            <motion.div variants={itemVariants} className="bg-surface/80 backdrop-blur-xl rounded-[32px] p-6 md:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-outline-variant/30 relative overflow-hidden group hover:border-primary/30 transition-colors">
+            {/* Project supervisors and administrators manage roster membership. */}
+            {canManage ? <motion.div variants={itemVariants} className="bg-surface/80 backdrop-blur-xl rounded-[32px] p-6 md:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-outline-variant/30 relative overflow-hidden group hover:border-primary/30 transition-colors">
               <div className="absolute -right-10 -top-10 w-40 h-40 bg-primary/5 rounded-full blur-[40px] pointer-events-none group-hover:bg-primary/10 transition-colors"></div>
 
               <div className="flex items-center gap-3 mb-6 relative z-10">
@@ -225,7 +231,7 @@ const TeamManagement = () => {
                 </button>
               </form>
               <p className="font-body-sm text-[12px] text-secondary mt-4 relative z-10">The student must already have an account registered with this email.</p>
-            </motion.div>
+            </motion.div> : <motion.div variants={itemVariants} className="rounded-[24px] border border-primary/20 bg-primary/5 p-5 text-sm text-on-surface-variant"><strong className="text-on-surface">Project roster</strong><p className="mt-1">Your supervisor manages student membership. You can leave this project from your own member row if needed.</p></motion.div>}
 
             {/* Team Roster List */}
             <motion.div variants={itemVariants} className="bg-surface-container-lowest/80 backdrop-blur-xl rounded-[32px] p-6 md:p-8 shadow-[0_8px_40px_rgba(0,0,0,0.04)] border border-outline-variant/30 flex-1">
@@ -250,7 +256,7 @@ const TeamManagement = () => {
                       <motion.div
                         initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 * i }}
                         key={member.id || i}
-                        className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 rounded-2xl border border-outline-variant/40 bg-surface/50 hover:bg-surface hover:shadow-md transition-all group cursor-default ${member.role === 'Supervisor' ? 'border-l-[4px] border-l-tertiary' : member.role === 'Team Leader' ? 'border-l-[4px] border-l-primary' : ''}`}
+                        className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 rounded-2xl border border-outline-variant/40 bg-surface/50 hover:bg-surface hover:shadow-md transition-all group cursor-default ${member.role === 'Supervisor' ? 'border-l-[4px] border-l-tertiary' : 'border-l-[4px] border-l-primary'}`}
                       >
                         <div className="flex items-center gap-4 w-full sm:w-1/2 mb-4 sm:mb-0">
                           <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-title-md font-bold text-[18px] uppercase shadow-sm ${member.role === 'Supervisor' ? 'bg-tertiary-container text-on-tertiary-container' : 'bg-surface-container-highest text-primary'}`}>
@@ -272,7 +278,7 @@ const TeamManagement = () => {
                               <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
                                 <motion.div
                                   initial={{ width: 0 }} animate={{ width: `${stats.pct}%` }} transition={{ duration: 1, delay: 0.2 }}
-                                  className={`h-full rounded-full ${member.role === 'Team Leader' ? 'bg-primary' : 'bg-secondary'}`}
+                                  className="h-full rounded-full bg-primary"
                                 />
                               </div>
                             </div>

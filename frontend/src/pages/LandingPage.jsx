@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useScroll, useTransform, useMotionValue, useSpring, AnimatePresence } from 'framer-motion';
-import { useTheme } from '../components/ThemeContext';
+import { useTheme } from '../hooks/useTheme';
 
 // --- Reusable Advanced Components ---
 

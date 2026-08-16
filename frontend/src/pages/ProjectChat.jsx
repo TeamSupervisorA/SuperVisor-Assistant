@@ -1,131 +1,146 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { io } from 'socket.io-client';
-import API_BASE_URL, { apiFetch } from '../lib/api';
-import { useAuth } from '../components/AuthContext';
+import React, { useEffect, useRef, useState } from 'react';
+import { apiFetch } from '../lib/api';
+import { useAuth } from '../hooks/useAuth';
 import { motion } from 'framer-motion';
+
+const messageId = (message) => String(message?._id || '');
+const sameUser = (left, right) => String(left || '') === String(right || '');
 
 const ProjectChat = () => {
   const { activeProject, user } = useAuth();
-  const [activeTab, setActiveTab] = useState('team'); // 'team' or 'ai'
-  
-  // Chat States
-  const [socket, setSocket] = useState(null);
+  const [activeTab, setActiveTab] = useState('team');
   const [teamMessages, setTeamMessages] = useState([]);
   const [aiMessages, setAiMessages] = useState([
-    { 
-      sender: { _id: 'ai', name: 'Supervisor AI' }, 
-      content: "Hello! I'm your AI assistant. I can help you brainstorm project ideas, refine your problem statement, or review your project proposals. What are you working on today?", 
-      createdAt: new Date().toISOString() 
+    {
+      sender: { _id: 'ai', name: 'Academic AI' },
+      content: 'Hello! I can help you brainstorm project ideas, refine a problem statement, or review a proposal. What are you working on today?',
+      createdAt: new Date().toISOString()
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
+  const [isSendingTeamMessage, setIsSendingTeamMessage] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [aiError, setAiError] = useState('');
-  
+  const [teamError, setTeamError] = useState('');
+  const [refreshIndex, setRefreshIndex] = useState(0);
+
   const messagesEndRef = useRef(null);
   const projectId = activeProject?._id;
-  
-  // Socket Connection for Team Chat
-  useEffect(() => {
-    if (!projectId) return;
-    const token = localStorage.getItem('token');
-    const newSocket = io(API_BASE_URL, { auth: { token } });
-    setSocket(newSocket);
-    newSocket.emit('join_project', projectId);
-    newSocket.on('receive_message', (message) => {
-      setTeamMessages((prev) => [...prev, message]);
-    });
-    return () => newSocket.close();
-  }, [projectId]);
+  const currentUserId = user?._id || user?.id;
 
-  // Fetch Team Messages
+  // Serverless deployments cannot maintain a dependable Socket.IO connection.
+  // Persist messages through the API, then use small, visibility-aware polling
+  // so multiple members still receive current project chat without ghost messages.
   useEffect(() => {
-    if (!projectId) return;
-    const fetchMessages = async () => {
+    if (!projectId) {
+      setTeamMessages([]);
+      setTeamError('');
+      return undefined;
+    }
+
+    let cancelled = false;
+    const loadMessages = async (initial = false) => {
+      if (initial) setIsLoadingMessages(true);
       try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-        const res = await fetch(`${API_BASE_URL}/api/messages/${projectId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const json = await res.json();
-        if (json.success) {
-          setTeamMessages(json.data);
+        const response = await apiFetch(`/api/messages/${projectId}`);
+        if (!cancelled) {
+          setTeamMessages(response.data || []);
+          setTeamError('');
         }
-      } catch (err) {
-        console.error('Failed to load messages', err);
+      } catch (error) {
+        if (!cancelled) {
+          setTeamError(error.message || 'Unable to load project messages.');
+        }
+      } finally {
+        if (!cancelled && initial) setIsLoadingMessages(false);
       }
     };
-    fetchMessages();
-  }, [projectId]);
 
-  // Auto Scroll
+    loadMessages(true);
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') loadMessages();
+    }, 15000);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') loadMessages();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [projectId, refreshIndex]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [teamMessages, aiMessages, activeTab, isAiTyping]);
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!inputMessage.trim() || !projectId) return;
-
-    const newMessage = {
-      project: projectId,
-      content: inputMessage,
-      sender: { _id: user?._id || 'self', name: user?.name || 'You' },
-      createdAt: new Date().toISOString()
-    };
-
-    const currentInput = inputMessage;
-    setInputMessage('');
+  const handleSendMessage = async (event) => {
+    event.preventDefault();
+    const content = inputMessage.trim();
+    if (!content || !projectId) return;
 
     if (activeTab === 'team') {
-      setTeamMessages(prev => [...prev, newMessage]);
+      setTeamError('');
+      setIsSendingTeamMessage(true);
       try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${API_BASE_URL}/api/messages`, {
+        const response = await apiFetch('/api/messages', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ project: projectId, content: currentInput })
+          body: JSON.stringify({ project: projectId, content })
         });
-        const json = await res.json();
-        if (json.success && socket) {
-          socket.emit('send_message', json.data);
-        }
-      } catch (err) {
-        console.error('Failed to send message', err);
-      }
-    } else {
-      setAiMessages(prev => [...prev, newMessage]);
-      setAiError('');
-      setIsAiTyping(true);
-      try {
-        const response = await apiFetch('/api/ai/feedback', {
-          method: 'POST',
-          body: JSON.stringify({
-            text: currentInput,
-            criteria: 'Helpful academic research assistance. Be concise, evidence-aware, and do not invent sources.'
-          })
-        });
-        const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2);
-        setAiMessages(prev => [...prev, {
-          sender: { _id: 'ai', name: 'Supervisor AI' },
-          content,
-          createdAt: new Date().toISOString()
-        }]);
-      } catch (err) {
-        setAiError(err.message || 'The AI service is unavailable. No response was generated.');
+        const savedMessage = response.data;
+        setTeamMessages((current) => current.some((message) => messageId(message) === messageId(savedMessage))
+          ? current
+          : [...current, savedMessage]);
+        setInputMessage('');
+      } catch (error) {
+        setTeamError(error.message || 'Your message was not sent. Please try again.');
       } finally {
-        setIsAiTyping(false);
+        setIsSendingTeamMessage(false);
       }
+      return;
+    }
+
+    const userMessage = {
+      _id: `local-${Date.now()}`,
+      sender: { _id: currentUserId || 'self', name: user?.name || 'You' },
+      content,
+      createdAt: new Date().toISOString()
+    };
+    setAiMessages((current) => [...current, userMessage]);
+    setInputMessage('');
+    setAiError('');
+    setIsAiTyping(true);
+    try {
+      const response = await apiFetch('/api/ai/feedback', {
+        method: 'POST',
+        body: JSON.stringify({
+          text: content,
+          criteria: 'Helpful academic research assistance. Be concise, evidence-aware, and do not invent sources.'
+        })
+      });
+      const responseText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2);
+      setAiMessages((current) => [...current, {
+        sender: { _id: 'ai', name: 'Academic AI' },
+        content: responseText,
+        createdAt: new Date().toISOString()
+      }]);
+    } catch (error) {
+      setAiError(error.message || 'The AI service is unavailable. No response was generated.');
+    } finally {
+      setIsAiTyping(false);
     }
   };
 
   const currentMessages = activeTab === 'team' ? teamMessages : aiMessages;
+  const sending = activeTab === 'team' ? isSendingTeamMessage : isAiTyping;
 
   if (!activeProject) {
     return (
       <div className="w-full min-h-[calc(100vh-80px)] bg-background relative flex items-center justify-center p-6">
-        <div className="absolute inset-0 bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
+        <div className="absolute inset-0 bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0" />
         <div className="relative z-10 text-center bg-surface/80 backdrop-blur-xl border border-outline-variant/30 p-12 rounded-[32px] shadow-lg max-w-md w-full">
           <span className="material-symbols-outlined text-6xl text-secondary mb-4 opacity-50">forum</span>
           <h2 className="font-display text-[24px] font-bold text-on-surface mb-2 tracking-tight">No Project Selected</h2>
@@ -137,12 +152,8 @@ const ProjectChat = () => {
 
   return (
     <div className="w-full h-[calc(100vh-80px)] bg-background relative flex flex-col p-4 md:p-6 lg:p-8">
-      {/* Subtle Background Mesh */}
-      <div className="absolute top-0 right-1/4 w-[800px] h-[600px] bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
-      
+      <div className="absolute top-0 right-1/4 w-[800px] h-[600px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
       <div className="relative z-10 flex-1 w-full max-w-[1200px] mx-auto bg-surface/80 backdrop-blur-xl rounded-[32px] shadow-[0_8px_40px_rgba(0,0,0,0.04)] border border-outline-variant/30 flex flex-col overflow-hidden">
-        
-        {/* Header & Tabs */}
         <div className="px-6 py-5 border-b border-outline-variant/30 flex flex-col sm:flex-row items-center justify-between gap-4 bg-surface/50">
           <div className="flex items-center gap-4 w-full sm:w-auto">
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-on-surface transition-colors ${activeTab === 'ai' ? 'bg-tertiary-container text-tertiary' : 'bg-primary/10 text-primary'}`}>
@@ -150,130 +161,54 @@ const ProjectChat = () => {
             </div>
             <div>
               <h1 className="font-title-lg font-black text-on-surface tracking-tight">{activeTab === 'ai' ? 'AI Co-pilot Assistant' : 'Project Team Chat'}</h1>
-              <p className="font-body-sm text-on-surface-variant">{activeTab === 'ai' ? 'Idea Generation & Proposal Review' : activeProject.title}</p>
+              <p className="font-body-sm text-on-surface-variant">{activeTab === 'ai' ? 'Idea generation and proposal review' : `${activeProject.title} · refreshes automatically`}</p>
             </div>
           </div>
-          
           <div className="flex p-1 bg-surface-container-low rounded-xl border border-outline-variant/20 w-full sm:w-auto">
-            <button 
-              onClick={() => setActiveTab('team')}
-              className={`flex-1 sm:flex-none px-6 py-2 rounded-lg font-label-md text-[13px] font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'team' ? 'bg-surface shadow-sm text-primary' : 'text-secondary hover:text-on-surface'}`}
-            >
+            <button onClick={() => setActiveTab('team')} className={`flex-1 sm:flex-none px-6 py-2 rounded-lg font-label-md text-[13px] font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'team' ? 'bg-surface shadow-sm text-primary' : 'text-secondary hover:text-on-surface'}`}>
               <span className="material-symbols-outlined text-[18px]">group</span> Team
             </button>
-            <button 
-              onClick={() => setActiveTab('ai')}
-              className={`flex-1 sm:flex-none px-6 py-2 rounded-lg font-label-md text-[13px] font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'ai' ? 'bg-surface shadow-sm text-tertiary' : 'text-secondary hover:text-on-surface'}`}
-            >
+            <button onClick={() => setActiveTab('ai')} className={`flex-1 sm:flex-none px-6 py-2 rounded-lg font-label-md text-[13px] font-bold transition-all flex items-center justify-center gap-2 ${activeTab === 'ai' ? 'bg-surface shadow-sm text-tertiary' : 'text-secondary hover:text-on-surface'}`}>
               <span className="material-symbols-outlined text-[18px]">auto_awesome</span> AI Assist
             </button>
           </div>
         </div>
 
         {activeTab === 'ai' && aiError && <div role="alert" className="mx-6 mt-4 rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">{aiError}</div>}
+        {activeTab === 'team' && teamError && <div role="alert" className="mx-6 mt-4 flex items-center gap-3 rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error"><span className="flex-1">{teamError}</span><button type="button" onClick={() => setRefreshIndex((value) => value + 1)} className="rounded-lg border border-error/30 px-3 py-1.5 text-xs font-bold">Retry</button></div>}
 
-        {/* Chat Area */}
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 custom-scrollbar bg-surface-container-lowest/30">
-          {currentMessages.length === 0 ? (
+          {activeTab === 'team' && isLoadingMessages ? <div className="flex flex-1 items-center justify-center"><div className="h-9 w-9 animate-spin rounded-full border-4 border-primary/20 border-t-primary" /></div> : currentMessages.length === 0 ? (
             <div className="flex-1 flex items-center justify-center flex-col gap-4">
-              <div className="w-24 h-24 rounded-full bg-surface-container flex items-center justify-center mb-2">
-                <span className="material-symbols-outlined text-5xl text-secondary opacity-50">{activeTab === 'ai' ? 'model_training' : 'forum'}</span>
-              </div>
+              <div className="w-24 h-24 rounded-full bg-surface-container flex items-center justify-center mb-2"><span className="material-symbols-outlined text-5xl text-secondary opacity-50">{activeTab === 'ai' ? 'model_training' : 'forum'}</span></div>
               <h3 className="font-title-md font-bold text-on-surface">No messages yet</h3>
-              <p className="font-body-sm text-secondary max-w-sm text-center">
-                {activeTab === 'ai' ? "Ask the AI for project ideas or paste your proposal for instant feedback." : "Start the conversation with your team."}
-              </p>
+              <p className="font-body-sm text-secondary max-w-sm text-center">{activeTab === 'ai' ? 'Ask the AI for ideas or paste your proposal for academic feedback.' : 'Start the conversation with your project team.'}</p>
             </div>
-          ) : (
-            currentMessages.map((msg, idx) => {
-              const isSelf = msg.sender?._id === (user?._id || 'self');
-              const isAi = msg.sender?._id === 'ai';
-              
-              return (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} 
-                  key={idx} 
-                  className={`flex max-w-[85%] lg:max-w-[70%] ${isSelf ? 'self-end' : 'self-start'} gap-3 group`}
-                >
-                  {!isSelf && (
-                    <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center mt-auto shadow-sm ${isAi ? 'bg-tertiary text-on-tertiary' : 'bg-surface-container-high text-on-surface font-bold text-sm'}`}>
-                      {isAi ? <span className="material-symbols-outlined text-[16px]">auto_awesome</span> : (msg.sender?.name?.charAt(0) || 'U')}
-                    </div>
-                  )}
-                  
-                  <div className={`flex flex-col ${isSelf ? 'items-end' : 'items-start'}`}>
-                    {!isSelf && <span className="font-label-sm text-[11px] font-bold text-on-surface-variant mb-1.5 ml-1 uppercase tracking-wider">{msg.sender?.name || 'User'}</span>}
-                    
-                    <div className={`px-5 py-3.5 rounded-[20px] shadow-sm ${isSelf ? 'bg-primary text-on-primary rounded-br-[4px]' : isAi ? 'bg-tertiary-container/30 border border-tertiary/20 text-on-surface rounded-bl-[4px]' : 'bg-surface border border-outline-variant/30 text-on-surface rounded-bl-[4px]'}`}>
-                      {/* Using standard white-space formatting for simplicity, in a real app this would parse markdown for the AI */}
-                      <p className="font-body-md text-[15px] whitespace-pre-wrap leading-relaxed">{msg.content}</p>
-                    </div>
-                    
-                    <span className="font-label-sm text-[10px] font-bold text-secondary mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                </motion.div>
-              );
-            })
-          )}
-          
-          {/* AI Typing Indicator */}
-          {activeTab === 'ai' && isAiTyping && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex max-w-[85%] self-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-tertiary flex-shrink-0 flex items-center justify-center mt-auto shadow-sm text-on-tertiary">
-                <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
+          ) : currentMessages.map((message, index) => {
+            const senderId = message.sender?._id || message.sender;
+            const isSelf = sameUser(senderId, currentUserId) || (activeTab === 'ai' && senderId === 'self');
+            const isAi = senderId === 'ai';
+            return <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={message._id || `${senderId}-${message.createdAt}-${index}`} className={`flex max-w-[85%] lg:max-w-[70%] ${isSelf ? 'self-end' : 'self-start'} gap-3 group`}>
+              {!isSelf && <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center mt-auto shadow-sm ${isAi ? 'bg-tertiary text-on-tertiary' : 'bg-surface-container-high text-on-surface font-bold text-sm'}`}>{isAi ? <span className="material-symbols-outlined text-[16px]">auto_awesome</span> : (message.sender?.name?.charAt(0) || 'U')}</div>}
+              <div className={`flex flex-col ${isSelf ? 'items-end' : 'items-start'}`}>
+                {!isSelf && <span className="font-label-sm text-[11px] font-bold text-on-surface-variant mb-1.5 ml-1 uppercase tracking-wider">{message.sender?.name || 'User'}</span>}
+                <div className={`px-5 py-3.5 rounded-[20px] shadow-sm ${isSelf ? 'bg-primary text-on-primary rounded-br-[4px]' : isAi ? 'bg-tertiary-container/30 border border-tertiary/20 text-on-surface rounded-bl-[4px]' : 'bg-surface border border-outline-variant/30 text-on-surface rounded-bl-[4px]'}`}><p className="font-body-md text-[15px] whitespace-pre-wrap leading-relaxed">{message.content}</p></div>
+                <span className="font-label-sm text-[10px] font-bold text-secondary mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">{new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
-              <div className="flex flex-col items-start">
-                <span className="font-label-sm text-[11px] font-bold text-on-surface-variant mb-1.5 ml-1 uppercase tracking-wider">Supervisor AI</span>
-                <div className="px-5 py-4 rounded-[20px] bg-tertiary-container/30 border border-tertiary/20 rounded-bl-[4px] flex gap-1">
-                  <motion.div animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0 }} className="w-2 h-2 rounded-full bg-tertiary"></motion.div>
-                  <motion.div animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }} className="w-2 h-2 rounded-full bg-tertiary"></motion.div>
-                  <motion.div animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }} className="w-2 h-2 rounded-full bg-tertiary"></motion.div>
-                </div>
-              </div>
-            </motion.div>
-          )}
+            </motion.div>;
+          })}
+          {activeTab === 'ai' && isAiTyping && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex max-w-[85%] self-start gap-3"><div className="w-8 h-8 rounded-full bg-tertiary flex-shrink-0 flex items-center justify-center mt-auto shadow-sm text-on-tertiary"><span className="material-symbols-outlined text-[16px]">auto_awesome</span></div><div className="flex flex-col items-start"><span className="font-label-sm text-[11px] font-bold text-on-surface-variant mb-1.5 ml-1 uppercase tracking-wider">Academic AI</span><div className="px-5 py-4 rounded-[20px] bg-tertiary-container/30 border border-tertiary/20 rounded-bl-[4px] flex gap-1"><motion.div animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0 }} className="w-2 h-2 rounded-full bg-tertiary" /><motion.div animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }} className="w-2 h-2 rounded-full bg-tertiary" /><motion.div animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }} className="w-2 h-2 rounded-full bg-tertiary" /></div></div></motion.div>}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
         <div className="p-4 md:p-6 bg-surface/50 border-t border-outline-variant/30 backdrop-blur-md">
           <form onSubmit={handleSendMessage} className="flex gap-3 max-w-4xl mx-auto items-end">
-            <button type="button" className="w-12 h-12 flex items-center justify-center text-secondary hover:text-primary hover:bg-primary/10 rounded-full transition-colors flex-shrink-0">
-              <span className="material-symbols-outlined">attach_file</span>
-            </button>
-            
             <div className={`flex-1 bg-surface-container-lowest border ${activeTab === 'ai' ? 'focus-within:border-tertiary focus-within:ring-tertiary/20' : 'focus-within:border-primary focus-within:ring-primary/20'} border-outline-variant/40 focus-within:ring-2 rounded-[24px] flex items-end overflow-hidden transition-all duration-200 shadow-sm`}>
-              <textarea 
-                value={inputMessage} onChange={(e) => setInputMessage(e.target.value)}
-                placeholder={activeTab === 'ai' ? "Ask the AI for ideas or paste your proposal..." : "Type a message to your team..."}
-                className="w-full bg-transparent border-none focus:outline-none px-5 py-3.5 max-h-32 min-h-[52px] resize-none font-body-md text-on-surface"
-                rows={1}
-                onKeyDown={(e) => {
-                  if(e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage(e);
-                  }
-                }}
-              />
+              <textarea value={inputMessage} onChange={(event) => setInputMessage(event.target.value)} placeholder={activeTab === 'ai' ? 'Ask the AI for ideas or paste your proposal…' : 'Type a message to your team…'} disabled={sending} className="w-full bg-transparent border-none focus:outline-none px-5 py-3.5 max-h-32 min-h-[52px] resize-none font-body-md text-on-surface disabled:cursor-not-allowed disabled:opacity-60" rows={1} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); handleSendMessage(event); } }} />
             </div>
-            
-            <button 
-              type="submit" disabled={!inputMessage.trim()}
-              className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200 shadow-sm ${
-                !inputMessage.trim() 
-                  ? 'bg-surface-container-highest text-secondary cursor-not-allowed'
-                  : activeTab === 'ai'
-                    ? 'bg-tertiary text-on-tertiary hover:scale-105 active:scale-95 hover:shadow-md'
-                    : 'bg-primary text-on-primary hover:scale-105 active:scale-95 hover:shadow-md'
-              }`}
-            >
-              <span className="material-symbols-outlined font-bold text-[20px]" style={{ marginLeft: '2px' }}>send</span>
-            </button>
+            <button type="submit" disabled={!inputMessage.trim() || sending} className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200 shadow-sm ${!inputMessage.trim() || sending ? 'bg-surface-container-highest text-secondary cursor-not-allowed' : activeTab === 'ai' ? 'bg-tertiary text-on-tertiary hover:scale-105 active:scale-95 hover:shadow-md' : 'bg-primary text-on-primary hover:scale-105 active:scale-95 hover:shadow-md'}`} aria-label={activeTab === 'ai' ? 'Ask AI' : 'Send message'}>{sending ? <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> : <span className="material-symbols-outlined font-bold text-[20px]" style={{ marginLeft: '2px' }}>send</span>}</button>
           </form>
         </div>
-        
       </div>
     </div>
   );

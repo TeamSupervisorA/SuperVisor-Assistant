@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopNavbar from './TopNavbar';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from './ThemeContext';
+import { useTheme } from '../hooks/useTheme';
 
 const DashboardLayout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

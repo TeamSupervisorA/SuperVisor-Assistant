@@ -37,11 +37,27 @@ exports.searchWorks = async (req, res) => {
   if (query.length < 2) return res.status(422).json({ success: false, error: 'Use at least 2 characters to search research literature' });
   if (query.length > 160) return res.status(422).json({ success: false, error: 'Search query is too long' });
 
-  const encoded = encodeURIComponent(query);
+  const openAlexParams = new URLSearchParams({ search: query, 'per-page': '6' });
+  // OpenAlex deployments increasingly require a free API key. Keep Crossref
+  // available when the optional key is absent, rather than failing all
+  // literature discovery for a configuration-only reason.
+  if (process.env.OPENALEX_API_KEY) openAlexParams.set('api_key', process.env.OPENALEX_API_KEY);
+  if (process.env.RESEARCH_CONTACT_EMAIL) openAlexParams.set('mailto', process.env.RESEARCH_CONTACT_EMAIL);
+  const crossrefParams = new URLSearchParams({
+    'query.bibliographic': query,
+    rows: '6',
+    select: 'DOI,title,author,published,issued,container-title,URL,is-referenced-by-count,abstract'
+  });
   try {
     const [openAlexResult, crossrefResult] = await Promise.allSettled([
-      fetch(`https://api.openalex.org/works?search=${encoded}&per-page=6`, { headers: { 'User-Agent': 'AcademicAI/1.0 (research workspace)' } }),
-      fetch(`https://api.crossref.org/works?query.bibliographic=${encoded}&rows=6&select=DOI,title,author,published,issued,container-title,URL,is-referenced-by-count,abstract`, { headers: { 'User-Agent': 'AcademicAI/1.0 (research workspace)' } })
+      fetch(`https://api.openalex.org/works?${openAlexParams}`, {
+        headers: { 'User-Agent': 'AcademicAI/1.0 (research workspace)' },
+        signal: AbortSignal.timeout(9000)
+      }),
+      fetch(`https://api.crossref.org/works?${crossrefParams}`, {
+        headers: { 'User-Agent': 'AcademicAI/1.0 (research workspace)' },
+        signal: AbortSignal.timeout(9000)
+      })
     ]);
 
     const results = [];

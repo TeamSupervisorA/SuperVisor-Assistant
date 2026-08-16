@@ -1,5 +1,6 @@
 const Resource = require('../models/Resource');
 const { Project, canAccessProject, projectIdsForUser } = require('../utils/projectAccess');
+const { sendServerError } = require('../utils/errorResponse');
 
 exports.getAllResources = async (req, res) => {
   try {
@@ -18,7 +19,7 @@ exports.getAllResources = async (req, res) => {
     const resources = await Resource.find(filter).populate('project', 'title').sort({ createdAt: -1 });
     res.status(200).json({ success: true, count: resources.length, data: resources });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    return sendServerError(res, error, 'Unable to load resources');
   }
 };
 

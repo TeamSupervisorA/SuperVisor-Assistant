@@ -3,6 +3,7 @@ const {
   getProjects,
   getProject,
   createProject,
+  claimProject,
   updateProject,
   deleteProject,
   getProjectReport,
@@ -20,6 +21,8 @@ router.get('/explore', require('../controllers/projectController').exploreProjec
 router.route('/')
   .get(getProjects)
   .post(authorize('student', 'supervisor', 'admin'), createProject);
+
+router.post('/:id/claim', authorize('supervisor', 'admin'), claimProject);
 
 router.route('/:id')
   .get(getProject)

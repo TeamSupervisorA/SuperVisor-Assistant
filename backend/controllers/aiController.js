@@ -14,6 +14,18 @@ const aiErrorMessage = (error) => aiErrorStatus(error) === 429
   : 'The AI service is temporarily unavailable. Please try again later.';
 const userGuidance = (req) => req.user?.settings?.systemPrompt || '';
 
+// Settings are user-owned preferences, so a person who turns an assistant
+// feature off should not be able to invoke the same capability by calling the
+// API directly.
+const requireEnabledFeature = (req, res, setting, label) => {
+  if (req.user?.settings?.[setting] !== false) return true;
+  res.status(403).json({
+    success: false,
+    error: `${label} is disabled in your settings. Enable it in Settings to continue.`
+  });
+  return false;
+};
+
 const recordInteraction = async (req, feature, input, result) => {
   try {
     await AIInteraction.create({
@@ -58,6 +70,7 @@ exports.rateInteraction = async (req, res) => {
 // @access  Private
 exports.generateFeedback = async (req, res) => {
   try {
+    if (!requireEnabledFeature(req, res, 'aiChatbot', 'AI Supervisor Chatbot')) return;
     const { text, criteria } = req.body;
 
     if (!text) {
@@ -108,6 +121,7 @@ exports.checkPlagiarism = async (req, res) => {
 // @access  Private
 exports.suggestIdeas = async (req, res) => {
   try {
+    if (!requireEnabledFeature(req, res, 'ideaGenerator', 'Project Idea Generator')) return;
     const { interests, department } = req.body;
     if (!interests || !department) {
       return res.status(400).json({ success: false, error: 'Please provide interests and department' });
@@ -126,6 +140,7 @@ exports.suggestIdeas = async (req, res) => {
 // @access  Private
 exports.reviewProposal = async (req, res) => {
   try {
+    if (!requireEnabledFeature(req, res, 'proposalFeedback', 'Proposal Feedback')) return;
     const { proposalText } = req.body;
     if (!proposalText) {
       return res.status(400).json({ success: false, error: 'Please provide proposalText' });
@@ -143,6 +158,7 @@ exports.reviewProposal = async (req, res) => {
 // author and can revise the result before saving a proposal version.
 exports.generateProposalOutline = async (req, res) => {
   try {
+    if (!requireEnabledFeature(req, res, 'proposalFeedback', 'Proposal Feedback')) return;
     const outline = await geminiService.generateProposalOutline({
       topic: req.body?.topic,
       department: req.user.department || req.body?.department || 'General Studies',

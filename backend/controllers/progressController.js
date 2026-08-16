@@ -1,6 +1,11 @@
 const ProgressLog = require('../models/ProgressLog');
 const { Project, canAccessProject } = require('../utils/projectAccess');
 const { recordAudit } = require('../services/auditService');
+const Notification = require('../models/Notification');
+
+const notify = async (fields) => {
+  try { await Notification.create(fields); } catch { /* a notification never blocks an academic record */ }
+};
 
 exports.getProgressLogs = async (req, res) => {
   try {
@@ -16,10 +21,19 @@ exports.getProgressLogs = async (req, res) => {
 
 exports.createProgressLog = async (req, res) => {
   try {
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ success: false, error: 'Only project students can create weekly progress logs' });
+    }
     const project = await Project.findById(req.params.projectId);
     if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
     if (!canAccessProject(project, req.user)) return res.status(403).json({ success: false, error: 'Not authorized to add a progress log' });
-    const log = await ProgressLog.create({ ...req.body, project: project._id, author: req.user.id });
+    // State, author, project and timestamps are workflow-owned fields. A
+    // client can create only an editable draft; submission is explicit.
+    const data = {};
+    for (const field of ['weekStart', 'summary', 'blockers', 'evidence']) {
+      if (Object.hasOwn(req.body, field)) data[field] = req.body[field];
+    }
+    const log = await ProgressLog.create({ ...data, project: project._id, author: req.user.id, state: 'draft' });
     await recordAudit({ actor: req.user.id, action: 'progress_log.created', entityType: 'progressLog', entityId: log._id, metadata: { project: project._id } });
     res.status(201).json({ success: true, data: log });
   } catch (error) {
@@ -46,10 +60,22 @@ exports.submitProgressLog = async (req, res) => {
   try {
     const log = await ProgressLog.findById(req.params.id);
     if (!log) return res.status(404).json({ success: false, error: 'Progress log not found' });
-    if (log.author.toString() !== req.user.id || log.state !== 'draft') return res.status(409).json({ success: false, error: 'Only the author may submit a draft progress log' });
+    const project = await Project.findById(log.project);
+    if (!canAccessProject(project, req.user)) return res.status(403).json({ success: false, error: 'Not authorized to submit this progress log' });
+    if (log.author.toString() !== req.user.id) return res.status(403).json({ success: false, error: 'Only the author may submit this progress log' });
+    if (log.state !== 'draft') return res.status(409).json({ success: false, error: 'Only draft progress logs can be submitted' });
     log.state = 'submitted';
     log.submittedAt = new Date();
     await log.save();
+    if (project?.supervisor && project.supervisor.toString() !== req.user.id) {
+      await notify({
+        user: project.supervisor,
+        title: 'Progress update submitted',
+        message: `${req.user.name} submitted a weekly progress update for "${project.title}".`,
+        type: 'info',
+        link: '/progress-logs'
+      });
+    }
     await recordAudit({ actor: req.user.id, action: 'progress_log.submitted', entityType: 'progressLog', entityId: log._id, metadata: { project: log.project } });
     res.json({ success: true, data: log });
   } catch (error) {

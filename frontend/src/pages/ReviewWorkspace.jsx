@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '../lib/api';
-import { useAuth } from '../components/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 
 const ReviewWorkspace = () => {
   const { activeProject, user } = useAuth();
@@ -11,19 +11,20 @@ const ReviewWorkspace = () => {
   const [finding, setFinding] = useState({ section: 'General', severity: 'medium', explanation: '', recommendation: '' });
   const [message, setMessage] = useState('');
   const supervisor = ['supervisor', 'admin'].includes(user?.role);
+  const projectId = activeProject?._id;
 
-  const load = async () => {
-    if (!activeProject) return;
+  const load = useCallback(async () => {
+    if (!projectId) return;
     try {
       const [reviewResponse, proposalResponse] = await Promise.all([
-        apiFetch(`/api/projects/${activeProject._id}/reviews`),
-        apiFetch(`/api/projects/${activeProject._id}/proposals`)
+        apiFetch(`/api/projects/${projectId}/reviews`),
+        apiFetch(`/api/projects/${projectId}/proposals`)
       ]);
       setReviews(reviewResponse.data || []);
       setProposals(proposalResponse.data || []);
     } catch (error) { setMessage(error.message); }
-  };
-  useEffect(() => { load(); }, [activeProject?._id]);
+  }, [projectId]);
+  useEffect(() => { if (projectId) load(); else { setReviews([]); setProposals([]); } }, [projectId, load]);
 
   const createReview = async (event) => {
     event.preventDefault();

@@ -4,6 +4,7 @@ const Task = require('../models/Task');
 const Submission = require('../models/Submission');
 const Meeting = require('../models/Meeting');
 const PlagiarismReport = require('../models/PlagiarismReport');
+const { sendServerError } = require('../utils/errorResponse');
 
 exports.getAdminMetrics = async (req, res) => {
   try {
@@ -29,7 +30,7 @@ exports.getAdminMetrics = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    return sendServerError(res, error, 'Unable to load administrator dashboard data');
   }
 };
 
@@ -110,7 +111,7 @@ exports.getSupervisorMetrics = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    return sendServerError(res, error, 'Unable to load supervisor dashboard data');
   }
 };
 
@@ -137,7 +138,7 @@ exports.getStudentMetrics = async (req, res) => {
     // Next deadline — find nearest future task due date
     const nextTask = await Task.findOne({
       assignedTo: studentId,
-      status: { $ne: 'completed' },
+      status: { $nin: ['done', 'completed', 'cancelled'] },
       dueDate: { $gte: new Date() }
     }).sort({ dueDate: 1 }).populate('project', 'title').lean();
 
@@ -164,6 +165,6 @@ exports.getStudentMetrics = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    return sendServerError(res, error, 'Unable to load student dashboard data');
   }
 };

@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { sendServerError } = require('../utils/errorResponse');
 
 // Get token from model, create cookie and send response
 const sendTokenResponse = (user, statusCode, res) => {
@@ -76,6 +77,10 @@ exports.login = async (req, res) => {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
 
+    if (user.status === 'inactive') {
+      return res.status(403).json({ success: false, error: 'This account has been deactivated' });
+    }
+
     // Check if password matches
     const isMatch = await user.matchPassword(password);
 
@@ -105,7 +110,7 @@ exports.adminLogin = async (req, res) => {
 
     const user = await User.findOne({ email: String(email).trim().toLowerCase() }).select('+password');
     const isMatch = user ? await user.matchPassword(password) : false;
-    if (!user || user.role !== 'admin' || !isMatch) {
+    if (!user || user.role !== 'admin' || user.status === 'inactive' || !isMatch) {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
 
@@ -142,7 +147,8 @@ const sendResetEmail = async ({ email, name, resetUrl }) => {
       to: [email],
       subject: 'Reset your SuperVisorAI password',
       text: `Hello ${name},\n\nUse this link within one hour to reset your password:\n${resetUrl}\n\nIf you did not request this, you can ignore this email.`
-    })
+    }),
+    signal: AbortSignal.timeout(10000)
   });
   if (!response.ok) throw new Error('Unable to send the password reset email. Please try again later.');
 };
@@ -172,11 +178,15 @@ exports.forgotPassword = async (req, res) => {
       user.passwordResetToken = undefined;
       user.passwordResetExpires = undefined;
       await user.save({ validateBeforeSave: false });
-      throw error;
+      // Preserve the same public response for existing and non-existing
+      // addresses. Operators receive the server log without leaking account
+      // existence or email-provider configuration to an attacker.
+      console.error('Password reset email failed:', error.message);
+      return res.json({ success: true, message: 'If an account exists for this email, a reset link has been sent.' });
     }
     res.json({ success: true, message: 'If an account exists for this email, a reset link has been sent.' });
   } catch (error) {
-    res.status(503).json({ success: false, error: error.message || 'Unable to start password reset' });
+    return sendServerError(res, error, 'Password reset is temporarily unavailable. Please try again later.');
   }
 };
 

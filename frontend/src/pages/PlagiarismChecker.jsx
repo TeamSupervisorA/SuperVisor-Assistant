@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../lib/api';
-import { useAuth } from '../components/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { motion } from 'framer-motion';
 
 const containerVariants = {
@@ -22,21 +22,15 @@ const PlagiarismChecker = () => {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState('');
   const canRunChecks = ['supervisor', 'admin'].includes(user?.role);
+  const projectId = activeProject?._id;
 
-  useEffect(() => {
-    if (activeProject) {
-      loadData();
-    } else {
-      setLoading(false);
-    }
-  }, [activeProject]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    if (!projectId) return;
     setLoading(true);
     try {
       const [repRes, subRes] = await Promise.all([
-        apiFetch(`/api/plagiarism?project=${activeProject._id}`),
-        apiFetch(`/api/submissions?project=${activeProject._id}`)
+        apiFetch(`/api/plagiarism?project=${projectId}`),
+        apiFetch(`/api/submissions?project=${projectId}`)
       ]);
       if (repRes.data) setReports(repRes.data);
       if (subRes.data) setSubmissions(subRes.data);
@@ -46,7 +40,12 @@ const PlagiarismChecker = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
+
+  useEffect(() => {
+    if (projectId) loadData();
+    else { setReports([]); setSubmissions([]); setLoading(false); }
+  }, [projectId, loadData]);
 
   const handleRunCheck = async () => {
     if (!canRunChecks) { setError('Only the assigned supervisor or an administrator can run an integrity screen. Students can view shared reports.'); return; }

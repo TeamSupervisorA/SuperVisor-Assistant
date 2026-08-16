@@ -1,0 +1,15 @@
+# In Render's Blueprint import dialog, select latex-compiler/render.yaml.
+# These Docker paths are relative to the repository root. Render prompts for
+# the secret during the first import; never commit COMPILER_SHARED_SECRET.
+services:
+  - type: web
+    name: supervisor-latex-compiler
+    runtime: docker
+    dockerfilePath: ./latex-compiler/Dockerfile
+    dockerContext: ./latex-compiler
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: COMPILER_SHARED_SECRET
+        sync: false

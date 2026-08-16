@@ -13,7 +13,9 @@ const messageSchema = new mongoose.Schema({
   },
   content: {
     type: String,
-    required: true
+    required: true,
+    trim: true,
+    maxlength: [5000, 'A chat message cannot exceed 5,000 characters']
   },
   readBy: [{
     type: mongoose.Schema.Types.ObjectId,

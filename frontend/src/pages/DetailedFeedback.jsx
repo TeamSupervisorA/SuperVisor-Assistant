@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../components/AuthContext';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { apiFetch } from '../lib/api';
 import { motion } from 'framer-motion';
 
@@ -15,22 +16,17 @@ const itemVariants = {
 
 const DetailedFeedback = () => {
   const { activeProject, user } = useAuth();
+  const navigate = useNavigate();
   const [evaluation, setEvaluation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const projectId = activeProject?._id;
   
-  useEffect(() => {
-    if (activeProject) {
-      loadEvaluation();
-    } else {
-      setLoading(false);
-    }
-  }, [activeProject]);
-
-  const loadEvaluation = async () => {
+  const loadEvaluation = useCallback(async () => {
+    if (!projectId) return;
     setLoading(true);
     try {
-      const res = await apiFetch(`/api/evaluations?project=${activeProject._id}`);
+      const res = await apiFetch(`/api/evaluations?project=${projectId}`);
       if (res.data && res.data.length > 0) {
         setEvaluation(res.data[0]);
       } else {
@@ -43,7 +39,12 @@ const DetailedFeedback = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
+
+  useEffect(() => {
+    if (projectId) loadEvaluation();
+    else { setEvaluation(null); setLoading(false); }
+  }, [projectId, loadEvaluation]);
 
   if (!activeProject) {
     return (
@@ -100,15 +101,15 @@ const DetailedFeedback = () => {
           </div>
           
           <div className="flex gap-3">
-            <button className="px-5 py-2.5 rounded-xl border border-outline-variant/50 bg-surface/50 backdrop-blur-md text-on-surface font-label-md text-[13px] font-bold hover:bg-surface-container transition-colors shadow-sm flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span> Download Report
+            <button onClick={() => navigate('/project-report')} className="px-5 py-2.5 rounded-xl border border-outline-variant/50 bg-surface/50 backdrop-blur-md text-on-surface font-label-md text-[13px] font-bold hover:bg-surface-container transition-colors shadow-sm flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px]">summarize</span> Open Project Report
             </button>
             {isSupervisor ? (
-              <button className="px-5 py-2.5 rounded-xl bg-primary text-on-primary font-label-md text-[13px] font-bold hover:bg-primary-fixed-variant transition-colors shadow-sm flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px]">edit</span> Update Feedback
+              <button onClick={() => navigate('/evaluations')} className="px-5 py-2.5 rounded-xl bg-primary text-on-primary font-label-md text-[13px] font-bold hover:bg-primary-fixed-variant transition-colors shadow-sm flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px]">grading</span> Open Evaluations
               </button>
             ) : (
-              <button className="px-5 py-2.5 rounded-xl bg-primary text-on-primary font-label-md text-[13px] font-bold hover:bg-primary-fixed-variant transition-colors shadow-sm flex items-center gap-2">
+              <button onClick={() => navigate('/meeting-management')} className="px-5 py-2.5 rounded-xl bg-primary text-on-primary font-label-md text-[13px] font-bold hover:bg-primary-fixed-variant transition-colors shadow-sm flex items-center gap-2">
                 <span className="material-symbols-outlined text-[18px]">event</span> Schedule Review
               </button>
             )}
@@ -173,12 +174,7 @@ const DetailedFeedback = () => {
               </p>
             </div>
 
-            {isSupervisor && (
-              <div className="mt-6 flex justify-end gap-3 relative z-10">
-                <button className="px-5 py-2.5 rounded-xl border border-error/30 text-error font-label-md text-[13px] font-bold hover:bg-error/5 transition-colors">Request Revision</button>
-                <button className="px-5 py-2.5 rounded-xl bg-primary text-on-primary font-label-md text-[13px] font-bold hover:bg-primary/90 transition-colors">Approve Submission</button>
-              </div>
-            )}
+            {isSupervisor && <p className="mt-6 text-sm text-secondary">Project-level evaluations are managed from the Evaluations workspace. Deliverable-specific feedback is recorded from Deliverable Review.</p>}
           </motion.div>
 
           {/* Rubric Breakdown List (Full Width) */}

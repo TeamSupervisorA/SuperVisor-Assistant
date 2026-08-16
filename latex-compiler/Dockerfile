@@ -1,5 +1,7 @@
 FROM node:22-bookworm-slim
 
+ENV NODE_ENV=production
+
 # The packages below cover the IEEEtran class and the common IEEE mathematics,
 # algorithm, graphics, bibliography, XeLaTeX, and LuaLaTeX workflows.
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -9,8 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY package.json ./
-RUN npm install --omit=dev --ignore-scripts
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts
 COPY server.js ./
 RUN useradd --system --create-home --uid 10001 compiler
 USER compiler

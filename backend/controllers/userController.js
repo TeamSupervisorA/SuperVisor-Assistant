@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const { sendServerError } = require('../utils/errorResponse');
 
 const publicProfile = (user) => ({ id: user._id, name: user.name, email: user.email, role: user.role, department: user.department, studentId: user.studentId, batch: user.batch });
 
@@ -29,7 +30,7 @@ exports.getSettings = async (req, res) => {
     }
     res.status(200).json({ success: true, data: user.settings });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    return sendServerError(res, error, 'Unable to load user settings');
   }
 };
 
@@ -41,9 +42,21 @@ exports.updateSettings = async (req, res) => {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
     
-    const allowed = ['aiChatbot', 'ideaGenerator', 'proposalFeedback', 'plagiarismAutoCheck', 'systemPrompt', 'plagiarismTolerance'];
+    const allowed = ['aiChatbot', 'ideaGenerator', 'proposalFeedback', 'systemPrompt'];
+    const integrityKeys = ['plagiarismAutoCheck', 'plagiarismTolerance'];
+    if (integrityKeys.some((key) => req.body[key] !== undefined)) {
+      if (req.user.role !== 'supervisor') {
+        return res.status(403).json({ success: false, error: 'Only supervisors can configure automatic integrity screening' });
+      }
+      allowed.push(...integrityKeys);
+    }
     const settings = {};
     allowed.forEach((key) => { if (req.body[key] !== undefined) settings[key] = req.body[key]; });
+    for (const key of ['aiChatbot', 'ideaGenerator', 'proposalFeedback', 'plagiarismAutoCheck']) {
+      if (settings[key] !== undefined && typeof settings[key] !== 'boolean') {
+        return res.status(422).json({ success: false, error: `${key} must be true or false` });
+      }
+    }
     if (typeof settings.systemPrompt === 'string' && settings.systemPrompt.length > 4000) {
       return res.status(422).json({ success: false, error: 'System prompt must be 4000 characters or fewer' });
     }

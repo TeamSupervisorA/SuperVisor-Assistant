@@ -1,5 +1,6 @@
 const Task = require('../models/Task');
 const { Project, canAccessProject, projectIdsForUser } = require('../utils/projectAccess');
+const User = require('../models/User');
 
 const completedStatuses = new Set(['done', 'completed']);
 const lifecycleStatuses = new Set(['todo', 'in_progress', 'blocked', 'review', 'done', 'cancelled']);
@@ -13,6 +14,22 @@ const transitions = {
 };
 
 const normalizedStatus = (status) => status === 'completed' ? 'done' : status === 'delayed' ? 'todo' : status;
+
+const validateAssignee = async (project, assignee) => {
+  if (assignee === undefined || assignee === null || assignee === '') return null;
+  if (!project.students.some((student) => student.toString() === String(assignee))) {
+    const error = new Error('Task assignee must be a student assigned to this project');
+    error.statusCode = 422;
+    throw error;
+  }
+  const student = await User.findOne({ _id: assignee, role: 'student', status: 'active' }).select('_id');
+  if (!student) {
+    const error = new Error('Task assignee must be an active student account');
+    error.statusCode = 422;
+    throw error;
+  }
+  return student._id;
+};
 
 const hasOpenDependencies = async (dependencies = []) => {
   if (!dependencies.length) return false;
@@ -52,7 +69,10 @@ exports.getTasks = async (req, res) => {
       query.project = req.query.project;
     }
 
-    if (req.user.role === 'student') {
+    // A project workspace is shared: members need to see each other's tasks
+    // and prerequisite work in order to understand the timeline. The update
+    // and transition endpoints still restrict a student to their own task.
+    if (req.user.role === 'student' && !req.query.project) {
       query.assignedTo = req.user.id;
     } else if (req.user.role === 'supervisor') {
       query.project = query.project || { $in: await projectIdsForUser(req.user) };
@@ -64,7 +84,7 @@ exports.getTasks = async (req, res) => {
 
     res.status(200).json({ success: true, count: tasks.length, data: tasks });
   } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
+    res.status(error.statusCode || 400).json({ success: false, error: error.message });
   }
 };
 
@@ -96,13 +116,17 @@ exports.createTask = async (req, res) => {
     if (await hasDependencyCycle(null, req.body.dependencies)) {
       return res.status(422).json({ success: false, error: 'Task dependencies cannot contain a cycle' });
     }
-    const allowed = ['title', 'description', 'project', 'assignedTo', 'status', 'priority', 'dueDate', 'dependencies', 'acceptanceCriteria', 'blockedReason', 'evidence'];
+    // New tasks always begin as planned. Lifecycle state, blockers, and
+    // completion evidence are server-owned and move through /transition so a
+    // client cannot create a pre-completed task and inflate project progress.
+    const allowed = ['title', 'description', 'project', 'assignedTo', 'priority', 'dueDate', 'dependencies', 'acceptanceCriteria'];
     const input = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowed.includes(key)));
-    const task = await Task.create({ ...input, history: [{ actor: req.user.id, action: 'created', toStatus: input.status || 'todo' }] });
+    if (input.assignedTo !== undefined) input.assignedTo = await validateAssignee(project, input.assignedTo);
+    const task = await Task.create({ ...input, status: 'todo', history: [{ actor: req.user.id, action: 'created', toStatus: 'todo' }] });
 
     res.status(201).json({ success: true, data: task });
   } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
+    res.status(error.statusCode || 400).json({ success: false, error: error.message });
   }
 };
 
@@ -129,6 +153,7 @@ exports.updateTask = async (req, res) => {
     const editableFields = ['title', 'description', 'priority', 'dueDate', 'dependencies', 'acceptanceCriteria', 'assignedTo', 'evidence'];
     const updates = Object.fromEntries(Object.entries(req.body).filter(([key]) => editableFields.includes(key)));
     if (!Object.keys(updates).length) return res.status(422).json({ success: false, error: 'No editable task fields were provided' });
+    if (Object.hasOwn(updates, 'assignedTo')) updates.assignedTo = await validateAssignee(task.project, updates.assignedTo);
     if (updates.dependencies) {
       const dependencyCount = await Task.countDocuments({ _id: { $in: updates.dependencies }, project: task.project._id });
       if (dependencyCount !== updates.dependencies.length) return res.status(422).json({ success: false, error: 'Dependencies must be tasks in the same project' });
@@ -148,7 +173,7 @@ exports.updateTask = async (req, res) => {
 
     res.status(200).json({ success: true, data: task });
   } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
+    res.status(error.statusCode || 400).json({ success: false, error: error.message });
   }
 };
 
@@ -179,7 +204,7 @@ exports.transitionTask = async (req, res) => {
     await task.save();
     res.json({ success: true, data: task });
   } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
+    res.status(error.statusCode || 400).json({ success: false, error: error.message });
   }
 };
 

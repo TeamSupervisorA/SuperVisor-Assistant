@@ -56,13 +56,11 @@ function App() {
           {/* Protected Dashboard Routes */}
           <Route element={<ProtectedRoute />}>
             <Route element={<DashboardLayout />}>
-              {/* Student */}
-              <Route path="/dashboard" element={<StudentDashboard />} />
+              {/* Shared project workspaces */}
               <Route path="/explore" element={<ExploreProjects />} />
               <Route path="/tasks-milestones" element={<TasksMilestones />} />
               <Route path="/team-management" element={<TeamManagement />} />
               <Route path="/project-resource-library" element={<ProjectResourceLibrary />} />
-              <Route path="/create-new-work" element={<CreateNewWork />} />
               <Route path="/student-submissions" element={<StudentSubmissions />} />
               <Route path="/detailed-feedback" element={<DetailedFeedback />} />
               <Route path="/meeting-management" element={<MeetingManagement />} />
@@ -70,6 +68,8 @@ function App() {
               <Route path="/proposals" element={<ProposalLifecycle />} />
               <Route path="/progress-logs" element={<ProgressLogs />} />
               <Route path="/reviews" element={<ReviewWorkspace />} />
+              {/* Students can view shared integrity reports; only reviewers can run checks. */}
+              <Route path="/plagiarism-checker" element={<PlagiarismChecker />} />
               <Route path="/research-studio" element={<ResearchStudioRoute />} />
               <Route path="/paper-editor" element={<WorkspaceRoute><PaperEditor /></WorkspaceRoute>} />
               <Route path="/code-ide" element={<WorkspaceRoute><CodeIDE /></WorkspaceRoute>} />
@@ -77,10 +77,21 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/chat" element={<ProjectChat />} />
 
-              {/* Supervisor + Admin only */}
-              <Route element={<ProtectedRoute roles={['supervisor', 'admin']} />}>
+              {/* Role-specific entry points keep a user from landing in a
+                  dashboard whose API is intentionally unavailable to them. */}
+              <Route element={<ProtectedRoute roles={['student']} />}>
+                <Route path="/dashboard" element={<StudentDashboard />} />
+              </Route>
+
+              <Route element={<ProtectedRoute roles={['student', 'supervisor']} />}>
+                <Route path="/create-new-work" element={<CreateNewWork />} />
+              </Route>
+
+              <Route element={<ProtectedRoute roles={['supervisor']} />}>
                 <Route path="/supervisor-dashboard" element={<SupervisorDashboard />} />
-                <Route path="/plagiarism-checker" element={<PlagiarismChecker />} />
+              </Route>
+
+              <Route element={<ProtectedRoute roles={['supervisor', 'admin']} />}>
                 <Route path="/evaluations" element={<EvaluationsGrades />} />
               </Route>
 

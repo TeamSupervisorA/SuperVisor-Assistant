@@ -2,20 +2,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Editor, { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import { apiFetch } from '../lib/api';
-import { useAuth } from '../components/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 
 // Keep Monaco fully inside the Vite bundle. The default CDN loader can remain
 // on "Loading…" when a production Content-Security-Policy blocks injected
 // third-party scripts.
 loader.config({ monaco });
 
-const paperStarter = `\\documentclass[11pt]{article}
-\\usepackage[margin=1in]{geometry}
+const paperStarter = `\\documentclass[conference]{IEEEtran}
+\\usepackage{cite}
+\\usepackage{amsmath,amssymb,amsfonts}
+\\usepackage{algorithmic}
 \\usepackage{graphicx}
+\\usepackage{textcomp}
+\\usepackage{xcolor}
 \\usepackage{hyperref}
 \\title{Working paper title}
-\\author{Author name}
-\\date{\\today}
+\\author{\\IEEEauthorblockN{Author name}
+\\IEEEauthorblockA{\\textit{Department or School} \\\\
+Institution \\\\
+City, Country \\\\
+email@example.edu}}
 
 \\begin{document}
 \\maketitle
@@ -23,6 +30,10 @@ const paperStarter = `\\documentclass[11pt]{article}
 \\begin{abstract}
 Write a concise abstract: problem, method, results, and contribution.
 \\end{abstract}
+
+\\begin{IEEEkeywords}
+research topic, method, evaluation, reproducibility
+\\end{IEEEkeywords}
 
 \\section{Introduction}
 State the research problem, why it matters, and your contribution.
@@ -36,8 +47,9 @@ Add evidence, figures, and interpretation here.
 \\section{Conclusion}
 Summarise the contribution and next steps.
 
-\\bibliographystyle{plain}
-\\bibliography{references}
+\\begin{thebibliography}{00}
+\\bibitem{placeholder} Add verified sources from the Literature desk here.
+\\end{thebibliography}
 \\end{document}`;
 
 const codeStarter = `// Research implementation notebook\n// Keep experiments reproducible: document inputs, outputs, and assumptions.\n\nfunction main() {\n  console.log('Start your research implementation here');\n}\n\nmain();`;
@@ -45,6 +57,11 @@ const codeStarter = `// Research implementation notebook\n// Keep experiments re
 const codeLanguages = [
   ['javascript', 'JavaScript'], ['typescript', 'TypeScript'], ['python', 'Python'], ['java', 'Java'], ['c', 'C'], ['cpp', 'C++'], ['csharp', 'C#'], ['go', 'Go'], ['rust', 'Rust'], ['r', 'R'], ['julia', 'Julia'], ['php', 'PHP'], ['ruby', 'Ruby'], ['sql', 'SQL'], ['bash', 'Bash']
 ];
+const sourceExtensions = {
+  javascript: 'js', typescript: 'ts', python: 'py', java: 'java', c: 'c',
+  cpp: 'cpp', csharp: 'cs', go: 'go', rust: 'rs', r: 'R', julia: 'jl',
+  php: 'php', ruby: 'rb', sql: 'sql', bash: 'sh'
+};
 
 const starterForLanguage = (language) => ({
   javascript: codeStarter,
@@ -74,9 +91,22 @@ const citationKey = (work) => {
   return `${surname}${work.year || ''}${titleWord}`;
 };
 
-const bibtexFor = (work) => {
+const escapeLatex = (value) => String(value || '')
+  .replace(/\\/g, '\\textbackslash{}')
+  .replace(/([#$%&_{}])/g, '\\$1')
+  .replace(/\^/g, '\\textasciicircum{}')
+  .replace(/~/g, '\\textasciitilde{}');
+
+const bibliographyEntryFor = (work) => {
   const key = citationKey(work);
-  return `@article{${key},\n  title = {${work.title}},\n  author = {${(work.authors || []).join(' and ')}},\n  year = {${work.year || 'n.d.'}},\n  journal = {${work.venue || 'Unknown venue'}},\n  doi = {${work.doi || ''}},\n  url = {${work.url || ''}}\n}`;
+  const fields = [
+    escapeLatex((work.authors || []).join(', ') || 'Unknown author'),
+    `\\textit{${escapeLatex(work.title || 'Untitled work')}}`,
+    escapeLatex(work.venue || ''),
+    escapeLatex(work.year || ''),
+    work.doi ? `doi: ${escapeLatex(work.doi)}` : ''
+  ].filter(Boolean);
+  return `\\bibitem{${key}}\n${fields.join(', ')}.`;
 };
 
 const relativeTime = (date) => {
@@ -86,6 +116,22 @@ const relativeTime = (date) => {
   if (minutes < 60) return `Saved ${minutes}m ago`;
   return `Saved ${new Date(date).toLocaleDateString()}`;
 };
+
+// These states intentionally mirror the safe, host-free values returned by
+// /api/workspace/runtime-status. They explain a deployment setup problem
+// without disclosing a compiler URL or service credentials to project users.
+const compilerSetupMessageFor = (state) => ({
+  shared_secret_invalid: 'The PDF compiler service is missing its matching shared secret. Your draft is still safe; an administrator needs to complete the service configuration.',
+  invalid_url: 'The PDF compiler service address is invalid. Your draft is still safe; an administrator needs to correct the service configuration.',
+  not_configured: 'PDF compilation has not been enabled for this deployment. You can continue to save and download your LaTeX source while an administrator deploys and connects the private compiler service.'
+}[state] || 'PDF compilation is not ready on this deployment. You can continue to save and download your LaTeX source.');
+
+const runnerSetupMessageFor = (state) => ({
+  shared_secret_invalid: 'The isolated code runner is missing its matching shared secret. Your source is still safe; an administrator needs to complete the service configuration.',
+  invalid_url: 'The isolated code runner address is invalid. Your source is still safe; an administrator needs to correct the service configuration.',
+  unavailable: 'The private code runner or its approved runtime is not reachable yet. Your source is still safe; an administrator needs to restore the isolated service and verify its health check.',
+  not_configured: 'Code execution has not been enabled for this deployment. You can continue to save and download your source while an administrator deploys and connects the private runner.'
+}[state] || 'Code execution is not ready on this deployment. You can continue to save and download your source.');
 
 const EmptyProject = ({ workspace = 'research' }) => (
   <div className="min-h-[calc(100vh-64px)] grid place-items-center bg-background p-6">
@@ -121,13 +167,17 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
   const [compileLog, setCompileLog] = useState('');
   const [compileError, setCompileError] = useState('');
   const [compiledVersion, setCompiledVersion] = useState('');
+  const [isCheckingRuntime, setIsCheckingRuntime] = useState(false);
   const [isRunningCode, setIsRunningCode] = useState(false);
   const [codeOutput, setCodeOutput] = useState({ text: 'Run a program to see output here.', state: 'idle', language: '' });
+  const [runtimeStatus, setRuntimeStatus] = useState(null);
   const [isCodeFullscreen, setIsCodeFullscreen] = useState(false);
+  const [codeEditorHeight, setCodeEditorHeight] = useState(420);
   const saveTimer = useRef(null);
   const compileTimer = useRef(null);
   const selectedDocumentRef = useRef(null);
   const codeWorkspaceRef = useRef(null);
+  const runCodeRef = useRef(null);
 
   const loadDocuments = useCallback(async (keepId) => {
     if (!activeProject?._id) return;
@@ -139,8 +189,10 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
       const preferred = nextDocuments.find((item) => item._id === keepId) || nextDocuments[0];
       if (preferred) {
         const detail = await apiFetch(`/api/workspace/documents/${preferred._id}`);
+        selectedDocumentRef.current = detail.data;
         setSelectedDocument(detail.data);
       } else {
+        selectedDocumentRef.current = null;
         setSelectedDocument(null);
       }
     } catch (requestError) {
@@ -152,12 +204,50 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
 
   useEffect(() => {
     setDocuments([]);
+    selectedDocumentRef.current = null;
     setSelectedDocument(null);
     setDirty(false);
     setError('');
     if (activeProject?._id) loadDocuments();
     else setLoading(false);
   }, [activeProject?._id, loadDocuments]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!activeProject?._id) {
+      setRuntimeStatus(null);
+      return () => { cancelled = true; };
+    }
+    apiFetch('/api/workspace/runtime-status')
+      .then((result) => {
+        if (!cancelled) setRuntimeStatus(result.data || null);
+      })
+      .catch(() => {
+        if (!cancelled) setRuntimeStatus(null);
+      });
+    return () => { cancelled = true; };
+  }, [activeProject?._id]);
+
+  // Do not keep spending compile requests after the authenticated capability
+  // check has conclusively reported that this deployment has no compiler.
+  useEffect(() => {
+    if (runtimeStatus?.compiler?.configured === false) setAutoCompile(false);
+  }, [runtimeStatus?.compiler?.configured]);
+
+  useEffect(() => {
+    if (selectedDocument?.kind !== 'code' || selectedDocument.language === 'javascript' || !runtimeStatus) return;
+    const language = selectedDocument.language || 'javascript';
+    const available = runtimeStatus.codeRunner?.configured && runtimeStatus.codeRunner?.languages?.includes(language);
+    if (!available) {
+      setCodeOutput({
+        text: runtimeStatus.codeRunner?.configured
+          ? language + ' is not installed on the approved code runner. You can still save and download this source.'
+          : runnerSetupMessageFor(runtimeStatus.codeRunner?.state),
+        state: 'unavailable',
+        language
+      });
+    }
+  }, [runtimeStatus, selectedDocument?.kind, selectedDocument?.language]);
 
   useEffect(() => () => {
     clearTimeout(saveTimer.current);
@@ -198,6 +288,7 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
     try {
       setStatus('Loading document…');
       const result = await apiFetch(`/api/workspace/documents/${documentId}`);
+      selectedDocumentRef.current = result.data;
       setSelectedDocument(result.data);
       setDirty(false);
       setStatus('');
@@ -263,14 +354,62 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
     return () => window.removeEventListener('keydown', handleSaveShortcut);
   }, [saveDocument]);
 
+  useEffect(() => {
+    const handleRunShortcut = (event) => {
+      if (!(event.ctrlKey || event.metaKey) || event.key !== 'Enter') return;
+      const currentDocument = selectedDocumentRef.current;
+      if (currentDocument?.kind !== 'code') return;
+      event.preventDefault();
+      runCodeRef.current?.();
+    };
+    window.addEventListener('keydown', handleRunShortcut);
+    return () => window.removeEventListener('keydown', handleRunShortcut);
+  }, []);
+
   const updateSelected = (updates) => {
-    setSelectedDocument((current) => current ? { ...current, ...updates } : current);
+    setSelectedDocument((current) => {
+      const next = current ? { ...current, ...updates } : current;
+      selectedDocumentRef.current = next;
+      return next;
+    });
     setDirty(true);
   };
+
+  const refreshRuntimeStatus = async () => {
+    setIsCheckingRuntime(true);
+    try {
+      const result = await apiFetch('/api/workspace/runtime-status');
+      const nextStatus = result.data || null;
+      setRuntimeStatus(nextStatus);
+      if (nextStatus?.compiler?.configured) {
+        setCompileError('');
+        setCompileLog('');
+      }
+      if (nextStatus?.compiler?.configured || nextStatus?.codeRunner?.configured) {
+        setStatus('Workspace runtime status refreshed');
+      }
+    } catch (requestError) {
+      setError(requestError.message || 'Unable to check the workspace runtime configuration. Your source remains saved safely.');
+    } finally {
+      setIsCheckingRuntime(false);
+    }
+  };
+
+  // Kept as aliases for the paper controls; both paper and code controls now
+  // refresh the same authenticated, host-free runtime capability response.
+  const refreshCompilerStatus = refreshRuntimeStatus;
+  const isCheckingCompiler = isCheckingRuntime;
 
   const compileDocument = useCallback(async ({ automatic = false } = {}) => {
     let documentToCompile = selectedDocumentRef.current;
     if (!documentToCompile?._id || documentToCompile.kind !== 'paper' || isCompiling) return;
+    if (runtimeStatus?.compiler?.configured === false) {
+      const message = compilerSetupMessageFor(runtimeStatus.compiler.state);
+      setCompileError(message);
+      setCompileLog('The deployment reports that no private compiler service is ready. Your source was not sent to a compiler.');
+      if (!automatic) setStatus('Compiler setup required');
+      return;
+    }
     setCompileError('');
     setCompileLog('');
     setIsCompiling(true);
@@ -300,7 +439,7 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
     } finally {
       setIsCompiling(false);
     }
-  }, [compilerEngine, isCompiling, saveDocument]);
+  }, [compilerEngine, isCompiling, runtimeStatus, saveDocument]);
 
   useEffect(() => {
     if (!autoCompile || selectedDocument?.kind !== 'paper' || !selectedDocument?.content) return undefined;
@@ -309,12 +448,19 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
     return () => clearTimeout(compileTimer.current);
   }, [autoCompile, compileDocument, selectedDocument?.content, selectedDocument?.kind]);
 
-  const runJavascriptInWorker = (source) => new Promise((resolve) => {
+  const runJavascriptInWorker = useCallback((source) => new Promise((resolve) => {
     const workerSource = `
       const format = (value) => {
         if (typeof value === 'string') return value;
         try { return JSON.stringify(value); } catch { return String(value); }
       };
+      // The local runner is intentionally computation-only. It must not expose
+      // the application origin, API credentials, or a way to load more code.
+      self.fetch = () => Promise.reject(new Error('Network access is disabled in the local runner.'));
+      self.XMLHttpRequest = undefined;
+      self.WebSocket = undefined;
+      self.EventSource = undefined;
+      self.importScripts = () => { throw new Error('Loading external scripts is disabled in the local runner.'); };
       self.onmessage = async ({ data }) => {
         const lines = [];
         const capture = (...values) => lines.push(values.map(format).join(' '));
@@ -349,30 +495,50 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
       resolve({ ok: false, output: `Worker error: ${event.message}` });
     };
     worker.postMessage({ source });
-  });
+  }), []);
 
-  const runCode = async () => {
+  const runCode = useCallback(async () => {
     const documentToRun = selectedDocumentRef.current;
     if (!documentToRun?._id || documentToRun.kind !== 'code' || isRunningCode) return;
+    const language = documentToRun.language || 'javascript';
+    if (language !== 'javascript' && runtimeStatus?.codeRunner?.configured === false) {
+      setCodeOutput({
+        text: runnerSetupMessageFor(runtimeStatus.codeRunner.state),
+        state: 'unavailable',
+        language
+      });
+      setStatus('Runtime setup required');
+      return;
+    }
     setIsRunningCode(true);
-    setCodeOutput({ text: 'Saving source and preparing runtime…', state: 'running', language: documentToRun.language || 'javascript' });
+    setCodeOutput({ text: 'Saving source and preparing runtime…', state: 'running', language });
     try {
       const saved = await saveDocument(documentToRun, true);
       if (!saved) throw new Error('The source could not be saved, so it was not run.');
-      if (documentToRun.language === 'javascript') {
+      if (language === 'javascript') {
         const result = await runJavascriptInWorker(documentToRun.content);
         setCodeOutput({ text: result.output, state: result.ok ? 'success' : 'error', language: 'javascript' });
       } else {
         const result = await apiFetch(`/api/workspace/documents/${documentToRun._id}/run`, { method: 'POST', timeoutMs: 25000 });
         const text = [result.data.compileOutput, result.data.output, result.data.exitCode !== null ? `Process exited with code ${result.data.exitCode}.` : '', result.data.signal ? `Signal: ${result.data.signal}` : ''].filter(Boolean).join('\n');
-        setCodeOutput({ text: text || '(Program completed with no output.)', state: result.data.exitCode && result.data.exitCode !== 0 ? 'error' : 'success', language: documentToRun.language });
+        setCodeOutput({ text: text || '(Program completed with no output.)', state: result.data.exitCode && result.data.exitCode !== 0 ? 'error' : 'success', language });
       }
     } catch (requestError) {
-      setCodeOutput({ text: requestError.message || 'Code execution failed.', state: 'error', language: documentToRun.language || '' });
+      const message = requestError.message || 'Code execution failed.';
+      const runnerUnavailable = /CODE_RUNNER_URL|isolated code runner|code runner is configured with an invalid URL/i.test(message);
+      setCodeOutput({
+        text: runnerUnavailable
+          ? `${message}\n\nYour source is safe and saved. JavaScript can run locally in this browser; other languages require the project’s isolated runner to be deployed with its approved libraries.`
+          : message,
+        state: runnerUnavailable ? 'unavailable' : 'error',
+        language
+      });
     } finally {
       setIsRunningCode(false);
     }
-  };
+  }, [isRunningCode, runJavascriptInWorker, runtimeStatus, saveDocument]);
+
+  useEffect(() => { runCodeRef.current = runCode; }, [runCode]);
 
   const toggleCodeFullscreen = async () => {
     try {
@@ -399,6 +565,7 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
         })
       });
       setDocuments((current) => [result.data, ...current]);
+      selectedDocumentRef.current = result.data;
       setSelectedDocument(result.data);
       setDirty(false);
       setStatus('New workspace ready');
@@ -413,6 +580,7 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
       await apiFetch(`/api/workspace/documents/${selectedDocument._id}`, { method: 'DELETE' });
       const remaining = documents.filter((document) => document._id !== selectedDocument._id);
       setDocuments(remaining);
+      selectedDocumentRef.current = null;
       setSelectedDocument(null);
       setStatus('Document deleted');
       if (remaining[0]) selectDocument(remaining[0]._id);
@@ -444,18 +612,34 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
       return;
     }
     const key = citationKey(work);
-    const citation = `% Reference to add in references.bib:\n${bibtexFor(work)}\n\n`;
-    const content = selectedDocument.content.includes(`\\cite{${key}}`)
-      ? selectedDocument.content
-      : `${selectedDocument.content.replace(/\\end\{document\}\s*$/, '')}\n\nThis work builds on related research \\cite{${key}}.\n\n${citation}\\end{document}\n`;
+    const citation = bibliographyEntryFor(work);
+    let content = selectedDocument.content;
+    if (!content.includes(`\\cite{${key}}`)) {
+      const insertionAt = content.search(/\\begin\{thebibliography\}|\\end\{document\}/);
+      const sentence = `\nThis work builds on related research \\cite{${key}}.\n\n`;
+      content = insertionAt >= 0
+        ? `${content.slice(0, insertionAt)}${sentence}${content.slice(insertionAt)}`
+        : `${content}${sentence}`;
+    }
+    if (!content.includes(`\\bibitem{${key}}`)) {
+      if (/\\end\{thebibliography\}/.test(content)) {
+        content = content.replace(/\\end\{thebibliography\}/, `${citation}\n\\end{thebibliography}`);
+      } else {
+        // The isolated compiler receives one source file, so a self-contained
+        // thebibliography block is reliable where an external .bib file is not.
+        content = content
+          .replace(/^\s*\\bibliographystyle\{[^}]+\}\s*$/gm, '')
+          .replace(/^\s*\\bibliography\{[^}]+\}\s*$/gm, '')
+          .replace(/\\end\{document\}\s*$/, `\n\\begin{thebibliography}{00}\n${citation}\n\\end{thebibliography}\n\\end{document}\n`);
+      }
+    }
     updateSelected({ content });
-    setActivePanel('editor');
-    setStatus(`Citation ${key} added`);
+    setStatus(`Citation ${key} added to the self-contained reference list`);
   };
 
   const downloadSource = () => {
     if (!selectedDocument) return;
-    const extension = selectedDocument.kind === 'paper' ? 'tex' : selectedDocument.language === 'python' ? 'py' : 'js';
+    const extension = selectedDocument.kind === 'paper' ? 'tex' : (sourceExtensions[selectedDocument.language] || 'txt');
     const blob = new Blob([selectedDocument.content || ''], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -469,10 +653,11 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
     const target = selectedDocument?.overleafUrl || 'https://www.overleaf.com/project/new';
     try {
       const parsed = new URL(target);
-      if (parsed.protocol !== 'https:') throw new Error('Only HTTPS links are allowed');
+      const isOverleafHost = parsed.hostname === 'overleaf.com' || parsed.hostname.endsWith('.overleaf.com');
+      if (parsed.protocol !== 'https:' || !isOverleafHost) throw new Error('Only official Overleaf HTTPS links are allowed');
       window.open(parsed.href, '_blank', 'noopener,noreferrer');
     } catch {
-      setError('Use a valid HTTPS Overleaf project link.');
+      setError('Use a valid HTTPS Overleaf project link on overleaf.com.');
     }
   };
 
@@ -491,6 +676,28 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
   };
+
+  const adjustPaneRatio = (amount) => setSplitRatio((current) => Math.min(72, Math.max(28, current + amount)));
+
+  const startCodePaneResize = (event) => {
+    event.preventDefault();
+    const container = codeWorkspaceRef.current;
+    if (!container) return;
+    const bounds = container.getBoundingClientRect();
+    const onMove = (moveEvent) => {
+      const maxHeight = Math.max(320, Math.min(820, window.innerHeight - 250));
+      const next = moveEvent.clientY - bounds.top - 100;
+      setCodeEditorHeight(Math.min(maxHeight, Math.max(280, next)));
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
+  const adjustCodeEditorHeight = (amount) => setCodeEditorHeight((current) => Math.min(820, Math.max(280, current + amount)));
 
   const sections = useMemo(() => latexSections(selectedDocument?.content), [selectedDocument?.content]);
   const textPreview = useMemo(() => (selectedDocument?.content || '')
@@ -514,27 +721,40 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
       ['Introduction', /\\section\{Introduction\}/i.test(content)],
       ['Methodology', /\\section\{Methodology\}/i.test(content)],
       ['Results', /\\section\{Results\}/i.test(content)],
-      ['References', /\\bibliography\{/.test(content)]
+      ['References', /\\begin\{thebibliography\}|\\bibliography\{/.test(content)]
     ];
   }, [selectedDocument?.content]);
+
+  const currentRuntime = selectedDocument?.language || 'javascript';
+  const usesBrowserRuntime = currentRuntime === 'javascript';
+  const compilerUnavailable = runtimeStatus?.compiler?.configured === false;
+  const compilerSetupMessage = compilerSetupMessageFor(runtimeStatus?.compiler?.state);
+  const runnerUnavailable = !usesBrowserRuntime && runtimeStatus?.codeRunner?.configured === false;
+  const runnerSetupMessage = runnerSetupMessageFor(runtimeStatus?.codeRunner?.state);
+  const codeOutputTone = codeOutput.state === 'error'
+    ? 'text-red-400'
+    : codeOutput.state === 'unavailable'
+      ? 'text-amber-300'
+      : codeOutput.state === 'success'
+        ? 'text-emerald-400'
+        : 'text-sky-300';
 
   if (!activeProject) return <EmptyProject workspace={isPaperWorkspace ? 'paper editor' : isCodeWorkspace ? 'code IDE' : 'research'} />;
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-[#f4f6fb] text-slate-900 dark:bg-background dark:text-on-surface">
       <div className="w-full px-3 py-3 md:px-4 md:py-4">
-        <header className="mb-3 flex flex-col justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm dark:border-outline-variant/30 dark:bg-surface md:flex-row md:items-center">
-          <div className="flex items-start gap-4">
-            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-700 text-white shadow-lg shadow-indigo-600/20"><span className="material-symbols-outlined">auto_stories</span></div>
-            <div>
-              <div className="mb-1 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.16em] text-indigo-600 dark:text-primary"><span>{isPaperWorkspace ? 'Paper editor' : isCodeWorkspace ? 'Code IDE' : 'Research Studio'}</span><span className="size-1 rounded-full bg-current"/><span className="truncate">{activeProject.title}</span></div>
-              <h1 className="text-lg font-extrabold tracking-tight text-slate-950 dark:text-on-surface md:text-xl">{isPaperWorkspace ? 'Paper Editor' : isCodeWorkspace ? 'Code IDE' : 'Research Studio'}</h1>
-              <p className="mt-0.5 text-xs text-slate-500 dark:text-secondary">{activeProject.title} · {isPaperWorkspace ? 'LaTeX source and preview' : isCodeWorkspace ? 'Implementation workspace' : 'Project research workspace'}</p>
+        <header className="mb-2 flex min-h-14 flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-2 shadow-sm dark:border-outline-variant/30 dark:bg-surface">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-indigo-600 text-white shadow-sm"><span className="material-symbols-outlined text-[18px]">{isCodeWorkspace ? 'terminal' : 'article'}</span></div>
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-2 text-xs font-bold"><span className="shrink-0 text-slate-900 dark:text-on-surface">{isPaperWorkspace ? 'Paper Editor' : isCodeWorkspace ? 'Code IDE' : 'Research Studio'}</span><span className="text-slate-300 dark:text-outline">/</span><span className="truncate text-slate-500 dark:text-secondary">{activeProject.title}</span></div>
+              <p className="mt-0.5 text-[11px] text-slate-500 dark:text-secondary">{selectedDocument ? (dirty ? 'Unsaved changes' : status || relativeTime(selectedDocument.updatedAt)) : 'Project workspace'}</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {!isCodeWorkspace && <button onClick={() => createDocument('paper')} className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-px hover:bg-slate-800 dark:bg-primary dark:text-on-primary"><span className="material-symbols-outlined text-[18px]">article</span> New paper</button>}
-            {!isPaperWorkspace && <button onClick={() => createDocument('code')} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700 dark:border-outline-variant/50 dark:bg-surface dark:text-on-surface"><span className="material-symbols-outlined text-[18px]">terminal</span> New code file</button>}
+          <div className="flex flex-wrap gap-1.5">
+            {!isCodeWorkspace && <button type="button" onClick={() => createDocument('paper')} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-950 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800 dark:bg-primary dark:text-on-primary"><span className="material-symbols-outlined text-[16px]">article</span>New paper</button>}
+            {!isPaperWorkspace && <button type="button" onClick={() => createDocument('code')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700 dark:border-outline-variant/50 dark:bg-surface dark:text-on-surface"><span className="material-symbols-outlined text-[16px]">terminal</span>New code</button>}
           </div>
         </header>
 
@@ -563,20 +783,25 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
           </aside>
 
           <section ref={selectedDocument?.kind === 'code' ? codeWorkspaceRef : null} className={`min-w-0 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm dark:border-outline-variant/30 dark:bg-surface ${isCodeFullscreen ? 'h-screen overflow-y-auto rounded-none' : ''}`}>
-            {!selectedDocument && !loading ? <div className="grid min-h-[680px] place-items-center p-8 text-center"><div><span className="material-symbols-outlined text-[52px] text-indigo-500">edit_note</span><h2 className="mt-4 text-xl font-bold">Your research workspace is ready</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-slate-500 dark:text-secondary">Start a structured LaTeX paper, or keep experiments and implementation notes in a code lab.</p></div></div> : selectedDocument && <>
+            {!selectedDocument && !loading ? <div className="grid min-h-[680px] place-items-center p-8 text-center"><div><span className="material-symbols-outlined text-[52px] text-indigo-500">edit_note</span><h2 className="mt-4 text-xl font-bold">Your research workspace is ready</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-slate-500 dark:text-secondary">{isPaperWorkspace ? 'Create a LaTeX paper to start drafting.' : isCodeWorkspace ? 'Create a code file to start the implementation workspace.' : 'Create a paper or code file to start your project record.'}</p><div className="mt-5 flex flex-wrap justify-center gap-2">{!isCodeWorkspace && <button type="button" onClick={() => createDocument('paper')} className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-indigo-700">Create paper</button>}{!isPaperWorkspace && <button type="button" onClick={() => createDocument('code')} className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:border-indigo-300 hover:text-indigo-700 dark:border-outline-variant/40 dark:bg-surface dark:text-on-surface">Create code file</button>}</div></div></div> : selectedDocument && <>
               <div className="flex min-h-[40px] items-end overflow-x-auto border-b border-slate-200 bg-slate-50 dark:border-outline-variant/30 dark:bg-surface-container-low">{documents.map((document) => <button key={document._id} onClick={() => selectDocument(document._id)} className={`inline-flex shrink-0 items-center gap-2 border-r border-slate-200 px-3 py-2 text-xs font-semibold dark:border-outline-variant/30 ${document._id === selectedDocument._id ? 'bg-white text-indigo-700 dark:bg-surface dark:text-primary' : 'text-slate-500 hover:bg-white/70 dark:text-secondary dark:hover:bg-surface'}`}><span className="material-symbols-outlined text-[16px]">{document.kind === 'paper' ? 'description' : 'code'}</span>{document.title}{document._id === selectedDocument._id && dirty && <span className="size-1.5 rounded-full bg-amber-500"/>}</button>)}</div>
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-2.5 dark:border-outline-variant/30"><div className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-secondary"><span className="material-symbols-outlined text-[16px] text-indigo-600 dark:text-primary">description</span>{selectedDocument.kind === 'paper' ? 'Paper document' : 'Implementation file'} · {dirty ? 'Unsaved changes' : status || relativeTime(selectedDocument.updatedAt)}<button onClick={() => { const title = window.prompt('Rename document', selectedDocument.title)?.trim(); if (title) updateSelected({ title }); }} title="Rename document" className="ml-1 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-surface-container"><span className="material-symbols-outlined text-[15px]">edit</span></button></div><div className="flex flex-wrap items-center gap-1.5">{selectedDocument.kind === 'paper' && <><select value={compilerEngine} onChange={(event) => setCompilerEngine(event.target.value)} aria-label="LaTeX compiler" className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-bold text-slate-700 outline-none focus:border-indigo-400 dark:border-outline-variant/40 dark:bg-surface-container dark:text-on-surface"><option value="pdflatex">pdfLaTeX</option><option value="xelatex">XeLaTeX</option><option value="lualatex">LuaLaTeX</option></select><button onClick={() => compileDocument()} disabled={isCompiling} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60"><span className="material-symbols-outlined mr-1 align-[-3px] text-[16px]">play_arrow</span>{isCompiling ? 'Compiling…' : compiledPdf ? 'Recompile' : 'Compile'}</button></>}{selectedDocument.kind === 'code' && <><select value={selectedDocument.language || 'javascript'} onChange={(event) => { updateSelected({ language: event.target.value }); setCodeOutput({ text: `${event.target.options[event.target.selectedIndex].text} selected. Load a starter if you want a new template.`, state: 'idle', language: event.target.value }); }} aria-label="Programming language" className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-bold text-slate-700 outline-none focus:border-indigo-400 dark:border-outline-variant/40 dark:bg-surface-container dark:text-on-surface">{codeLanguages.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><button onClick={() => { const language = selectedDocument.language || 'javascript'; if (window.confirm(`Replace the current source with a ${language} starter template?`)) updateSelected({ content: starterForLanguage(language) }); }} title="Load language starter" className="grid size-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-indigo-700 dark:text-secondary dark:hover:bg-surface-container"><span className="material-symbols-outlined text-[18px]">note_add</span></button><button onClick={runCode} disabled={isRunningCode} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60"><span className="material-symbols-outlined mr-1 align-[-3px] text-[16px]">play_arrow</span>{isRunningCode ? 'Running…' : 'Run'}</button><button onClick={toggleCodeFullscreen} title={isCodeFullscreen ? 'Exit fullscreen' : 'Fullscreen coding'} className="grid size-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-indigo-700 dark:text-secondary dark:hover:bg-surface-container"><span className="material-symbols-outlined text-[18px]">{isCodeFullscreen ? 'fullscreen_exit' : 'fullscreen'}</span></button></>}<button onClick={() => saveDocument(selectedDocument)} disabled={isSaving} className="rounded-lg px-3 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-50 disabled:opacity-60 dark:text-primary dark:hover:bg-primary/10"><span className="material-symbols-outlined mr-1 align-[-3px] text-[16px]">save</span>{isSaving ? 'Saving…' : 'Save'}</button><button onClick={downloadSource} title="Download source" className="grid size-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-secondary dark:hover:bg-surface-container"><span className="material-symbols-outlined text-[18px]">download</span></button><button onClick={deleteDocument} title="Delete document" className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 dark:text-secondary dark:hover:bg-error-container/30"><span className="material-symbols-outlined text-[18px]">delete</span></button></div></div>
-              <div className={`flex min-h-[calc(100vh-290px)] flex-col overflow-hidden ${selectedDocument.kind === 'code' && isCodeWorkspace ? '' : 'xl:flex-row'}`}>
-                <section className={`min-w-0 w-full bg-[#1e1e1e] ${selectedDocument.kind === 'code' && isCodeWorkspace ? '' : 'xl:w-[var(--pane-width)] xl:shrink-0'}`} style={selectedDocument.kind === 'code' && isCodeWorkspace ? undefined : { '--pane-width': `${splitRatio}%` }}>
+               {selectedDocument.kind === 'paper' && compilerUnavailable && <div role="status" className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-400/25 dark:bg-amber-500/10 dark:text-amber-100"><div className="flex min-w-0 items-start gap-2"><span className="material-symbols-outlined mt-0.5 text-[18px]">settings_alert</span><p><strong className="font-extrabold">PDF compiler setup required.</strong> {compilerSetupMessage}</p></div><button type="button" onClick={refreshCompilerStatus} disabled={isCheckingCompiler} className="shrink-0 rounded-md border border-amber-300 bg-white px-3 py-1.5 text-[11px] font-bold text-amber-900 hover:bg-amber-100 disabled:opacity-60 dark:border-amber-300/30 dark:bg-surface dark:text-amber-100 dark:hover:bg-amber-500/15">{isCheckingCompiler ? 'Checking…' : 'Check again'}</button></div>}
+               {selectedDocument.kind === 'code' && runnerUnavailable && <div role="status" className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-400/25 dark:bg-amber-500/10 dark:text-amber-100"><div className="flex min-w-0 items-start gap-2"><span className="material-symbols-outlined mt-0.5 text-[18px]">settings_alert</span><p><strong className="font-extrabold">Runtime setup required.</strong> {runnerSetupMessage}</p></div><button type="button" onClick={refreshRuntimeStatus} disabled={isCheckingRuntime} className="shrink-0 rounded-md border border-amber-300 bg-white px-3 py-1.5 text-[11px] font-bold text-amber-900 hover:bg-amber-100 disabled:opacity-60 dark:border-amber-300/30 dark:bg-surface dark:text-amber-100 dark:hover:bg-amber-500/15">{isCheckingRuntime ? 'Checking…' : 'Check again'}</button></div>}
+               <div className={`flex min-h-[calc(100vh-290px)] flex-col overflow-hidden ${selectedDocument.kind === 'code' ? '' : 'xl:flex-row'}`}>
+                <section className={`min-w-0 w-full bg-[#1e1e1e] ${selectedDocument.kind === 'code' ? '' : 'xl:w-[var(--pane-width)] xl:shrink-0'}`} style={selectedDocument.kind === 'code' ? undefined : { '--pane-width': `${splitRatio}%` }}>
                   <div className="flex items-center justify-between border-b border-white/10 bg-[#252526] px-4 py-2.5 text-xs font-semibold text-slate-300"><span className="inline-flex items-center gap-2"><span className="material-symbols-outlined text-[16px] text-indigo-300">code</span>{selectedDocument.kind === 'paper' ? 'main.tex' : selectedDocument.language || 'source'}</span><span className="text-[10px] uppercase tracking-wider text-slate-500">Editable source</span></div>
-                  <div className={selectedDocument.kind === 'code' && isCodeWorkspace ? 'h-[42vh] min-h-[320px]' : 'h-[calc(100vh-360px)] min-h-[560px]'}><Editor height="100%" language={languageFor(selectedDocument)} value={selectedDocument.content} theme="vs-dark" onChange={(value) => updateSelected({ content: value || '' })} options={{ minimap: { enabled: true }, fontSize: 14, lineNumbersMinChars: 3, wordWrap: 'on', padding: { top: 18 }, scrollBeyondLastLine: false, automaticLayout: true, stickyScroll: { enabled: true } }} /></div>
+                  <div style={selectedDocument.kind === 'code' ? { height: codeEditorHeight } : undefined} className={selectedDocument.kind === 'code' ? 'min-h-[280px]' : 'h-[calc(100vh-360px)] min-h-[560px]'}><Editor height="100%" language={languageFor(selectedDocument)} value={selectedDocument.content} theme="vs-dark" loading={<div className="grid h-full place-items-center bg-[#1e1e1e] text-sm text-slate-300">Loading editor…</div>} onChange={(value) => updateSelected({ content: value || '' })} options={{ minimap: { enabled: true }, fontSize: 14, lineNumbersMinChars: 3, wordWrap: selectedDocument.kind === 'paper' ? 'on' : 'off', padding: { top: 18 }, scrollBeyondLastLine: false, automaticLayout: true, stickyScroll: { enabled: true }, bracketPairColorization: { enabled: true }, formatOnPaste: true }} /></div>
                 </section>
-                <div role="separator" aria-orientation="vertical" onMouseDown={startPaneResize} className={`hidden w-2 shrink-0 cursor-col-resize bg-slate-200 transition hover:bg-indigo-500 dark:bg-outline-variant/40 dark:hover:bg-primary ${selectedDocument.kind === 'code' && isCodeWorkspace ? '' : 'xl:block'}`} title="Drag to resize panes" />
-                <section className={`min-w-0 flex-1 bg-slate-100 p-3 dark:bg-surface-container-low ${selectedDocument.kind === 'code' && isCodeWorkspace ? 'hidden' : ''}`}>
+                <div role="separator" aria-orientation="vertical" aria-label="Resize source and preview panes" tabIndex={selectedDocument.kind === 'paper' ? 0 : -1} onMouseDown={startPaneResize} onDoubleClick={() => setSplitRatio(50)} onKeyDown={(event) => { if (event.key === 'ArrowLeft') adjustPaneRatio(-2); if (event.key === 'ArrowRight') adjustPaneRatio(2); if (event.key === 'Home') setSplitRatio(50); }} className={selectedDocument.kind === 'paper' ? 'hidden w-2 shrink-0 cursor-col-resize bg-slate-200 transition hover:bg-indigo-500 focus:bg-indigo-500 dark:bg-outline-variant/40 dark:hover:bg-primary xl:block' : 'hidden'} title="Drag to resize panes. Use arrow keys for small adjustments." />
+                <section className={`min-w-0 flex-1 bg-slate-100 p-3 dark:bg-surface-container-low ${selectedDocument.kind === 'code' ? 'hidden' : ''}`}>
                   {selectedDocument.kind === 'paper' ? <div className="mx-auto flex h-[calc(100vh-390px)] min-h-[560px] max-w-none flex-col overflow-hidden rounded-sm bg-white shadow-[0_4px_18px_rgba(15,23,42,.14)]"><div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3"><span className="inline-flex items-center gap-2 text-xs font-bold text-slate-700"><span className="material-symbols-outlined text-[16px] text-indigo-600">picture_as_pdf</span>{compiledPdfUrl ? 'Compiled PDF preview' : 'PDF compiler'}</span><div className="flex items-center gap-2"><label className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] font-semibold text-slate-500"><input type="checkbox" checked={autoCompile} onChange={(event) => setAutoCompile(event.target.checked)} className="size-3.5 accent-emerald-600"/>Auto compile</label><button onClick={() => compileDocument()} disabled={isCompiling} className="rounded-md bg-emerald-600 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60"><span className="material-symbols-outlined mr-1 align-[-3px] text-[14px]">play_arrow</span>{isCompiling ? 'Compiling…' : compiledPdf ? 'Recompile' : 'Compile PDF'}</button></div></div>{compiledVersion && compiledVersion !== selectedDocument.content && <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-800">The source has changed since the last successful compilation. Choose Recompile to update the PDF.</div>}{compileError && <div className="border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-800"><span className="font-bold">Compilation failed:</span> {compileError}</div>}{compiledPdfUrl ? <iframe title={`${selectedDocument.title} compiled PDF`} src={compiledPdfUrl} className="min-h-0 flex-1 bg-slate-100" /> : <div className="grid flex-1 place-items-center overflow-auto bg-slate-100 p-6"><div className="max-w-md rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm"><span className="material-symbols-outlined text-[40px] text-indigo-600">picture_as_pdf</span><h2 className="mt-3 text-lg font-extrabold text-slate-900">Ready for a real IEEE PDF</h2><p className="mt-2 text-sm leading-relaxed text-slate-600">Choose <strong>Compile PDF</strong> to run the saved <code>main.tex</code> source through {compilerEngine}. This panel only displays a true compiler result; it no longer pretends a text conversion is a typeset PDF.</p><p className="mt-3 text-xs leading-relaxed text-slate-500">Enable Auto compile to rebuild two seconds after you stop editing. It is off by default to avoid unnecessary compiler usage.</p>{compileLog && <details className="mt-4 text-left"><summary className="cursor-pointer text-xs font-bold text-indigo-700">View compiler log</summary><pre className="mt-2 max-h-40 overflow-auto rounded-lg bg-slate-950 p-3 text-[11px] leading-5 text-slate-200">{compileLog}</pre></details>}</div></div>}</div> : <div className="flex h-[calc(100vh-390px)] min-h-[560px] flex-col overflow-hidden rounded-sm bg-[#111827] font-mono text-sm text-slate-200 shadow-[0_4px_18px_rgba(15,23,42,.14)]"><div className="flex items-center justify-between border-b border-white/10 px-4 py-3"><span className="inline-flex items-center gap-2 font-sans text-xs font-bold"><span className="material-symbols-outlined text-[16px] text-emerald-400">terminal</span>Development output</span><span className="font-sans text-[10px] uppercase tracking-wider text-slate-500">Safe workspace</span></div><pre className="flex-1 overflow-auto whitespace-pre-wrap p-5 text-xs leading-6 text-slate-300">$ project-notebook status\nFile: {selectedDocument.title}\nLanguage: {selectedDocument.language || 'javascript'}\nLines: {codeStats.lines}\nTODO markers: {codeStats.todos}\n\nRun code in your approved local or cloud development environment. This academic workspace intentionally does not execute arbitrary code in the browser.</pre><div className="border-t border-white/10 px-4 py-3 text-[11px] text-slate-500">Save source here, then download it for local execution or your institution’s approved compute environment.</div></div>}
                 </section>
               </div>
-              {selectedDocument.kind === 'code' && isCodeWorkspace && <section className="border-t border-slate-700 bg-[#111827] font-mono text-slate-200"><div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-4 py-2.5"><span className="inline-flex items-center gap-2 font-sans text-xs font-bold"><span className={`material-symbols-outlined text-[17px] ${codeOutput.state === 'error' ? 'text-red-400' : codeOutput.state === 'success' ? 'text-emerald-400' : 'text-sky-400'}`}>terminal</span>Output</span><div className="flex items-center gap-2"><span className="font-sans text-[10px] uppercase tracking-wider text-slate-500">{codeOutput.language || selectedDocument.language || 'javascript'} runtime</span><button onClick={() => setCodeOutput({ text: 'Output cleared.', state: 'idle', language: selectedDocument.language || '' })} className="rounded px-2 py-1 font-sans text-[11px] font-bold text-slate-400 hover:bg-white/10 hover:text-white">Clear</button></div></div><pre aria-live="polite" className="h-52 overflow-auto whitespace-pre-wrap p-4 text-xs leading-6 text-slate-200">{isRunningCode ? 'Running program…' : codeOutput.text}</pre><div className="border-t border-white/10 px-4 py-2 font-sans text-[11px] text-slate-500">JavaScript runs in a time-limited browser worker. Other languages run only through your configured isolated code runner.</div></section>}
+              {selectedDocument.kind === 'code' && <>
+                <div role="separator" aria-orientation="horizontal" aria-label="Resize code editor and output panes" tabIndex={0} onMouseDown={startCodePaneResize} onDoubleClick={() => setCodeEditorHeight(420)} onKeyDown={(event) => { if (event.key === 'ArrowUp') adjustCodeEditorHeight(-24); if (event.key === 'ArrowDown') adjustCodeEditorHeight(24); if (event.key === 'Home') setCodeEditorHeight(420); }} className="flex h-2 cursor-row-resize items-center justify-center bg-slate-700 hover:bg-emerald-600 focus:bg-emerald-600"><span className="h-0.5 w-10 rounded bg-white/40" /></div>
+                <section className="border-t border-slate-700 bg-[#111827] font-mono text-slate-200"><div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-4 py-2.5"><span className="inline-flex items-center gap-2 font-sans text-xs font-bold"><span className={'material-symbols-outlined text-[17px] ' + codeOutputTone}>terminal</span>{codeOutput.state === 'unavailable' ? 'Runtime unavailable' : 'Output'}</span><div className="flex items-center gap-2"><span className="font-sans text-[10px] uppercase tracking-wider text-slate-500">{codeOutput.language || currentRuntime} · {usesBrowserRuntime ? 'browser worker' : 'isolated runner'}</span><button type="button" onClick={() => setCodeOutput({ text: 'Output cleared.', state: 'idle', language: currentRuntime })} className="rounded px-2 py-1 font-sans text-[11px] font-bold text-slate-400 hover:bg-white/10 hover:text-white">Clear</button></div></div><pre aria-live="polite" className="h-52 min-h-[170px] overflow-auto whitespace-pre-wrap p-4 text-xs leading-6 text-slate-200">{isRunningCode ? 'Running program…' : codeOutput.text}</pre><div className="border-t border-white/10 px-4 py-2 font-sans text-[11px] text-slate-500">{usesBrowserRuntime ? 'JavaScript runs in a time-limited browser worker. Ctrl/Cmd + Enter runs the saved source.' : 'This language uses the project’s isolated runner and approved libraries. Your source can always be saved and downloaded.'}</div></section>
+              </>}
             </>}
           </section>
 

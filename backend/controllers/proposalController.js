@@ -25,7 +25,12 @@ exports.createProposalDraft = async (req, res) => {
     const project = await getProject(req.params.projectId);
     if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
     if (!canAccessProject(project, req.user)) return res.status(403).json({ success: false, error: 'Not authorized to create a proposal for this project' });
-    if (req.user.role === 'supervisor' && project.supervisor?.toString() !== req.user.id) return res.status(403).json({ success: false, error: 'Only project students may author proposal drafts' });
+    // Proposal versions are student-authored records. Supervisors and
+    // administrators review or decide them; they must not impersonate an
+    // author through this endpoint.
+    if (req.user.role !== 'student' || !project.students.some((student) => student.toString() === req.user.id)) {
+      return res.status(403).json({ success: false, error: 'Only project students may author proposal drafts' });
+    }
 
     const latest = await ProposalVersion.findOne({ project: project._id }).sort({ versionNo: -1 }).select('versionNo');
     const version = await ProposalVersion.create({
@@ -97,7 +102,10 @@ exports.decideProposal = async (req, res) => {
     version.decision = { value: decision, comment, decidedBy: req.user.id, decidedAt: new Date() };
     await version.save();
     project.proposalState = decision;
-    if (decision === 'approved') project.approvedProposalVersion = version._id;
+    if (decision === 'approved') {
+      project.approvedProposalVersion = version._id;
+      project.status = 'active';
+    }
     await project.save();
     for (const student of project.students) await Notification.create({ user: student, title: `Proposal ${decision.replace('_', ' ')}`, message: `Proposal version ${version.versionNo} for "${project.title}" was ${decision.replace('_', ' ')}.`, type: decision === 'approved' ? 'success' : 'warning', link: '/proposals' });
     await recordAudit({ actor: req.user.id, action: `proposal.${decision}`, entityType: 'proposalVersion', entityId: version._id, metadata: { project: project._id, versionNo: version.versionNo } });

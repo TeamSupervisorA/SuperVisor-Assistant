@@ -1,8 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useAuth } from '../hooks/useAuth';
 
 const NotFound = () => {
+  const { isAuthenticated, getDashboardPath } = useAuth();
+  const workspacePath = isAuthenticated ? getDashboardPath() : '/login';
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <motion.div 
@@ -27,11 +30,11 @@ const NotFound = () => {
         
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link 
-            to="/dashboard" 
+            to={workspacePath}
             className="bg-primary text-on-primary px-6 py-3 rounded-xl font-label-md text-[14px] font-semibold hover:bg-surface-tint transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined text-[18px]">home</span>
-            Go to Dashboard
+            {isAuthenticated ? 'Go to Workspace' : 'Sign In'}
           </Link>
           <Link 
             to="/" 

@@ -57,6 +57,10 @@ const userSchema = new mongoose.Schema({
     type: Date,
     select: false
   },
+  passwordChangedAt: {
+    type: Date,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -75,13 +79,14 @@ const userSchema = new mongoose.Schema({
 });
 
 // Encrypt password using bcrypt
-userSchema.pre('save', async function() {
-  if (!this.isModified('password')) {
-    return;
-  }
+userSchema.pre('save', async function encryptPasswordAndTrackChanges() {
+  if (!this.isModified('password')) return;
 
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
+  // Subtract one second so a freshly-issued replacement token in the same
+  // second remains valid while all earlier tokens are rejected.
+  if (!this.isNew) this.passwordChangedAt = new Date(Date.now() - 1000);
 });
 
 // Match user entered password to hashed password in database

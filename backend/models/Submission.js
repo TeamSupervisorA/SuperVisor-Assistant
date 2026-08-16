@@ -21,7 +21,11 @@ const submissionSchema = new mongoose.Schema({
   },
   fileUrl: {
     type: String,
-    required: [true, 'Please provide the file URL']
+    trim: true,
+    maxlength: [2000, 'File URL cannot exceed 2,000 characters'],
+    required: function requireFileWhenNoText() {
+      return !String(this.content || '').trim();
+    }
   },
   content: {
     type: String,

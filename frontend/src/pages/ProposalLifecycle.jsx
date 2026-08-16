@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '../lib/api';
-import { useAuth } from '../components/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 
 const ProposalLifecycle = () => {
   const { activeProject, user } = useAuth();
@@ -12,21 +12,22 @@ const ProposalLifecycle = () => {
   const [message, setMessage] = useState('');
 
   const isSupervisor = ['supervisor', 'admin'].includes(user?.role);
+  const projectId = activeProject?._id;
 
-  const loadVersions = async () => {
-    if (!activeProject) return;
+  const loadVersions = useCallback(async () => {
+    if (!projectId) return;
     setLoading(true);
     try {
-      const response = await apiFetch(`/api/projects/${activeProject._id}/proposals`);
+      const response = await apiFetch(`/api/projects/${projectId}/proposals`);
       setVersions(response.data || []);
     } catch (error) {
       setMessage(error.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
 
-  useEffect(() => { loadVersions(); }, [activeProject?._id]);
+  useEffect(() => { if (projectId) loadVersions(); else setVersions([]); }, [projectId, loadVersions]);
 
   const createDraft = async (event) => {
     event.preventDefault();

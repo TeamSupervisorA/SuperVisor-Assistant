@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useAuth } from './AuthContext';
+import { useAuth } from '../hooks/useAuth';
 
 const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
   const location = useLocation();
@@ -16,9 +16,11 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
 
   const studentItems = [
     { name: 'Dashboard', icon: 'dashboard', path: '/dashboard' },
+    { name: 'My Projects', icon: 'folder_open', path: '/explore' },
     { name: 'Tasks & Milestones', icon: 'checklist', path: '/tasks-milestones' },
     { name: 'Progress Logs', icon: 'timeline', path: '/progress-logs' },
     { name: 'Submissions', icon: 'upload_file', path: '/student-submissions' },
+    { name: 'Integrity Reports', icon: 'policy', path: '/plagiarism-checker' },
     { name: 'Team', icon: 'groups', path: '/team-management' },
     { name: 'Meetings', icon: 'event', path: '/meeting-management' },
     { name: 'Resources', icon: 'library_books', path: '/project-resource-library' },
@@ -33,13 +35,16 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
 
   const supervisorItems = [
     { name: 'Dashboard', icon: 'dashboard', path: '/supervisor-dashboard' },
+    { name: 'Project Directory', icon: 'folder_open', path: '/explore' },
     { name: 'New Project', icon: 'add_circle', path: '/create-new-work' },
     { name: 'Tasks & Milestones', icon: 'checklist', path: '/tasks-milestones' },
+    { name: 'Deliverables', icon: 'upload_file', path: '/student-submissions' },
     { name: 'Progress Logs', icon: 'timeline', path: '/progress-logs' },
     { name: 'Evaluations', icon: 'grading', path: '/evaluations' },
-    { name: 'Plagiarism', icon: 'policy', path: '/plagiarism-checker' },
-    { name: 'Feedback', icon: 'rate_review', path: '/detailed-feedback' },
+    { name: 'Integrity Reports', icon: 'policy', path: '/plagiarism-checker' },
+    { name: 'Team', icon: 'groups', path: '/team-management' },
     { name: 'Meetings', icon: 'event', path: '/meeting-management' },
+    { name: 'Resources', icon: 'library_books', path: '/project-resource-library' },
     { name: 'Paper Editor', icon: 'article', path: '/paper-editor' },
     { name: 'Code IDE', icon: 'terminal', path: '/code-ide' },
     { name: 'Report', icon: 'summarize', path: '/project-report' },
@@ -51,6 +56,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
 
   const adminItems = [
     { name: 'Dashboard', icon: 'dashboard', path: '/admin-dashboard' },
+    { name: 'Project Directory', icon: 'folder_open', path: '/explore' },
     { name: 'Course Management', icon: 'school', path: '/course-management' },
     { name: 'Users & Departments', icon: 'manage_accounts', path: '/admin-management' },
     ...commonItems,
@@ -85,8 +91,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
               >
-                <h1 className="font-headline-md text-[18px] font-bold text-primary leading-tight tracking-tight">Academic AI</h1>
-                <p className="font-label-md text-[11px] text-secondary capitalize">{role} portal</p>
+                <p className="font-label-md text-[12px] font-semibold text-secondary capitalize">{role} workspace</p>
               </motion.div>
             )}
           </div>
@@ -165,7 +170,10 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
 
       {/* Toggle Collapse Button (Desktop Only) */}
       <button 
+        type="button"
         onClick={toggleCollapse} 
+        aria-label={isCollapsed ? 'Keep sidebar open' : 'Allow sidebar to collapse'}
+        title={isCollapsed ? 'Keep sidebar open' : 'Allow sidebar to collapse'}
         className="hidden md:flex absolute top-7 -right-3.5 p-1 rounded-full bg-surface border border-outline-variant/30 text-on-surface-variant hover:bg-surface-container transition-colors shadow-sm z-[60]"
       >
         <span className="material-symbols-outlined text-[18px]">

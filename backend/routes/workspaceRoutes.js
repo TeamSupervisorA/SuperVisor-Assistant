@@ -9,6 +9,7 @@ router.use(protect);
 router.route('/projects/:projectId/documents')
   .get(workspace.listDocuments)
   .post(workspace.createDocument);
+router.get('/runtime-status', workspace.getRuntimeStatus);
 router.post('/documents/:id/compile', rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 12,

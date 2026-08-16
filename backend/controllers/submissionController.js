@@ -5,6 +5,7 @@ const Notification = require('../models/Notification');
 const User = require('../models/User');
 const PlagiarismReport = require('../models/PlagiarismReport');
 const geminiService = require('../services/geminiService');
+const { sendServerError } = require('../utils/errorResponse');
 
 // Notifications are best-effort — never fail the main operation over one
 const notify = async (fields) => {
@@ -64,29 +65,40 @@ exports.getAllSubmissions = async (req, res) => {
     const submissions = await Submission.find(filter).populate('student', 'name email').populate('project', 'title').sort({ submittedAt: -1 });
     res.status(200).json({ success: true, count: submissions.length, data: submissions });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    return sendServerError(res, error, 'Unable to load submissions');
   }
 };
 
 exports.createSubmission = async (req, res) => {
   try {
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ success: false, error: 'Only students can create submissions' });
+    }
     const project = await Project.findById(req.body.project);
     if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
     if (!canAccessProject(project, req.user)) {
       return res.status(403).json({ success: false, error: 'Not authorized to submit to this project' });
     }
 
-    const { title, task, fileUrl, content } = req.body;
+    const { title, task, fileUrl } = req.body;
+    const content = typeof req.body.content === 'string' ? req.body.content.trim() : '';
+    const normalizedFileUrl = typeof fileUrl === 'string' ? fileUrl.trim() : '';
+    if (!normalizedFileUrl && !content) {
+      return res.status(422).json({ success: false, error: 'Provide a file or paste the submission text' });
+    }
     if (task) {
       const projectTask = await Task.findOne({ _id: task, project: project._id });
       if (!projectTask) return res.status(422).json({ success: false, error: 'The selected task does not belong to this project' });
+      if (projectTask.assignedTo && projectTask.assignedTo.toString() !== req.user.id) {
+        return res.status(403).json({ success: false, error: 'You can submit only work assigned to you' });
+      }
     }
     // Submission metadata is owned by the server: a student must never be able
     // to pre-grade a submission, submit as another user, or change its project.
     const submission = await Submission.create({
       title,
       task,
-      fileUrl,
+      fileUrl: normalizedFileUrl,
       content,
       project: project._id,
       student: req.user.id
@@ -126,6 +138,9 @@ exports.updateSubmission = async (req, res) => {
       if (submission.student.toString() !== req.user.id) {
         return res.status(403).json({ success: false, error: 'Not authorized to update this submission' });
       }
+      if (['Under Review', 'Graded'].includes(submission.status)) {
+        return res.status(409).json({ success: false, error: 'This submission is already under review or graded and can no longer be edited' });
+      }
       const studentFields = ['title', 'task', 'fileUrl', 'content'];
       updates = Object.fromEntries(Object.entries(req.body).filter(([field]) => studentFields.includes(field)));
     } else {
@@ -138,6 +153,21 @@ exports.updateSubmission = async (req, res) => {
     if (updates.task) {
       const projectTask = await Task.findOne({ _id: updates.task, project: submission.project });
       if (!projectTask) return res.status(422).json({ success: false, error: 'The selected task does not belong to this project' });
+      if (req.user.role === 'student' && projectTask.assignedTo && projectTask.assignedTo.toString() !== req.user.id) {
+        return res.status(403).json({ success: false, error: 'You can submit only work assigned to you' });
+      }
+    }
+    if (req.user.role === 'student') {
+      if (updates.content !== undefined) updates.content = typeof updates.content === 'string' ? updates.content.trim() : '';
+      if (updates.fileUrl !== undefined) updates.fileUrl = typeof updates.fileUrl === 'string' ? updates.fileUrl.trim() : '';
+      const nextContent = updates.content !== undefined ? updates.content : submission.content;
+      const nextFileUrl = updates.fileUrl !== undefined ? updates.fileUrl : submission.fileUrl;
+      if (!nextContent?.trim() && !nextFileUrl?.trim()) {
+        return res.status(422).json({ success: false, error: 'Provide a file or paste the submission text' });
+      }
+      // Changing a submission returned for revision puts it back in the
+      // supervisor's review queue without letting the client choose a status.
+      if (submission.status === 'Needs Revision') updates.status = 'Submitted';
     }
 
     const wasGraded = req.user.role !== 'student' && (

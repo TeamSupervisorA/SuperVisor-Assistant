@@ -20,7 +20,8 @@ const courseSchema = new mongoose.Schema({
   },
   sections: {
     type: Number,
-    default: 1
+    default: 1,
+    min: [1, 'A course must have at least one section']
   },
   leadInstructor: {
     type: mongoose.Schema.ObjectId,

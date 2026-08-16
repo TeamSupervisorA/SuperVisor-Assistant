@@ -2,6 +2,9 @@ const { GoogleGenAI } = require('@google/genai');
 
 // The deployment can choose any Gemini model enabled for its API key. Keep the
 // default configurable instead of hard-coding a preview-only model in clients.
+// Flash is the balanced default for this application and supports the
+// Google-Search-grounded integrity workflow. Deployments may still override
+// it with a model explicitly enabled for their own API key.
 const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 const MAX_INPUT_CHARS = 60000;
 

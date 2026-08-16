@@ -22,6 +22,10 @@ if (isProduction) {
 connectDB().catch(() => {});
 
 const app = express();
+// Express 5 exposes `req.query` as a read-only getter.  Using the simple
+// parser prevents nested query objects such as `field[$ne]` from ever reaching
+// Mongoose while keeping ordinary search and pagination query strings intact.
+app.set('query parser', 'simple');
 if (isProduction) app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
@@ -52,11 +56,16 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 
-app.get('/api/health', (req, res) => {
-  res.status(getDatabaseStatus() === 'connected' ? 200 : 503).json({
-    success: getDatabaseStatus() === 'connected',
-    database: getDatabaseStatus()
-  });
+// Readiness must wait for the shared connection promise. On a serverless cold
+// start, merely reading Mongoose's immediate state can briefly report 503 even
+// though the database connection is already in progress and will succeed.
+app.get('/api/health', async (req, res) => {
+  try {
+    await connectDB();
+    res.status(200).json({ success: true, database: 'connected' });
+  } catch {
+    res.status(503).json({ success: false, database: getDatabaseStatus() });
+  }
 });
 
 app.use('/api', async (req, res, next) => {
@@ -71,13 +80,13 @@ app.use('/api', async (req, res, next) => {
   }
 });
 
-// express-mongo-sanitize mutates req.query, which is read-only in Express 5 and
-// causes every request to fail. Sanitize JSON request bodies without touching
+// A generic Mongo sanitizer that mutates `req.query` breaks Express 5 because
+// that property is read-only. Sanitize JSON request bodies without touching
 // Express-owned request properties.
 const sanitizeObject = (value) => {
   if (!value || typeof value !== 'object') return;
   for (const key of Object.keys(value)) {
-    if (key.startsWith('$') || key.includes('.')) {
+    if (key.startsWith('$') || key.includes('.') || ['__proto__', 'prototype', 'constructor'].includes(key)) {
       delete value[key];
     } else {
       sanitizeObject(value[key]);
@@ -146,67 +155,6 @@ if (!isProduction) {
   }));
 }
 
-const http = require('http');
-const { Server } = require('socket.io');
-const jwt = require('jsonwebtoken');
-const User = require('./models/User');
-const Project = require('./models/Project');
-
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: (origin, callback) => callback(null, isAllowedOrigin(origin)),
-    methods: ['GET', 'POST']
-  }
-});
-
-const canAccessSocketProject = (project, user) =>
-  Boolean(project) && (user.role === 'admin' ||
-  project.supervisor?.toString() === user.id ||
-  project.students.some((student) => student.toString() === user.id));
-
-io.use(async (socket, next) => {
-  try {
-    const token = socket.handshake.auth?.token;
-    if (!token) return next(new Error('Authentication required'));
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id);
-    if (!user || user.status === 'inactive') return next(new Error('Authentication required'));
-    socket.user = user;
-    next();
-  } catch {
-    next(new Error('Authentication required'));
-  }
-});
-
-// Socket.io connection handling
-io.on('connection', (socket) => {
-  console.log('New client connected:', socket.id);
-
-  socket.on('join_project', async (projectId) => {
-    const project = await Project.findById(projectId);
-    if (!canAccessSocketProject(project, socket.user)) {
-      return socket.emit('socket_error', 'Not authorized to join this project');
-    }
-    socket.join(projectId);
-  });
-
-  socket.on('send_message', async (data) => {
-    const project = await Project.findById(data?.project);
-    if (!canAccessSocketProject(project, socket.user)) {
-      return socket.emit('socket_error', 'Not authorized to send to this project');
-    }
-    socket.to(data.project).emit('receive_message', data);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
-  });
-});
-
-// Make io accessible to routers
-app.set('io', io);
-
 // New Routes
 app.use('/api/messages', require('./routes/messageRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
@@ -216,7 +164,7 @@ const PORT = process.env.PORT || 5000;
 
 // Don't bind a port on Vercel — serverless functions handle requests directly
 if (!process.env.VERCEL) {
-  server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
 
 // Export for Vercel Serverless Functions

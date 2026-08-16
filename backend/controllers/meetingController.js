@@ -1,5 +1,6 @@
 const Meeting = require('../models/Meeting');
 const { Project, canAccessProject, projectIdsForUser } = require('../utils/projectAccess');
+const { sendServerError } = require('../utils/errorResponse');
 
 const attendeesBelongToProject = (attendees, project) => {
   if (!attendees) return true;
@@ -24,7 +25,7 @@ exports.getAllMeetings = async (req, res) => {
     const meetings = await Meeting.find(filter).populate('project', 'title').sort({ date: 1 });
     res.status(200).json({ success: true, count: meetings.length, data: meetings });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    return sendServerError(res, error, 'Unable to load meetings');
   }
 };
 

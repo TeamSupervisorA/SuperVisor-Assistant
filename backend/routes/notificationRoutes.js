@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Notification = require('../models/Notification');
 const { protect } = require('../middleware/auth');
+const { sendServerError } = require('../utils/errorResponse');
 
 router.get('/', protect, async (req, res) => {
   try {
@@ -10,7 +11,21 @@ router.get('/', protect, async (req, res) => {
       .limit(20);
     res.json({ success: true, data: notifications });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    return sendServerError(res, error, 'Unable to load notifications');
+  }
+});
+
+// Mark every notification belonging to the authenticated user as read. This
+// keeps the dashboard action server-backed rather than merely changing UI state.
+router.put('/read-all', protect, async (req, res) => {
+  try {
+    const result = await Notification.updateMany(
+      { user: req.user._id, isRead: false },
+      { $set: { isRead: true } }
+    );
+    res.json({ success: true, data: { markedRead: result.modifiedCount } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Unable to mark notifications as read' });
   }
 });
 
@@ -27,7 +42,7 @@ router.put('/:id/read', protect, async (req, res) => {
     }
     res.json({ success: true, data: notification });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    return sendServerError(res, error, 'Unable to update this notification');
   }
 });
 

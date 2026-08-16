@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../components/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -22,19 +22,13 @@ const EvaluationsGrades = () => {
     scores: { problemUnderstanding: 0, methodology: 0, implementation: 0, documentation: 0 },
     feedback: '' 
   });
+  const projectId = activeProject?._id;
 
-  useEffect(() => {
-    if (activeProject) {
-      loadEvaluations();
-    } else {
-      setLoading(false);
-    }
-  }, [activeProject]);
-
-  const loadEvaluations = async () => {
+  const loadEvaluations = useCallback(async () => {
+    if (!projectId) return;
     setLoading(true);
     try {
-      const res = await apiFetch(`/api/evaluations?project=${activeProject._id}`).catch(() => ({ data: [] }));
+      const res = await apiFetch(`/api/evaluations?project=${projectId}`).catch(() => ({ data: [] }));
       if (res && res.data) {
         setEvaluations(res.data);
       }
@@ -43,7 +37,16 @@ const EvaluationsGrades = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
+
+  useEffect(() => {
+    if (projectId) {
+      loadEvaluations();
+    } else {
+      setEvaluations([]);
+      setLoading(false);
+    }
+  }, [projectId, loadEvaluations]);
 
   const handleCreate = async (e) => {
     e.preventDefault();

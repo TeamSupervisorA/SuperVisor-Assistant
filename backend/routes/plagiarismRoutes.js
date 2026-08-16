@@ -5,6 +5,7 @@ const Submission = require('../models/Submission');
 const { Project, canAccessProject, projectIdsForUser } = require('../utils/projectAccess');
 const { protect, authorize } = require('../middleware/auth');
 const geminiService = require('../services/geminiService');
+const { sendServerError } = require('../utils/errorResponse');
 
 // Get plagiarism reports for a project
 router.get('/', protect, async (req, res) => {
@@ -29,7 +30,7 @@ router.get('/', protect, async (req, res) => {
 
     res.json({ success: true, data: reports });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    return sendServerError(res, error, 'Unable to load integrity reports');
   }
 });
 

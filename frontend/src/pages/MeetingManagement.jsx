@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../components/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -19,32 +19,35 @@ const MeetingManagement = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [newMeeting, setNewMeeting] = useState({ title: '', date: '', time: '', type: 'Online' });
+  const [viewDate, setViewDate] = useState(() => new Date());
+  const [error, setError] = useState('');
+  const projectId = activeProject?._id;
 
-  useEffect(() => {
-    if (activeProject) {
-      loadMeetings();
-    } else {
-      setLoading(false);
-    }
-  }, [activeProject]);
-
-  const loadMeetings = async () => {
+  const loadMeetings = useCallback(async () => {
+    if (!projectId) return;
     try {
       setLoading(true);
-      const res = await apiFetch(`/api/meetings?project=${activeProject._id}`).catch(() => ({ data: [] }));
+      const res = await apiFetch(`/api/meetings?project=${projectId}`);
       if (res && res.data) {
         setMeetings(res.data);
       }
     } catch (error) {
-      console.error('Failed to load meetings', error);
+      setMeetings([]);
+      setError(error.message || 'Unable to load meetings.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
+
+  useEffect(() => {
+    if (projectId) loadMeetings();
+    else { setMeetings([]); setLoading(false); }
+  }, [projectId, loadMeetings]);
 
   const handleCreateMeeting = async (e) => {
     e.preventDefault();
     if (!activeProject) return;
+    setError('');
     try {
       const res = await apiFetch('/api/meetings', {
         method: 'POST',
@@ -61,26 +64,42 @@ const MeetingManagement = () => {
         }
       }
     } catch (error) {
-      alert('Error creating meeting: ' + error.message);
+      setError(error.message || 'Unable to schedule this meeting.');
     }
+  };
+
+  const localDateKey = (value) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const getCalendarDays = () => {
     const days = [];
     const today = new Date();
-    const currentMonth = today.getMonth();
-    const daysInMonth = new Date(today.getFullYear(), currentMonth + 1, 0).getDate();
+    const currentMonth = viewDate.getMonth();
+    const year = viewDate.getFullYear();
+    const daysInMonth = new Date(year, currentMonth + 1, 0).getDate();
     
     for (let i = 1; i <= daysInMonth; i++) {
-      const dateStr = `${today.getFullYear()}-${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-      const dayMeetings = meetings.filter(m => m.date.startsWith(dateStr));
-      days.push({ day: i, dateStr, meetings: dayMeetings, isToday: i === today.getDate() });
+      const dateStr = `${year}-${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+      const dayMeetings = meetings.filter((meeting) => localDateKey(meeting.date) === dateStr);
+      days.push({ day: i, dateStr, meetings: dayMeetings, isToday: i === today.getDate() && currentMonth === today.getMonth() && year === today.getFullYear() });
     }
     return days;
   };
 
   const calendarDays = getCalendarDays();
-  const today = new Date();
+  const leadingEmptyDays = (new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay() + 6) % 7;
+  const trailingEmptyDays = (7 - ((leadingEmptyDays + calendarDays.length) % 7)) % 7;
+  const upcomingMeetings = meetings.filter((meeting) => {
+    if (meeting.status !== 'Upcoming') return false;
+    const start = new Date(`${localDateKey(meeting.date)}T${meeting.time || '00:00'}`);
+    return !Number.isNaN(start.getTime()) && start >= new Date();
+  });
 
   if (!activeProject) {
     return (
@@ -115,6 +134,8 @@ const MeetingManagement = () => {
           </div>
         </motion.div>
 
+        {error && <div role="alert" className="rounded-2xl border border-error/30 bg-error/10 px-5 py-3 text-sm font-medium text-error">{error}</div>}
+
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 flex-1">
           {/* Calendar Section */}
           <motion.section variants={itemVariants} className="flex-1 bg-surface/80 backdrop-blur-xl rounded-[32px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-outline-variant/30 p-6 md:p-8 flex flex-col min-h-[700px]">
@@ -124,17 +145,17 @@ const MeetingManagement = () => {
                   <span className="material-symbols-outlined text-[24px]">calendar_month</span>
                 </div>
                 <div>
-                  <h2 className="font-title-lg text-[22px] font-bold text-on-surface leading-tight">{today.toLocaleString('default', { month: 'long' })} {today.getFullYear()}</h2>
+                  <h2 className="font-title-lg text-[22px] font-bold text-on-surface leading-tight">{viewDate.toLocaleString('default', { month: 'long' })} {viewDate.getFullYear()}</h2>
                   <p className="font-body-sm text-[13px] text-secondary">Academic Calendar</p>
                 </div>
               </div>
               
               <div className="flex items-center gap-2 bg-surface-container-lowest border border-outline-variant/40 rounded-[12px] p-1 shadow-sm">
-                <button className="w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-surface-variant text-on-surface-variant transition-colors">
+                <button type="button" onClick={() => setViewDate((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))} aria-label="Previous month" className="w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-surface-variant text-on-surface-variant transition-colors">
                   <span className="material-symbols-outlined text-[20px]">chevron_left</span>
                 </button>
-                <button className="px-4 py-1.5 font-label-md text-[13px] font-bold rounded-[8px] hover:bg-surface-variant text-on-surface transition-colors">Today</button>
-                <button className="w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-surface-variant text-on-surface-variant transition-colors">
+                <button type="button" onClick={() => setViewDate(new Date())} className="px-4 py-1.5 font-label-md text-[13px] font-bold rounded-[8px] hover:bg-surface-variant text-on-surface transition-colors">Today</button>
+                <button type="button" onClick={() => setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))} aria-label="Next month" className="w-8 h-8 flex items-center justify-center rounded-[8px] hover:bg-surface-variant text-on-surface-variant transition-colors">
                   <span className="material-symbols-outlined text-[20px]">chevron_right</span>
                 </button>
               </div>
@@ -152,8 +173,7 @@ const MeetingManagement = () => {
                 <div className="bg-surface/80 py-3">Sun</div>
               </div>
               <div className="grid grid-cols-7 gap-[1px] bg-outline-variant/30 flex-1 overflow-y-auto">
-                {/* Filler for start of month (simplified) */}
-                <div className="bg-surface/50 min-h-[120px] p-2"></div>
+                {Array.from({ length: leadingEmptyDays }).map((_, index) => <div key={`leading-${index}`} className="bg-surface/50 min-h-[120px] p-2" />)}
                 
                 {calendarDays.map((d, i) => (
                   <div key={i} className={`bg-surface/50 min-h-[120px] p-2 hover:bg-surface/80 transition-colors flex flex-col group ${d.isToday ? 'bg-primary/5' : ''}`}>
@@ -173,6 +193,7 @@ const MeetingManagement = () => {
                     </div>
                   </div>
                 ))}
+                {Array.from({ length: trailingEmptyDays }).map((_, index) => <div key={`trailing-${index}`} className="bg-surface/50 min-h-[120px] p-2" />)}
               </div>
             </div>
           </motion.section>
@@ -197,14 +218,14 @@ const MeetingManagement = () => {
                 <div className="flex justify-center py-10">
                   <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
                 </div>
-              ) : meetings.length === 0 ? (
+              ) : upcomingMeetings.length === 0 ? (
                 <div className="text-center py-10 bg-surface-container-lowest/50 rounded-[20px] border border-outline-variant/30">
                    <span className="material-symbols-outlined text-[32px] text-outline mb-2">event_available</span>
                    <p className="font-body-sm text-[14px] text-secondary">No upcoming meetings.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {meetings.slice(0, 5).map((meeting, idx) => {
+                  {upcomingMeetings.slice(0, 5).map((meeting, idx) => {
                     const typeColor = meeting.type === 'Online' ? 'bg-primary' : meeting.type === 'In-Person' ? 'bg-[#10B981]' : 'bg-tertiary';
                     
                     return (

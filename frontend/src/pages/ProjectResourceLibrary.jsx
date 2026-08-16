@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiFetch, uploadFile, assetUrl } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../components/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -20,28 +20,29 @@ const ProjectResourceLibrary = () => {
   const [showModal, setShowModal] = useState(false);
   const [newResource, setNewResource] = useState({ title: '', type: 'Document', category: 'General', url: '', file: null });
   const [uploading, setUploading] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const projectId = activeProject?._id;
 
-  useEffect(() => {
-    if (activeProject) {
-      loadResources();
-    } else {
-      setLoading(false);
-    }
-  }, [activeProject]);
-
-  const loadResources = async () => {
+  const loadResources = useCallback(async () => {
+    if (!projectId) return;
     try {
       setLoading(true);
-      const res = await apiFetch(`/api/resources?project=${activeProject._id}`).catch(() => ({ data: [] }));
+      const res = await apiFetch(`/api/resources?project=${projectId}`);
       if (res && res.data) {
         setResources(res.data);
       }
     } catch (error) {
       console.error('Failed to load resources', error);
+      setResources([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
+
+  useEffect(() => {
+    if (projectId) loadResources();
+    else { setResources([]); setLoading(false); }
+  }, [projectId, loadResources]);
 
   const handleUpload = async (e) => {
     e.preventDefault();
@@ -94,6 +95,7 @@ const ProjectResourceLibrary = () => {
       default: return 'bg-secondary-container text-secondary';
     }
   };
+  const filteredResources = categoryFilter === 'all' ? resources : resources.filter((resource) => resource.category === categoryFilter);
 
   if (!activeProject) {
     return (
@@ -127,9 +129,7 @@ const ProjectResourceLibrary = () => {
             <p className="font-title-md text-[16px] text-on-surface-variant font-medium">Manage and discover shared assets, documentation, and tools.</p>
           </div>
           <div className="flex gap-3">
-            <button className="px-5 py-3 rounded-[16px] border border-outline-variant/50 bg-surface/50 backdrop-blur-md text-on-surface font-title-sm text-[14px] font-bold hover:bg-surface-container hover:border-primary/50 transition-all shadow-sm flex items-center gap-2 group">
-              <span className="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">filter_list</span> Filter
-            </button>
+            <label className="flex items-center gap-2 rounded-[16px] border border-outline-variant/50 bg-surface/50 px-4 py-3 text-sm font-bold text-on-surface shadow-sm"><span className="material-symbols-outlined text-[20px] text-primary">filter_list</span><span className="sr-only">Filter resources by category</span><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="bg-transparent outline-none"><option value="all">All resources</option><option value="General">General</option><option value="Research">Research</option><option value="Dataset">Dataset</option><option value="Design">Design</option></select></label>
             <button onClick={() => setShowModal(true)} className="px-6 py-3 bg-primary text-on-primary rounded-[16px] font-title-sm text-[14px] font-bold hover:bg-primary-fixed-variant transition-all flex items-center gap-2 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 group">
               <span className="material-symbols-outlined text-[20px] group-hover:-translate-y-0.5 transition-transform">upload</span> Upload Resource
             </button>
@@ -151,15 +151,15 @@ const ProjectResourceLibrary = () => {
                 <div className="flex-1 flex justify-center items-center py-20 relative z-10">
                    <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
                 </div>
-              ) : resources.length === 0 ? (
+              ) : filteredResources.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center py-20 relative z-10 opacity-60">
                    <span className="material-symbols-outlined text-[64px] text-outline mb-4">cloud_off</span>
-                   <p className="font-title-md text-secondary">No resources available.</p>
-                   <p className="font-body-sm text-outline mt-1">Click Upload Resource to add your first file.</p>
+                   <p className="font-title-md text-secondary">No matching resources.</p>
+                   <p className="font-body-sm text-outline mt-1">{resources.length ? 'Choose another category to see more resources.' : 'Upload a resource to add the first item.'}</p>
                 </div>
               ) : (
                 <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 relative z-10">
-                  {resources.map((res, idx) => (
+                  {filteredResources.map((res, idx) => (
                     <motion.div key={res._id || idx} variants={itemVariants} className="bg-surface-container-lowest/50 backdrop-blur-md rounded-[24px] shadow-sm border border-outline-variant/40 p-6 flex flex-col group hover:bg-surface hover:shadow-md hover:border-outline-variant/80 transition-all cursor-pointer relative overflow-hidden">
                       <div className={`absolute -right-4 -top-4 w-20 h-20 rounded-full blur-[24px] opacity-10 group-hover:opacity-30 transition-opacity ${getColorClass(res.type).split(' ')[0]}`}></div>
                       

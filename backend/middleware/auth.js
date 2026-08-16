@@ -31,6 +31,9 @@ exports.protect = async (req, res, next) => {
     if (req.user.status === 'inactive') {
       return res.status(403).json({ success: false, error: 'This account has been deactivated' });
     }
+    if (req.user.passwordChangedAt && decoded.iat && decoded.iat < Math.floor(req.user.passwordChangedAt.getTime() / 1000)) {
+      return res.status(401).json({ success: false, error: 'Your password was changed. Please sign in again.' });
+    }
 
     next();
   } catch (err) {

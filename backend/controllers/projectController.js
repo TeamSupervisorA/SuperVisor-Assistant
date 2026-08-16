@@ -4,6 +4,46 @@ const Submission = require('../models/Submission');
 const Meeting = require('../models/Meeting');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const Team = require('../models/Team');
+const ProposalVersion = require('../models/ProposalVersion');
+const Report = require('../models/Report');
+const Review = require('../models/Review');
+const ProgressLog = require('../models/ProgressLog');
+const WorkspaceDocument = require('../models/WorkspaceDocument');
+const Resource = require('../models/Resource');
+const Message = require('../models/Message');
+const Evaluation = require('../models/Evaluation');
+const PlagiarismReport = require('../models/PlagiarismReport');
+const { recordAudit } = require('../services/auditService');
+
+const activeStudentIds = async (studentIds) => {
+  if (!Array.isArray(studentIds)) {
+    const error = new Error('students must be an array of student IDs');
+    error.statusCode = 422;
+    throw error;
+  }
+  const uniqueIds = [...new Set(studentIds.map((id) => String(id)))];
+  if (!uniqueIds.length) return [];
+  const students = await User.find({
+    _id: { $in: uniqueIds },
+    role: 'student',
+    status: 'active'
+  }).select('_id');
+  if (students.length !== uniqueIds.length) {
+    const error = new Error('Every project member must be an active student account');
+    error.statusCode = 422;
+    throw error;
+  }
+  return students.map((student) => student._id);
+};
+
+const populateProject = (id) => Project.findById(id)
+  .populate('supervisor', 'name email')
+  .populate('students', 'name email');
+
+const notify = async (fields) => {
+  try { await Notification.create(fields); } catch { /* notifications are non-critical */ }
+};
 
 // @desc    Get projects (students/supervisors see their own, admins see all)
 // @route   GET /api/projects
@@ -33,22 +73,40 @@ exports.getProjects = async (req, res) => {
 exports.exploreProjects = async (req, res) => {
   try {
     const { search } = req.query;
-    let query = {};
+    const filters = [];
+
+    // Project discovery must not become a directory of every student's work.
+    // Students see only projects they belong to. Supervisors see their own
+    // projects plus unassigned proposals they can claim; administrators see all.
+    if (req.user.role === 'student') {
+      filters.push({ students: req.user.id });
+    } else if (req.user.role === 'supervisor') {
+      filters.push({
+        $or: [
+          { supervisor: req.user.id },
+          { supervisor: null, status: { $in: ['proposed', 'active'] } }
+        ]
+      });
+    }
     
     if (search && typeof search === 'string') {
       // Escape special characters to prevent regex injection
       const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      query = {
+      filters.push({
         $or: [
           { title: { $regex: safeSearch, $options: 'i' } },
           { description: { $regex: safeSearch, $options: 'i' } }
         ]
-      };
+      });
     }
 
+    const query = filters.length === 0 ? {} : filters.length === 1 ? filters[0] : { $and: filters };
+
     const projects = await Project.find(query)
-      .populate('supervisor', 'name email')
-      .populate('students', 'name email')
+      // An explore card only needs collaboration names. Do not leak student
+      // e-mail addresses to other project members or prospective supervisors.
+      .populate('supervisor', 'name')
+      .populate('students', 'name department')
       .sort({ createdAt: -1 })
       .limit(50); // Limit results for performance
 
@@ -86,20 +144,39 @@ exports.getProject = async (req, res) => {
 // @access  Private (student/supervisor/admin)
 exports.createProject = async (req, res) => {
   try {
-    const { title, description, students, status } = req.body;
+    const { title, description, students } = req.body;
 
     let projectData = {
       title,
-      description,
-      status: status || 'proposed'
+      description
     };
 
     if (req.user.role === 'student') {
       projectData.students = [req.user.id];
       projectData.supervisor = null; // To be assigned later
+      // A student-created project enters the proposal workflow. A supervisor
+      // or administrator controls any later lifecycle state change.
+      projectData.status = 'proposed';
     } else {
-      projectData.students = students || [];
-      projectData.supervisor = req.user.role === 'admin' && req.body.supervisor ? req.body.supervisor : req.user.id;
+      projectData.students = await activeStudentIds(students || []);
+      // A supervisor-created project is immediately an active workspace. It
+      // must not remain in the student-proposal state with no way for that
+      // supervisor to approve it through the normal proposal workflow.
+      projectData.status = 'active';
+
+      if (req.user.role === 'supervisor') {
+        projectData.supervisor = req.user.id;
+      } else {
+        // Administrators assign a real supervisor instead of becoming a
+        // project supervisor themselves. This preserves the supervisor ↔
+        // student ownership model and avoids orphaned admin-owned projects.
+        if (!req.body.supervisor) {
+          return res.status(422).json({ success: false, error: 'Choose an active supervisor when creating a project as an administrator' });
+        }
+        const supervisor = await User.findOne({ _id: req.body.supervisor, role: 'supervisor', status: 'active' }).select('_id');
+        if (!supervisor) return res.status(422).json({ success: false, error: 'The assigned supervisor must be an active supervisor account' });
+        projectData.supervisor = supervisor._id;
+      }
     }
 
     const project = await Project.create(projectData);
@@ -107,6 +184,67 @@ exports.createProject = async (req, res) => {
     res.status(201).json({ success: true, data: project });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// @desc    Claim an unassigned student proposal, or assign/reassign it as an admin
+// @route   POST /api/projects/:id/claim
+// @access  Private (supervisor/admin)
+exports.claimProject = async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
+
+    let supervisor;
+    if (req.user.role === 'supervisor') {
+      if (project.supervisor && idOf(project.supervisor) !== req.user.id) {
+        return res.status(409).json({ success: false, error: 'This project is already assigned to another supervisor' });
+      }
+      supervisor = req.user;
+    } else {
+      const supervisorId = req.body?.supervisorId || req.body?.supervisor;
+      if (!supervisorId) return res.status(422).json({ success: false, error: 'An administrator must provide supervisorId when assigning a project' });
+      supervisor = await User.findOne({ _id: supervisorId, role: 'supervisor', status: 'active' });
+      if (!supervisor) return res.status(422).json({ success: false, error: 'The assigned supervisor must be an active supervisor account' });
+    }
+
+    const previousSupervisor = project.supervisor ? idOf(project.supervisor) : null;
+    project.supervisor = supervisor._id;
+    await project.save();
+
+    // Teams made while a proposal was unassigned inherit the accepted
+    // supervisor so review and leader-confirmation permissions stay coherent.
+    await Team.updateMany({ project: project._id }, { $set: { supervisor: supervisor._id } });
+
+    await Promise.all([
+      ...project.students.map((student) => notify({
+        user: student,
+        title: previousSupervisor ? 'Project supervisor updated' : 'Supervisor assigned',
+        message: `${supervisor.name} is now supervising "${project.title}".`,
+        type: 'info',
+        link: '/proposals'
+      })),
+      previousSupervisor && previousSupervisor !== idOf(supervisor._id)
+        ? notify({
+          user: previousSupervisor,
+          title: 'Project reassigned',
+          message: `You are no longer the assigned supervisor for "${project.title}".`,
+          type: 'info',
+          link: '/supervisor-dashboard'
+        })
+        : Promise.resolve()
+    ]);
+    await recordAudit({
+      actor: req.user.id,
+      action: previousSupervisor ? 'project.supervisor_reassigned' : 'project.supervisor_assigned',
+      entityType: 'project',
+      entityId: project._id,
+      metadata: { previousSupervisor, supervisor: supervisor._id }
+    });
+
+    res.json({ success: true, data: await populateProject(project._id) });
+  } catch (error) {
+    res.status(error.statusCode || 400).json({ success: false, error: error.message });
   }
 };
 
@@ -162,6 +300,31 @@ exports.deleteProject = async (req, res) => {
 
     if (req.user.role !== 'admin' && project.supervisor?.toString() !== req.user.id) {
       return res.status(403).json({ success: false, error: 'Not authorized to delete this project' });
+    }
+
+    // Never silently leave academic records orphaned. Projects with activity
+    // should be moved to on_hold/completed; an empty accidental project can be
+    // deleted safely.
+    const relatedCounts = await Promise.all([
+      Task.countDocuments({ project: project._id }),
+      Submission.countDocuments({ project: project._id }),
+      Meeting.countDocuments({ project: project._id }),
+      Team.countDocuments({ project: project._id }),
+      ProposalVersion.countDocuments({ project: project._id }),
+      Report.countDocuments({ project: project._id }),
+      Review.countDocuments({ project: project._id }),
+      ProgressLog.countDocuments({ project: project._id }),
+      WorkspaceDocument.countDocuments({ project: project._id }),
+      Resource.countDocuments({ project: project._id }),
+      Message.countDocuments({ project: project._id }),
+      Evaluation.countDocuments({ project: project._id }),
+      PlagiarismReport.countDocuments({ project: project._id })
+    ]);
+    if (relatedCounts.some(Boolean)) {
+      return res.status(409).json({
+        success: false,
+        error: 'This project has academic records and cannot be deleted. Set its status to on_hold or completed to preserve the audit trail.'
+      });
     }
 
     await project.deleteOne();
@@ -274,7 +437,8 @@ exports.addProjectMember = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
-    if (!canAccessProject(project, req.user)) {
+    const isAssignedSupervisor = idOf(project.supervisor) === req.user.id;
+    if (req.user.role !== 'admin' && !isAssignedSupervisor) {
       return res.status(403).json({ success: false, error: 'Not authorized to manage this team' });
     }
 
