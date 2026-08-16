@@ -884,8 +884,8 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
   if (!activeProject) return <EmptyProject workspace={isPaperWorkspace ? 'paper editor' : isCodeWorkspace ? 'code IDE' : 'research'} />;
 
   return (
-    <div className={`${isPaperWorkspace ? `paper-editor-page h-full min-h-0 overflow-hidden ${isPaperFocusMode ? 'paper-editor-page--focus' : ''}` : 'min-h-[calc(100vh-64px)]'} bg-[#f4f6fb] text-slate-900 dark:bg-background dark:text-on-surface`}>
-      <div className={`w-full px-3 py-3 md:px-4 md:py-4 ${isPaperWorkspace ? 'paper-editor-page__content flex h-full min-h-0 flex-col overflow-hidden' : ''}`}>
+    <div className={`${isPaperWorkspace ? `paper-editor-page min-h-full ${isPaperFocusMode ? 'paper-editor-page--focus' : ''}` : 'min-h-[calc(100vh-64px)]'} bg-[#f4f6fb] text-slate-900 dark:bg-background dark:text-on-surface`}>
+      <div className={`w-full px-3 py-3 md:px-4 md:py-4 ${isPaperWorkspace ? 'paper-editor-page__content flex min-h-full flex-col' : ''}`}>
         <header className={`paper-editor-page__header mb-2 flex min-h-14 flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-white px-3 py-2 shadow-sm dark:border-outline-variant/30 dark:bg-surface ${isPaperWorkspace ? 'shrink-0' : ''}`}>
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-indigo-600 text-white shadow-sm"><span className="material-symbols-outlined text-[18px]">{isCodeWorkspace ? 'terminal' : 'article'}</span></div>

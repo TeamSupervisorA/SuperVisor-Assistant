@@ -168,14 +168,13 @@
   }
 }
 
-/* Overleaf-style paper workbench. The page owns a bounded desktop height;
-   Monaco and the browser PDF viewer are the only vertical scrollers. */
+/* Overleaf-style paper workbench. The project tools scroll away above a
+   viewport-height workbench; Monaco and the PDF viewer then scroll internally. */
 .paper-editor-page {
-  height: 100%;
-  max-height: 100%;
-  min-height: 0;
-  overflow: hidden;
-  overscroll-behavior: none;
+  height: auto;
+  max-height: none;
+  min-height: 100%;
+  overflow: visible;
 }
 
 .paper-editor-page__content,
@@ -186,7 +185,8 @@
 }
 
 .paper-editor-page__content {
-  height: 100%;
+  height: auto;
+  min-height: 100%;
 }
 
 .paper-editor-page__header,
@@ -201,8 +201,11 @@
 .paper-editor-workbench-shell {
   display: flex;
   width: 100%;
-  flex: 1 1 0;
+  height: calc(100dvh - 64px);
+  min-height: 640px;
+  flex: none;
   overflow: hidden;
+  scroll-margin-top: 0;
 }
 
 .paper-editor-workbench {
@@ -339,6 +342,7 @@
   }
 
   .paper-editor-workbench-shell {
+    height: auto;
     min-height: 0;
     flex: none;
     overflow: visible;
