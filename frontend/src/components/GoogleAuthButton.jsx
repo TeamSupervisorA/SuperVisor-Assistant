@@ -90,17 +90,42 @@ const GoogleAuthButton = ({ onCredential, onError, disabled = false, label = 'Co
 
   if (!clientId) {
     return (
-      <p className="rounded-xl border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-center text-xs text-secondary">
-        Google sign-in is not enabled for this deployment.
-      </p>
+      <div aria-live="polite">
+        <button
+          type="button"
+          disabled
+          className="flex min-h-12 w-full cursor-not-allowed items-center justify-center gap-3 rounded-2xl border border-outline-variant/60 bg-surface-container-lowest px-4 text-sm font-bold text-on-surface opacity-70 shadow-sm"
+        >
+          <span aria-hidden="true" className="grid size-6 place-items-center rounded-full bg-white font-black text-[#4285f4] shadow-sm">G</span>
+          Continue with Google
+        </button>
+        <p className="mt-2 text-center text-xs text-secondary">
+          Google sign-in needs VITE_GOOGLE_CLIENT_ID in the frontend deployment.
+        </p>
+      </div>
     );
   }
 
   return (
     <div aria-live="polite" className={disabled ? 'pointer-events-none opacity-60' : ''}>
-      <div ref={targetRef} data-google-button={instanceId} className="flex min-h-11 w-full justify-center overflow-hidden rounded-full" />
-      {status === 'loading' && <p className="mt-2 text-center text-xs text-secondary">Loading Google sign-in…</p>}
-      {status === 'error' && <p className="mt-2 text-center text-xs text-error">Google sign-in is temporarily unavailable.</p>}
+      <div className="relative min-h-12 w-full">
+        <div
+          ref={targetRef}
+          data-google-button={instanceId}
+          className={`flex min-h-12 w-full justify-center overflow-hidden rounded-2xl ${status === 'ready' ? 'visible' : 'invisible'}`}
+        />
+        {status !== 'ready' && (
+          <button
+            type="button"
+            disabled
+            className="absolute inset-0 flex min-h-12 w-full cursor-wait items-center justify-center gap-3 rounded-2xl border border-outline-variant/60 bg-surface-container-lowest px-4 text-sm font-bold text-on-surface shadow-sm"
+          >
+            <span aria-hidden="true" className="grid size-6 place-items-center rounded-full bg-white font-black text-[#4285f4] shadow-sm">G</span>
+            {status === 'error' ? 'Continue with Google' : 'Loading Google sign-in…'}
+          </button>
+        )}
+      </div>
+      {status === 'error' && <p className="mt-2 text-center text-xs text-error">Google sign-in is temporarily unavailable. Refresh the page and try again.</p>}
     </div>
   );
 };
