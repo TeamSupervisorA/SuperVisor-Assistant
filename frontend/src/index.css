@@ -168,13 +168,13 @@
   }
 }
 
-/* Overleaf-style paper workbench. The project tools scroll away above a
-   viewport-height workbench; Monaco and the PDF viewer then scroll internally. */
+/* Editor-first paper workbench. Desktop uses one viewport: compact project
+   controls stay above two independently scrollable source/PDF panes. */
 .paper-editor-page {
-  height: auto;
-  max-height: none;
-  min-height: 100%;
-  overflow: visible;
+  height: calc(100dvh - 64px);
+  max-height: calc(100dvh - 64px);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .paper-editor-page__content,
@@ -185,8 +185,21 @@
 }
 
 .paper-editor-page__content {
-  height: auto;
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 8px 10px;
+}
+
+.paper-editor-page__header {
+  min-height: 46px;
+  margin-bottom: 6px;
+  border-radius: 9px;
+  padding-block: 6px;
+}
+
+.paper-editor-page__literature {
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
 }
 
 .paper-editor-page__header,
@@ -201,9 +214,9 @@
 .paper-editor-workbench-shell {
   display: flex;
   width: 100%;
-  height: calc(100dvh - 64px);
-  min-height: 640px;
-  flex: none;
+  height: auto;
+  min-height: 0;
+  flex: 1 1 0;
   overflow: hidden;
   scroll-margin-top: 0;
 }
@@ -215,9 +228,24 @@
   flex: 1 1 0;
 }
 
+/* Compact the document tabs and primary toolbar. These rows remain available,
+   but no longer consume the space needed for writing and reviewing. */
+.paper-editor-workbench > div:first-child:has(+ div) {
+  min-height: 34px;
+}
+
+.paper-editor-workbench > div:first-child:has(+ div) > button {
+  padding: 6px 10px;
+}
+
+.paper-editor-workbench > div:nth-child(2) {
+  min-height: 40px;
+  padding: 6px 10px;
+}
+
 .paper-workspace {
   display: grid;
-  grid-template-columns: minmax(320px, var(--paper-source-width, 50%)) 14px minmax(320px, 1fr);
+  grid-template-columns: minmax(320px, var(--paper-source-width, 50%)) 10px minmax(320px, 1fr);
   grid-template-rows: minmax(0, 1fr);
   flex: 1 1 0;
   height: auto;
@@ -239,6 +267,11 @@
   overscroll-behavior: contain;
 }
 
+.paper-workspace__source > :first-child {
+  min-height: 34px;
+  padding: 6px 10px;
+}
+
 .paper-workspace__editor {
   flex: 1 1 0;
   min-height: 0;
@@ -257,7 +290,7 @@
 
 .paper-workspace__preview {
   display: flex;
-  padding: 12px;
+  padding: 8px;
   overscroll-behavior: contain;
 }
 
@@ -268,6 +301,27 @@
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
+}
+
+/* The document toolbar already owns compilation. Keep only PDF identity and
+   auto-compile in the preview header to avoid duplicated primary actions. */
+.paper-preview-card > :first-child {
+  min-height: 36px;
+  padding: 6px 10px;
+}
+
+.paper-preview-card > :first-child button {
+  display: none;
+}
+
+.paper-workspace-modebar {
+  min-height: 28px;
+  justify-content: flex-end;
+  padding-block: 2px;
+}
+
+.paper-workspace-modebar > span {
+  display: none;
 }
 
 .paper-preview-frame,
@@ -292,7 +346,7 @@
 
 .paper-splitter {
   display: grid;
-  width: 14px;
+  width: 10px;
   min-height: 0;
   cursor: col-resize;
   touch-action: none;
@@ -339,6 +393,10 @@
     height: auto;
     min-height: calc(100vh - 64px);
     overflow: visible;
+  }
+
+  .paper-editor-page__content {
+    padding: 10px;
   }
 
   .paper-editor-workbench-shell {
