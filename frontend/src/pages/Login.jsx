@@ -14,7 +14,6 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -152,17 +151,6 @@ const Login = () => {
                   <span className="material-symbols-outlined text-[20px]">{showPassword ? 'visibility_off' : 'visibility'}</span>
                 </button>
               </div>
-            </div>
-
-            <div className="flex items-center gap-3 pl-1 pt-2">
-              <input 
-                type="checkbox" 
-                id="remember" 
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 rounded border-outline-variant/50 text-primary focus:ring-primary accent-primary bg-surface-container-lowest/50"
-              />
-              <label htmlFor="remember" className="font-body-sm text-[13px] font-medium text-secondary select-none cursor-pointer">Keep me signed in</label>
             </div>
 
             <button

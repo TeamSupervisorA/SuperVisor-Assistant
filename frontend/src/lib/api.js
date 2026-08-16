@@ -6,6 +6,12 @@ const getApiBaseUrl = () => {
   throw new Error('The API is not configured. Set VITE_API_URL in the frontend Vercel project and redeploy.');
 };
 
+const handleUnauthorizedResponse = (response) => {
+  if (response.status !== 401) return;
+  sessionStorage.setItem('authNotice', 'Your session has expired or is no longer valid. Please sign in again.');
+  window.dispatchEvent(new Event('auth-invalid'));
+};
+
 const fetchWithTimeout = async (url, { timeoutMs = 15000, ...options } = {}) => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -40,10 +46,7 @@ export const apiFetch = async (path, options = {}) => {
   }
 
   if (!response.ok || data?.success === false) {
-    if (response.status === 401) {
-      sessionStorage.setItem('authNotice', 'Your session has expired or is no longer valid. Please sign in again.');
-      window.dispatchEvent(new Event('auth-invalid'));
-    }
+    handleUnauthorizedResponse(response);
     const error = new Error(data?.error || `Request failed (${response.status})`);
     error.data = data?.data;
     throw error;
@@ -73,6 +76,7 @@ export const uploadFile = async (file) => {
   }
 
   if (!response.ok || data?.success === false) {
+    handleUnauthorizedResponse(response);
     throw new Error(data?.error || `Upload failed (${response.status})`);
   }
 

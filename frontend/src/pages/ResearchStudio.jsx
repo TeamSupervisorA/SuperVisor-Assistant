@@ -178,17 +178,23 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
   const selectedDocumentRef = useRef(null);
   const codeWorkspaceRef = useRef(null);
   const runCodeRef = useRef(null);
+  const workspaceLoadRef = useRef(0);
+  const dirtyRef = useRef(false);
 
   const loadDocuments = useCallback(async (keepId) => {
     if (!activeProject?._id) return;
+    const loadId = workspaceLoadRef.current + 1;
+    workspaceLoadRef.current = loadId;
     setLoading(true);
     try {
       const result = await apiFetch(`/api/workspace/projects/${activeProject._id}/documents`);
+      if (loadId !== workspaceLoadRef.current) return;
       const nextDocuments = (result.data || []).filter((item) => !isPaperWorkspace && !isCodeWorkspace || (isPaperWorkspace ? item.kind === 'paper' : item.kind === 'code'));
       setDocuments(nextDocuments);
       const preferred = nextDocuments.find((item) => item._id === keepId) || nextDocuments[0];
       if (preferred) {
         const detail = await apiFetch(`/api/workspace/documents/${preferred._id}`);
+        if (loadId !== workspaceLoadRef.current) return;
         selectedDocumentRef.current = detail.data;
         setSelectedDocument(detail.data);
       } else {
@@ -196,21 +202,11 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
         setSelectedDocument(null);
       }
     } catch (requestError) {
-      setError(requestError.message || 'Unable to load the research workspace.');
+      if (loadId === workspaceLoadRef.current) setError(requestError.message || 'Unable to load the research workspace.');
     } finally {
-      setLoading(false);
+      if (loadId === workspaceLoadRef.current) setLoading(false);
     }
   }, [activeProject?._id, isCodeWorkspace, isPaperWorkspace]);
-
-  useEffect(() => {
-    setDocuments([]);
-    selectedDocumentRef.current = null;
-    setSelectedDocument(null);
-    setDirty(false);
-    setError('');
-    if (activeProject?._id) loadDocuments();
-    else setLoading(false);
-  }, [activeProject?._id, loadDocuments]);
 
   useEffect(() => {
     let cancelled = false;
@@ -254,6 +250,7 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
     clearTimeout(compileTimer.current);
   }, []);
   useEffect(() => { selectedDocumentRef.current = selectedDocument; }, [selectedDocument]);
+  useEffect(() => { dirtyRef.current = dirty; }, [dirty]);
   useEffect(() => {
     const syncFullscreen = () => setIsCodeFullscreen(document.fullscreenElement === codeWorkspaceRef.current);
     document.addEventListener('fullscreenchange', syncFullscreen);
@@ -286,6 +283,19 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
   const selectDocument = async (documentId) => {
     if (!documentId || documentId === selectedDocument?._id) return;
     try {
+      const currentDocument = selectedDocumentRef.current;
+      // Selecting another tab used to clear the active effect and cancel its
+      // 900 ms autosave. Persist the current tab first so rapid tab changes
+      // cannot silently discard a user's source edits.
+      if (dirty && currentDocument?._id) {
+        clearTimeout(saveTimer.current);
+        setStatus('Saving current document…');
+        const saved = await saveDocument(currentDocument, true);
+        if (!saved) {
+          setStatus('Save failed');
+          return;
+        }
+      }
       setStatus('Loading document…');
       const result = await apiFetch(`/api/workspace/documents/${documentId}`);
       selectedDocumentRef.current = result.data;
@@ -321,7 +331,9 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
         currentDocument.overleafUrl !== documentToSave.overleafUrl
       );
       if (currentDocument?._id === result.data._id && !changedWhileSaving) {
+        selectedDocumentRef.current = result.data;
         setSelectedDocument(result.data);
+        dirtyRef.current = false;
         setDirty(false);
       }
       setStatus(relativeTime(result.data.updatedAt));
@@ -334,6 +346,35 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
       setIsSaving(false);
     }
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const changeProjectWorkspace = async () => {
+      // The active-project menu is global, so a user can switch projects while
+      // a paper or code file still has its debounce pending. Save that outgoing
+      // document before replacing the workspace context.
+      const outgoingDocument = selectedDocumentRef.current;
+      let outgoingSaveFailed = false;
+      workspaceLoadRef.current += 1;
+      if (dirtyRef.current && outgoingDocument?._id) {
+        clearTimeout(saveTimer.current);
+        const saved = await saveDocument(outgoingDocument, true);
+        outgoingSaveFailed = !saved;
+      }
+      if (cancelled) return;
+
+      setDocuments([]);
+      selectedDocumentRef.current = null;
+      setSelectedDocument(null);
+      dirtyRef.current = false;
+      setDirty(false);
+      setError(outgoingSaveFailed ? 'The previous document could not be saved before changing project. Reopen it to retry.' : '');
+      if (activeProject?._id) loadDocuments();
+      else setLoading(false);
+    };
+    changeProjectWorkspace();
+    return () => { cancelled = true; };
+  }, [activeProject?._id, loadDocuments, saveDocument]);
 
   useEffect(() => {
     if (!dirty || !selectedDocument?._id) return undefined;
@@ -372,6 +413,7 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
       selectedDocumentRef.current = next;
       return next;
     });
+    dirtyRef.current = true;
     setDirty(true);
   };
 
@@ -783,7 +825,7 @@ export const ResearchStudio = ({ workspace = 'research' }) => {
           </aside>
 
           <section ref={selectedDocument?.kind === 'code' ? codeWorkspaceRef : null} className={`min-w-0 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm dark:border-outline-variant/30 dark:bg-surface ${isCodeFullscreen ? 'h-screen overflow-y-auto rounded-none' : ''}`}>
-            {!selectedDocument && !loading ? <div className="grid min-h-[680px] place-items-center p-8 text-center"><div><span className="material-symbols-outlined text-[52px] text-indigo-500">edit_note</span><h2 className="mt-4 text-xl font-bold">Your research workspace is ready</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-slate-500 dark:text-secondary">{isPaperWorkspace ? 'Create a LaTeX paper to start drafting.' : isCodeWorkspace ? 'Create a code file to start the implementation workspace.' : 'Create a paper or code file to start your project record.'}</p><div className="mt-5 flex flex-wrap justify-center gap-2">{!isCodeWorkspace && <button type="button" onClick={() => createDocument('paper')} className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-indigo-700">Create paper</button>}{!isPaperWorkspace && <button type="button" onClick={() => createDocument('code')} className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:border-indigo-300 hover:text-indigo-700 dark:border-outline-variant/40 dark:bg-surface dark:text-on-surface">Create code file</button>}</div></div></div> : selectedDocument && <>
+            {!selectedDocument && loading ? <div className="grid min-h-[680px] place-items-center p-8 text-center" role="status"><div><div className="mx-auto size-10 animate-spin rounded-full border-4 border-indigo-100 border-t-indigo-600 dark:border-primary/20 dark:border-t-primary"/><p className="mt-4 text-sm font-medium text-slate-500 dark:text-secondary">Loading workspace…</p></div></div> : !selectedDocument ? <div className="grid min-h-[680px] place-items-center p-8 text-center"><div><span className="material-symbols-outlined text-[52px] text-indigo-500">edit_note</span><h2 className="mt-4 text-xl font-bold">Your research workspace is ready</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-slate-500 dark:text-secondary">{isPaperWorkspace ? 'Create a LaTeX paper to start drafting.' : isCodeWorkspace ? 'Create a code file to start the implementation workspace.' : 'Create a paper or code file to start your project record.'}</p><div className="mt-5 flex flex-wrap justify-center gap-2">{!isCodeWorkspace && <button type="button" onClick={() => createDocument('paper')} className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-indigo-700">Create paper</button>}{!isPaperWorkspace && <button type="button" onClick={() => createDocument('code')} className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:border-indigo-300 hover:text-indigo-700 dark:border-outline-variant/40 dark:bg-surface dark:text-on-surface">Create code file</button>}</div></div></div> : <>
               <div className="flex min-h-[40px] items-end overflow-x-auto border-b border-slate-200 bg-slate-50 dark:border-outline-variant/30 dark:bg-surface-container-low">{documents.map((document) => <button key={document._id} onClick={() => selectDocument(document._id)} className={`inline-flex shrink-0 items-center gap-2 border-r border-slate-200 px-3 py-2 text-xs font-semibold dark:border-outline-variant/30 ${document._id === selectedDocument._id ? 'bg-white text-indigo-700 dark:bg-surface dark:text-primary' : 'text-slate-500 hover:bg-white/70 dark:text-secondary dark:hover:bg-surface'}`}><span className="material-symbols-outlined text-[16px]">{document.kind === 'paper' ? 'description' : 'code'}</span>{document.title}{document._id === selectedDocument._id && dirty && <span className="size-1.5 rounded-full bg-amber-500"/>}</button>)}</div>
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-2.5 dark:border-outline-variant/30"><div className="inline-flex items-center gap-2 text-xs text-slate-500 dark:text-secondary"><span className="material-symbols-outlined text-[16px] text-indigo-600 dark:text-primary">description</span>{selectedDocument.kind === 'paper' ? 'Paper document' : 'Implementation file'} · {dirty ? 'Unsaved changes' : status || relativeTime(selectedDocument.updatedAt)}<button onClick={() => { const title = window.prompt('Rename document', selectedDocument.title)?.trim(); if (title) updateSelected({ title }); }} title="Rename document" className="ml-1 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-surface-container"><span className="material-symbols-outlined text-[15px]">edit</span></button></div><div className="flex flex-wrap items-center gap-1.5">{selectedDocument.kind === 'paper' && <><select value={compilerEngine} onChange={(event) => setCompilerEngine(event.target.value)} aria-label="LaTeX compiler" className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-bold text-slate-700 outline-none focus:border-indigo-400 dark:border-outline-variant/40 dark:bg-surface-container dark:text-on-surface"><option value="pdflatex">pdfLaTeX</option><option value="xelatex">XeLaTeX</option><option value="lualatex">LuaLaTeX</option></select><button onClick={() => compileDocument()} disabled={isCompiling} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60"><span className="material-symbols-outlined mr-1 align-[-3px] text-[16px]">play_arrow</span>{isCompiling ? 'Compiling…' : compiledPdf ? 'Recompile' : 'Compile'}</button></>}{selectedDocument.kind === 'code' && <><select value={selectedDocument.language || 'javascript'} onChange={(event) => { updateSelected({ language: event.target.value }); setCodeOutput({ text: `${event.target.options[event.target.selectedIndex].text} selected. Load a starter if you want a new template.`, state: 'idle', language: event.target.value }); }} aria-label="Programming language" className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-bold text-slate-700 outline-none focus:border-indigo-400 dark:border-outline-variant/40 dark:bg-surface-container dark:text-on-surface">{codeLanguages.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><button onClick={() => { const language = selectedDocument.language || 'javascript'; if (window.confirm(`Replace the current source with a ${language} starter template?`)) updateSelected({ content: starterForLanguage(language) }); }} title="Load language starter" className="grid size-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-indigo-700 dark:text-secondary dark:hover:bg-surface-container"><span className="material-symbols-outlined text-[18px]">note_add</span></button><button onClick={runCode} disabled={isRunningCode} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60"><span className="material-symbols-outlined mr-1 align-[-3px] text-[16px]">play_arrow</span>{isRunningCode ? 'Running…' : 'Run'}</button><button onClick={toggleCodeFullscreen} title={isCodeFullscreen ? 'Exit fullscreen' : 'Fullscreen coding'} className="grid size-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-indigo-700 dark:text-secondary dark:hover:bg-surface-container"><span className="material-symbols-outlined text-[18px]">{isCodeFullscreen ? 'fullscreen_exit' : 'fullscreen'}</span></button></>}<button onClick={() => saveDocument(selectedDocument)} disabled={isSaving} className="rounded-lg px-3 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-50 disabled:opacity-60 dark:text-primary dark:hover:bg-primary/10"><span className="material-symbols-outlined mr-1 align-[-3px] text-[16px]">save</span>{isSaving ? 'Saving…' : 'Save'}</button><button onClick={downloadSource} title="Download source" className="grid size-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-secondary dark:hover:bg-surface-container"><span className="material-symbols-outlined text-[18px]">download</span></button><button onClick={deleteDocument} title="Delete document" className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 dark:text-secondary dark:hover:bg-error-container/30"><span className="material-symbols-outlined text-[18px]">delete</span></button></div></div>
                {selectedDocument.kind === 'paper' && compilerUnavailable && <div role="status" className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-400/25 dark:bg-amber-500/10 dark:text-amber-100"><div className="flex min-w-0 items-start gap-2"><span className="material-symbols-outlined mt-0.5 text-[18px]">settings_alert</span><p><strong className="font-extrabold">PDF compiler setup required.</strong> {compilerSetupMessage}</p></div><button type="button" onClick={refreshCompilerStatus} disabled={isCheckingCompiler} className="shrink-0 rounded-md border border-amber-300 bg-white px-3 py-1.5 text-[11px] font-bold text-amber-900 hover:bg-amber-100 disabled:opacity-60 dark:border-amber-300/30 dark:bg-surface dark:text-amber-100 dark:hover:bg-amber-500/15">{isCheckingCompiler ? 'Checking…' : 'Check again'}</button></div>}
