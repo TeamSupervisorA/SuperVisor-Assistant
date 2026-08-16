@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
@@ -131,7 +131,10 @@ const AdminLogin = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="block font-label-md text-[12px] font-bold text-white/70 uppercase tracking-widest" htmlFor="password">Secure Password</label>
+              <div className="flex items-center justify-between gap-3">
+                <label className="block font-label-md text-[12px] font-bold text-white/70 uppercase tracking-widest" htmlFor="password">Secure Password</label>
+                <Link to="/forgot-password" className="text-xs font-bold text-error-container hover:underline">Forgot password?</Link>
+              </div>
               <div className="relative group">
                 <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-white/40 text-[20px] group-focus-within:text-error transition-colors">key</span>
                 <input

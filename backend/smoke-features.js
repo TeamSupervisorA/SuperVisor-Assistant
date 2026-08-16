@@ -3,6 +3,7 @@ process.env.NODE_ENV = 'test';
 process.env.PORT = '5099';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'smoke-secret';
 process.env.ALLOW_PUBLIC_SUPERVISOR_REGISTRATION = 'true';
+process.env.EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS = '30';
 // Exercise the exact Paper Editor failure path without allowing a developer's
 // local compiler configuration to make this smoke test reach a real service.
 process.env.LATEX_COMPILER_URL = '';
@@ -14,6 +15,17 @@ require('./server');
 const User = require('./models/User');
 
 const BASE = 'http://localhost:5099';
+const runId = `${process.pid}-${Date.now()}`;
+const emails = {
+  alice: `alice-${runId}@test.com`,
+  bob: `bob-${runId}@test.com`,
+  eve: `eve-${runId}@test.com`,
+  supervisor: `sup-${runId}@test.com`,
+  inactive: `inactive-${runId}@test.com`,
+  modern: `modern-${runId}@research.technology`,
+  pending: `pending-${runId}@test.com`,
+  unapproved: `unapproved-${runId}@test.com`
+};
 let passed = 0, failed = 0;
 const check = (name, cond, extra = '') => {
   if (cond) { passed++; console.log(`  PASS  ${name}`); }
@@ -48,24 +60,47 @@ const run = async () => {
   check('unknown API routes return JSON rather than an HTML error page', missingRoute.status === 404 && missingRoute.data?.error === 'API endpoint not found');
 
   // ---- users
-  const reg = async (name, email, role) =>
-    (await api('/api/auth/register', { method: 'POST', body: { name, email, password: 'pass1234', role } })).data;
-  const alice = await reg('Alice', 'alice@test.com', 'student');
-  const bob = await reg('Bob', 'bob@test.com', 'student');
-  const eve = await reg('Eve', 'eve@test.com', 'student');
-  const sup = await reg('Dr. Sup', 'sup@test.com', 'supervisor');
-  const modernDomain = await api('/api/auth/register', { method: 'POST', body: { name: 'Modern Domain', email: 'modern@research.technology', password: 'pass1234' } });
-  check('registration accepts a valid modern top-level domain', modernDomain.status === 201);
-  const inactiveStudent = await reg('Inactive Student', 'inactive@test.com', 'student');
+  const reg = async (name, email, role) => {
+    const requested = await api('/api/auth/register/request-verification', {
+      method: 'POST', body: { name, email, password: 'pass1234', role }
+    });
+    if (requested.status !== 202) {
+      console.error(`Registration request failed for smoke user ${name}:`, requested.status, requested.data?.error);
+      return requested.data;
+    }
+    const verified = await api('/api/auth/register/verify', {
+      method: 'POST', body: { email, code: '000000' }
+    });
+    if (verified.status !== 201) console.error(`Registration verification failed for smoke user ${name}:`, verified.status, verified.data?.error);
+    return verified.data;
+  };
+  const alice = await reg('Alice', emails.alice, 'student');
+  const bob = await reg('Bob', emails.bob, 'student');
+  const eve = await reg('Eve', emails.eve, 'student');
+  const sup = await reg('Dr. Sup', emails.supervisor, 'supervisor');
+  const modernDomain = await api('/api/auth/register/request-verification', { method: 'POST', body: { name: 'Modern Domain', email: emails.modern, password: 'pass1234' } });
+  const modernDomainVerified = await api('/api/auth/register/verify', { method: 'POST', body: { email: emails.modern, code: '000000' } });
+  check('registration accepts a valid modern top-level domain after email verification', modernDomain.status === 202 && modernDomainVerified.status === 201 && !!modernDomainVerified.data.token);
+  const inactiveStudent = await reg('Inactive Student', emails.inactive, 'student');
   await User.findByIdAndUpdate(inactiveStudent.user.id, { status: 'inactive' });
-  const duplicateRegistration = await api('/api/auth/register', { method: 'POST', body: { name: 'Alice Again', email: 'alice@test.com', password: 'pass1234' } });
+  const duplicateRegistration = await api('/api/auth/register/request-verification', { method: 'POST', body: { name: 'Alice Again', email: emails.alice, password: 'pass1234' } });
   check('duplicate registration returns a safe sign-in message', duplicateRegistration.status === 409 && /account already exists/i.test(duplicateRegistration.data.error));
+  const pendingSignup = await api('/api/auth/register/request-verification', { method: 'POST', body: { name: 'Pending User', email: emails.pending, password: 'pass1234' } });
+  const pendingLogin = await api('/api/auth/login', { method: 'POST', body: { email: emails.pending, password: 'pass1234' } });
+  const wrongVerification = await api('/api/auth/register/verify', { method: 'POST', body: { email: emails.pending, code: '111111' } });
+  const pending = await User.findOne({ email: emails.pending });
+  if (pending) await User.findByIdAndUpdate(pending._id, { emailVerificationLastSentAt: new Date(Date.now() - 31_000) });
+  const pendingResend = await api('/api/auth/register/resend-verification', { method: 'POST', body: { email: emails.pending } });
+  const verifiedPending = await api('/api/auth/register/verify', { method: 'POST', body: { email: emails.pending, code: '000000' } });
+  check('email verification blocks login, rejects wrong codes, allows safe resend, and activates only after the correct code', pendingSignup.status === 202 && pendingLogin.status === 403 && wrongVerification.status === 400 && pendingResend.status === 200 && verifiedPending.status === 201 && !!verifiedPending.data.token);
+  const googleNotConfigured = await api('/api/auth/google', { method: 'POST', body: { credential: 'not-a-real-token' } });
+  check('Google sign-in does not accept credentials when the client ID is not configured', googleNotConfigured.status === 503 && !googleNotConfigured.data.token);
   const unknownReset = await api('/api/auth/forgot-password', { method: 'POST', body: { email: 'unknown@test.com' } });
   check('password reset does not reveal unknown accounts', unknownReset.status === 200 && /If an account exists/i.test(unknownReset.data.message));
   const invalidReset = await api('/api/auth/reset-password/not-a-valid-token', { method: 'POST', body: { password: 'pass1234' } });
   check('invalid reset token is rejected', invalidReset.status === 400);
   process.env.ALLOW_PUBLIC_SUPERVISOR_REGISTRATION = 'false';
-  const unapprovedSupervisor = await reg('Unapproved Supervisor', 'unapproved@test.com', 'supervisor');
+  const unapprovedSupervisor = await reg('Unapproved Supervisor', emails.unapproved, 'supervisor');
   check('public supervisor registration is downgraded to student', unapprovedSupervisor.user.role === 'student');
 
   // ---- student proposal -> supervisor claim lifecycle and private discovery
@@ -75,7 +110,7 @@ const run = async () => {
   const outsiderExplore = await api('/api/projects/explore', { token: eve.token });
   check('students cannot discover unrelated projects', outsiderExplore.status === 200 && !(outsiderExplore.data.data || []).some(project => project._id === unassignedId));
   const supervisorExplore = await api('/api/projects/explore', { token: sup.token });
-  check('supervisor can discover unassigned proposals without student email leakage', supervisorExplore.status === 200 && (supervisorExplore.data.data || []).some(project => project._id === unassignedId) && !JSON.stringify(supervisorExplore.data).includes('alice@test.com'));
+  check('supervisor can discover unassigned proposals without student email leakage', supervisorExplore.status === 200 && (supervisorExplore.data.data || []).some(project => project._id === unassignedId) && !JSON.stringify(supervisorExplore.data).includes(emails.alice));
   const claimed = await api(`/api/projects/${unassignedId}/claim`, { method: 'POST', token: sup.token });
   check('supervisor can claim an unassigned student proposal', claimed.status === 200 && claimed.data.data.supervisor?._id === sup.user.id);
   const claimedAgain = await api(`/api/projects/${unassignedId}/claim`, { method: 'POST', token: sup.token });
@@ -97,22 +132,22 @@ const run = async () => {
   check('outsider cannot generate a project report narrative (403)', outsiderReportDraft.status === 403);
 
   // ---- member management
-  const studentAdd = await api(`/api/projects/${pid}/members`, { method: 'POST', token: alice.token, body: { email: 'bob@test.com' } });
+  const studentAdd = await api(`/api/projects/${pid}/members`, { method: 'POST', token: alice.token, body: { email: emails.bob } });
   check('student cannot change a supervised project roster', studentAdd.status === 403);
 
-  const add = await api(`/api/projects/${pid}/members`, { method: 'POST', token: sup.token, body: { email: 'bob@test.com' } });
+  const add = await api(`/api/projects/${pid}/members`, { method: 'POST', token: sup.token, body: { email: emails.bob } });
   check('assigned supervisor adds teammate by email', add.status === 200 && add.data.data.students.length === 2);
 
-  const inactiveAdd = await api(`/api/projects/${pid}/members`, { method: 'POST', token: sup.token, body: { email: 'inactive@test.com' } });
+  const inactiveAdd = await api(`/api/projects/${pid}/members`, { method: 'POST', token: sup.token, body: { email: emails.inactive } });
   check('inactive students cannot be added to an active project team', inactiveAdd.status === 400 && /active student/i.test(inactiveAdd.data.error));
 
-  const dup = await api(`/api/projects/${pid}/members`, { method: 'POST', token: sup.token, body: { email: 'bob@test.com' } });
+  const dup = await api(`/api/projects/${pid}/members`, { method: 'POST', token: sup.token, body: { email: emails.bob } });
   check('duplicate member rejected', dup.status === 400);
 
-  const evil = await api(`/api/projects/${pid}/members`, { method: 'POST', token: eve.token, body: { email: 'eve@test.com' } });
+  const evil = await api(`/api/projects/${pid}/members`, { method: 'POST', token: eve.token, body: { email: emails.eve } });
   check('outsider cannot add members (403)', evil.status === 403);
 
-  const supAdd = await api(`/api/projects/${pid}/members`, { method: 'POST', token: sup.token, body: { email: 'sup@test.com' } });
+  const supAdd = await api(`/api/projects/${pid}/members`, { method: 'POST', token: sup.token, body: { email: emails.supervisor } });
   check('supervisor account rejected as member', supAdd.status === 400);
 
   // Bob got a notification

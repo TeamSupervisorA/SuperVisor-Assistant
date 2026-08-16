@@ -11,7 +11,12 @@ const connectDB = async () => {
     let uri = process.env.MONGODB_URI;
     if (process.env.NODE_ENV === 'test') {
       const { MongoMemoryServer } = require('mongodb-memory-server');
-      mongoServer = await MongoMemoryServer.create();
+      // A unique database name keeps repeated smoke/E2E runs isolated even if
+      // a previous test process was interrupted before its in-memory MongoDB
+      // child process had a chance to shut down cleanly.
+      mongoServer = await MongoMemoryServer.create({
+        instance: { dbName: `supervisor_test_${process.pid}_${Date.now()}` }
+      });
       uri = mongoServer.getUri();
     }
     if (!uri) throw new Error('MONGODB_URI is not configured');

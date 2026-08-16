@@ -19,7 +19,9 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: [true, 'Please add a password'],
+    // Google-only accounts do not have a local password unless the user
+    // chooses to add one during (or after) profile completion.
+    required: function passwordRequired() { return !this.googleId; },
     minlength: [8, 'Password must be at least 8 characters long'],
     select: false // Don't return password by default
   },
@@ -47,7 +49,44 @@ const userSchema = new mongoose.Schema({
   },
   googleId: {
     type: String,
-    default: null
+    select: false
+  },
+  // Existing accounts predate verification. The default deliberately keeps
+  // them usable, while every new password registration explicitly starts as
+  // unverified in the controller.
+  emailVerified: {
+    type: Boolean,
+    default: true
+  },
+  onboardingStatus: {
+    type: String,
+    enum: ['complete', 'email_verification_pending', 'google_profile_pending'],
+    default: 'complete'
+  },
+  emailVerificationCode: {
+    type: String,
+    select: false
+  },
+  emailVerificationExpires: {
+    type: Date,
+    select: false
+  },
+  emailVerificationAttempts: {
+    type: Number,
+    default: 0,
+    select: false
+  },
+  emailVerificationLastSentAt: {
+    type: Date,
+    select: false
+  },
+  googleProfileToken: {
+    type: String,
+    select: false
+  },
+  googleProfileTokenExpires: {
+    type: Date,
+    select: false
   },
   passwordResetToken: {
     type: String,
@@ -88,6 +127,15 @@ userSchema.pre('save', async function encryptPasswordAndTrackChanges() {
   // second remains valid while all earlier tokens are rejected.
   if (!this.isNew) this.passwordChangedAt = new Date(Date.now() - 1000);
 });
+
+// A sparse unique index with a `null` default would permit only one local
+// account because MongoDB indexes that null. Index only actual string Google
+// subject IDs so legacy/local accounts stay independent and a Google subject
+// can never be linked to two profiles.
+userSchema.index(
+  { googleId: 1 },
+  { unique: true, partialFilterExpression: { googleId: { $type: 'string' } } }
+);
 
 // Match user entered password to hashed password in database
 userSchema.methods.matchPassword = async function(enteredPassword) {

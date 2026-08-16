@@ -13,6 +13,62 @@ Deploy `frontend` and `backend` as separate Vercel projects, with each project's
 - `FRONTEND_URL` is an exact allow-list, not a wildcard. Add each permitted production or preview origin explicitly, comma-separated.
 - To enable password-reset email, set `RESEND_API_KEY` and `EMAIL_FROM` (a verified Resend sender) in the backend project, then redeploy. Reset links use the first origin in `FRONTEND_URL`.
 
+## Account verification, recovery, and Google sign-in
+
+New password-based registrations are not activated until the person enters the six-digit code sent to their email. The code is short-lived and stored only as a hash. Password-reset requests always return the same confirmation message, whether or not the address exists, so the endpoint cannot be used to enumerate accounts.
+
+### 1. Enable transactional email
+
+1. In Resend, verify a domain that you own and create an API key.
+2. In the **backend Vercel project**, add these production variables:
+
+   ```text
+   RESEND_API_KEY=re_...
+   EMAIL_FROM=SuperVisorAI <noreply@your-verified-domain.example>
+   FRONTEND_URL=https://your-frontend.vercel.app
+   ```
+
+3. Redeploy the backend. Use the production frontend URL as the first `FRONTEND_URL` origin because reset links are built from it.
+4. Test with a non-administrator account: register, enter the email code, use **Forgot password?**, and follow the one-time reset link. Check the spam folder while the sending domain is new.
+
+### 2. Enable Continue with Google
+
+1. In Google Cloud Console, create or select a project, configure its OAuth consent screen, and create an OAuth 2.0 **Web application** client.
+2. Under **Authorized JavaScript origins**, add the exact frontend origins, such as `https://your-frontend.vercel.app`. Add preview origins only if you deliberately test Google sign-in there.
+3. Copy the Web client ID (it ends in `.apps.googleusercontent.com`) into both Vercel projects:
+
+   ```text
+   # frontend Vercel project — public identifier, not a secret
+   VITE_GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+
+   # backend Vercel project — used to verify the token audience
+   GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+   ```
+
+4. Redeploy the backend and then the frontend. Do **not** put an OAuth client secret in the frontend or add a Google service-account key to this application.
+5. A new Google user receives a short-lived profile-completion session and is then created as a student. Google sign-in cannot self-provision an administrator or supervisor.
+
+## Roles and access
+
+- **Students:** use `/register`, verify their email, then sign in at `/login`.
+- **Supervisors:** an active administrator promotes or provisions a verified account through **Admin dashboard → Manage users**. The supervisor then uses the normal `/login` page and is directed to `/supervisor-dashboard` automatically.
+- **Administrators:** use `/admin-login` and are directed to `/admin-dashboard`. Administrator accounts are never created by public registration. Keep `ALLOW_PUBLIC_SUPERVISOR_REGISTRATION=false` in production.
+
+The authenticated dashboards enforce role checks on both the client and server. A student cannot access supervisory review or administrative routes simply by changing a URL.
+
+### Bootstrap the first administrator
+
+Run this once from the `backend` folder on a trusted machine that has the correct `MONGODB_URI` in its local `.env`. It creates a new administrator only when the email is unused; it never changes an existing account and is not exposed over HTTP.
+
+```powershell
+cd backend
+$env:ADMIN_INITIAL_PASSWORD = 'use-a-unique-password-of-at-least-12-characters'
+npm run create-admin -- "Institution Administrator" admin@your-domain.example
+Remove-Item Env:ADMIN_INITIAL_PASSWORD
+```
+
+Then visit `/admin-login`. From **Manage users**, promote a verified student to supervisor or restore/deactivate accounts. Do not turn on public supervisor registration merely to create institutional staff accounts.
+
 ## Gemini academic-assistance workflows
 
 Set `GEMINI_API_KEY` and, if needed, a Gemini model available to that key in `GEMINI_MODEL`. The default is `gemini-3.6-flash`, a current GA Flash model for academic assistance. Google Search grounding is subject to the Google AI project’s model access, quota, and billing settings; the integrity workflow reports quota exhaustion clearly rather than fabricating a result. The backend keeps the key private and exposes only a configured/not-configured status at `/api/ai/status`. It rate-limits AI requests and records user-scoped interaction history for accountability.

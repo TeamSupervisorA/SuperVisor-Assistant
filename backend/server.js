@@ -71,7 +71,10 @@ const limiter = rateLimit({
 // database readiness middleware for the same reason as the general limiter.
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  // The integration suite completes many independent account lifecycles from
+  // one localhost address. Keep the production brute-force limit strict while
+  // allowing test coverage without weakening deployed environments.
+  max: process.env.NODE_ENV === 'test' ? 1000 : 10,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: { success: false, error: 'Too many authentication attempts, please try again later' }

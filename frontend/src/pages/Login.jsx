@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 
 const roleHome = {
   student: '/dashboard',
@@ -18,6 +19,23 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  const finishAuthentication = (data) => {
+    if (data?.requiresProfile || data?.needsProfile) {
+      const onboardingToken = data.onboardingToken || data.setupToken || data.registrationToken;
+      if (!onboardingToken) throw new Error('Google sign-in needs profile completion, but the server did not provide a secure setup token.');
+      sessionStorage.setItem('googleOnboarding', JSON.stringify({
+        token: onboardingToken,
+        name: data.profile?.name || data.user?.name || '',
+        email: data.profile?.email || data.user?.email || ''
+      }));
+      navigate('/complete-profile');
+      return;
+    }
+    if (!data?.token || !data?.user) throw new Error('The server did not return a valid sign-in session.');
+    login(data.token, data.user);
+    navigate(roleHome[data.user.role] || '/dashboard');
+  };
 
   useEffect(() => {
     const notice = sessionStorage.getItem('authNotice');
@@ -38,10 +56,25 @@ const Login = () => {
         body: JSON.stringify({ email, password })
       });
 
-      login(data.token, data.user);
-      navigate(roleHome[data.user.role] || '/dashboard');
+      finishAuthentication(data);
     } catch (err) {
       setError(err.message || 'Failed to login');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleCredential = async (credential) => {
+    setError('');
+    setLoading(true);
+    try {
+      const data = await apiFetch('/api/auth/google', {
+        method: 'POST',
+        body: JSON.stringify({ credential })
+      });
+      finishAuthentication(data);
+    } catch (err) {
+      setError(err.message || 'Unable to continue with Google.');
     } finally {
       setLoading(false);
     }
@@ -165,6 +198,18 @@ const Login = () => {
               )}
             </button>
           </form>
+
+          <div className="my-7 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-secondary/70">
+            <span className="h-px flex-1 bg-outline-variant/50" />
+            or
+            <span className="h-px flex-1 bg-outline-variant/50" />
+          </div>
+          <GoogleAuthButton
+            label="Continue with Google"
+            disabled={loading}
+            onCredential={handleGoogleCredential}
+            onError={(message) => setError(message)}
+          />
 
           <div className="mt-10 text-center">
             <p className="font-body-sm text-[14px] text-secondary">

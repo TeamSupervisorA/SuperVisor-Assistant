@@ -17,28 +17,36 @@ async function runTests() {
   const studentEmail = `student${randId}@test.com`;
   const supervisorEmail = `supervisor${randId}@test.com`;
 
+  const registerAndVerify = async ({ name, email, password, role }) => {
+    const request = await fetch(`${API_BASE}/auth/register/request-verification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password, role })
+    });
+    const requestData = await request.json();
+    if (!request.ok) throw new Error(requestData.error || 'Could not request email verification');
+    const verify = await fetch(`${API_BASE}/auth/register/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // The test-only mail transport uses a deterministic code and never
+      // exposes it through the public production API.
+      body: JSON.stringify({ email, code: '000000' })
+    });
+    const verifyData = await verify.json();
+    if (!verify.ok) throw new Error(verifyData.error || 'Could not verify email');
+    return verifyData;
+  };
+
   try {
     // 1. Register Student
     console.log(`\n[1] Registering student: ${studentEmail}`);
-    const regRes = await fetch(`${API_BASE}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Test Student', email: studentEmail, password: 'password123', role: 'student' })
-    });
-    const regData = await regRes.json();
-    if (!regData.success) throw new Error(regData.error);
+    const regData = await registerAndVerify({ name: 'Test Student', email: studentEmail, password: 'password123', role: 'student' });
     studentToken = regData.token;
     console.log('✅ Student registered successfully');
 
     // 2. Register Supervisor
     console.log(`\n[2] Registering supervisor: ${supervisorEmail}`);
-    const supRegRes = await fetch(`${API_BASE}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Test Supervisor', email: supervisorEmail, password: 'password123', role: 'supervisor' })
-    });
-    const supRegData = await supRegRes.json();
-    if (!supRegData.success) throw new Error(supRegData.error);
+    const supRegData = await registerAndVerify({ name: 'Test Supervisor', email: supervisorEmail, password: 'password123', role: 'supervisor' });
     supervisorToken = supRegData.token;
     console.log('✅ Supervisor registered successfully');
 

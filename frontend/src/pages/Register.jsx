@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 
 const roleHome = {
   student: '/dashboard',
@@ -69,7 +70,7 @@ const Register = () => {
 
     setLoading(true);
     try {
-      const data = await apiFetch('/api/auth/register', {
+      await apiFetch('/api/auth/register/request-verification', {
         method: 'POST',
         body: JSON.stringify({
           name: form.fullName,
@@ -81,11 +82,40 @@ const Register = () => {
           batch: form.batch || undefined
         })
       });
+      const normalizedEmail = form.email.trim().toLowerCase();
+      sessionStorage.setItem('pendingVerificationEmail', normalizedEmail);
+      navigate('/verify-email');
+    } catch (err) {
+      setError(err.message || 'Failed to register');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const handleGoogleCredential = async (credential) => {
+    setError('');
+    setLoading(true);
+    try {
+      const data = await apiFetch('/api/auth/google', {
+        method: 'POST',
+        body: JSON.stringify({ credential })
+      });
+      if (data?.requiresProfile) {
+        const registrationToken = data.registrationToken;
+        if (!registrationToken) throw new Error('Google sign-in needs profile completion, but the server did not provide a secure setup token.');
+        sessionStorage.setItem('googleOnboarding', JSON.stringify({
+          token: registrationToken,
+          name: data.profile?.name || '',
+          email: data.profile?.email || ''
+        }));
+        navigate('/complete-profile');
+        return;
+      }
+      if (!data?.token || !data?.user) throw new Error('The server did not return a valid sign-in session.');
       login(data.token, data.user);
       navigate(roleHome[data.user.role] || '/dashboard');
     } catch (err) {
-      setError(err.message || 'Failed to register');
+      setError(err.message || 'Unable to continue with Google.');
     } finally {
       setLoading(false);
     }
@@ -241,12 +271,27 @@ const Register = () => {
               disabled={loading}
             >
               {loading ? (
-                <><motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="material-symbols-outlined text-[20px]">sync</motion.span> Creating account...</>
+                <><motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="material-symbols-outlined text-[20px]">sync</motion.span> Sending code...</>
               ) : (
-                <>Create Account <span className="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">arrow_forward</span></>
+                <>Send verification code <span className="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">arrow_forward</span></>
               )}
             </button>
           </form>
+
+          <div className="my-7 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-secondary/70">
+            <span className="h-px flex-1 bg-outline-variant/50" />
+            or
+            <span className="h-px flex-1 bg-outline-variant/50" />
+          </div>
+          <GoogleAuthButton
+            label="Continue with Google"
+            disabled={loading}
+            onCredential={handleGoogleCredential}
+            onError={(message) => setError(message)}
+          />
+          <p className="mt-3 text-center text-xs leading-relaxed text-secondary">
+            Google confirms your email. You will complete your academic profile next.
+          </p>
 
           <div className="mt-10 text-center border-t border-outline-variant/30 pt-8">
             <p className="font-body-sm text-[14px] text-secondary">
