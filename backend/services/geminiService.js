@@ -130,6 +130,43 @@ exports.generateReportNarrative = async (reportContext, guidance) => {
   return String(response.text || '').trim();
 };
 
+exports.academicAssistant = async ({ message, mode, role, userProfile, projectContext, recentHistory, guidance }) => {
+  const question = normalizeText(message, 'Message');
+  const allowedModes = ['research', 'career', 'planning'];
+  const selectedMode = allowedModes.includes(mode) ? mode : 'research';
+  const roleInstructions = {
+    student: 'Coach the student to make their own decisions and produce their own work. Explain the next practical step and what evidence to bring to their human supervisor.',
+    supervisor: 'Support supervisory judgment. Identify progress evidence, risks, questions to ask the student, and a reasonable intervention without replacing the supervisor’s decision.',
+    admin: 'Support academic operations. Focus on workload, ownership, escalation, traceability, and fair process; do not make disciplinary or academic decisions.'
+  };
+  const modeInstructions = {
+    research: 'Help frame research questions, methods, evaluation, literature-search strategy, ethics, limitations, and academic writing. Never invent citations or results.',
+    career: 'Use career-readiness areas such as self-development, communication, critical thinking, teamwork, professionalism, leadership, and technology. Connect advice to the user’s project evidence and recommend concrete portfolio or skill-building actions.',
+    planning: 'Turn the verified project state into a dependency-aware plan with ownership, acceptance criteria, risks, and a check-in point.'
+  };
+  const response = await request({
+    prompt: `Mode: ${selectedMode}\nRole: ${role}\nUser profile: ${JSON.stringify(userProfile)}\nVerified project context: ${JSON.stringify(projectContext || null)}\nRecent conversation: ${JSON.stringify((recentHistory || []).slice(-6))}\n\nUser message:\n${question}\n\nReturn JSON only with this shape: {"answer":"a direct, plain-language response without markdown headings","nextActions":[{"title":"","reason":"","owner":"student|supervisor|admin|team"}],"questionsToConsider":[""],"humanCheckpoint":"what should be verified with a person or source"}. Return no more than four next actions and three questions. When information is missing, ask targeted questions instead of making assumptions.`,
+    systemInstruction: withUserGuidance(`You are a role-aware academic supervision and career-development assistant. ${roleInstructions[role] || roleInstructions.student} ${modeInstructions[selectedMode]} Preserve human agency, protect privacy, label uncertainty, and distinguish verified project records from user claims. Do not fabricate sources, institutional policy, deadlines, people, progress, grades, job outcomes, or capabilities. Never claim to have contacted anyone or completed an action.`, guidance),
+    json: true
+  });
+  const result = parseJson(response.text, 'academic-assistant');
+  if (!result?.answer || typeof result.answer !== 'string') throw new Error('The AI did not return a usable assistant response.');
+  return {
+    answer: result.answer.trim().slice(0, 8000),
+    nextActions: Array.isArray(result.nextActions) ? result.nextActions.slice(0, 4).map((action) => ({
+      title: String(action?.title || '').trim().slice(0, 200),
+      reason: String(action?.reason || '').trim().slice(0, 500),
+      owner: ['student', 'supervisor', 'admin', 'team'].includes(action?.owner) ? action.owner : role
+    })).filter((action) => action.title) : [],
+    questionsToConsider: Array.isArray(result.questionsToConsider)
+      ? result.questionsToConsider.slice(0, 3).map((questionItem) => String(questionItem || '').trim().slice(0, 500)).filter(Boolean)
+      : [],
+    humanCheckpoint: String(result.humanCheckpoint || 'Verify important academic and career decisions with your assigned supervisor or institution.').trim().slice(0, 1000),
+    mode: selectedMode,
+    role
+  };
+};
+
 exports.checkPlagiarism = async (text) => {
   const submission = normalizeText(text, 'Submission text');
   if (submission.length < 200) throw new Error('Provide at least 200 characters of submission text for an integrity screen.');

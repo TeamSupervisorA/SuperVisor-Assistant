@@ -148,7 +148,9 @@ exports.createProject = async (req, res) => {
 
     let projectData = {
       title,
-      description
+      description,
+      department: String(req.body?.department || req.user.department || '').trim() || null,
+      section: String(req.body?.section || '').trim() || null
     };
 
     if (req.user.role === 'student') {
@@ -157,6 +159,7 @@ exports.createProject = async (req, res) => {
       // A student-created project enters the proposal workflow. A supervisor
       // or administrator controls any later lifecycle state change.
       projectData.status = 'proposed';
+      projectData.supervisionSource = 'unassigned';
     } else {
       projectData.students = await activeStudentIds(students || []);
       // A supervisor-created project is immediately an active workspace. It
@@ -166,6 +169,9 @@ exports.createProject = async (req, res) => {
 
       if (req.user.role === 'supervisor') {
         projectData.supervisor = req.user.id;
+        projectData.supervisionSource = 'supervisor_claim';
+        projectData.supervisorAssignedAt = new Date();
+        projectData.supervisorAssignedBy = req.user.id;
       } else {
         // Administrators assign a real supervisor instead of becoming a
         // project supervisor themselves. This preserves the supervisor ↔
@@ -176,6 +182,9 @@ exports.createProject = async (req, res) => {
         const supervisor = await User.findOne({ _id: req.body.supervisor, role: 'supervisor', status: 'active' }).select('_id');
         if (!supervisor) return res.status(422).json({ success: false, error: 'The assigned supervisor must be an active supervisor account' });
         projectData.supervisor = supervisor._id;
+        projectData.supervisionSource = 'admin_assignment';
+        projectData.supervisorAssignedAt = new Date();
+        projectData.supervisorAssignedBy = req.user.id;
       }
     }
 
@@ -210,11 +219,25 @@ exports.claimProject = async (req, res) => {
 
     const previousSupervisor = project.supervisor ? idOf(project.supervisor) : null;
     project.supervisor = supervisor._id;
+    project.supervisionSource = req.user.role === 'admin' ? 'admin_assignment' : 'supervisor_claim';
+    project.supervisorAssignedAt = new Date();
+    project.supervisorAssignedBy = req.user.id;
     await project.save();
 
     // Teams made while a proposal was unassigned inherit the accepted
     // supervisor so review and leader-confirmation permissions stay coherent.
-    await Team.updateMany({ project: project._id }, { $set: { supervisor: supervisor._id } });
+    const relatedTeams = await Team.find({ project: project._id });
+    await Promise.all(relatedTeams.map(async (team) => {
+      team.supervisor = supervisor._id;
+      team.supervisorInvitations?.forEach((invitation) => {
+        if (invitation.status === 'pending') {
+          invitation.status = 'cancelled';
+          invitation.respondedAt = new Date();
+        }
+      });
+      if (team.status === 'pending_approval') team.status = 'forming';
+      await team.save();
+    }));
 
     await Promise.all([
       ...project.students.map((student) => notify({

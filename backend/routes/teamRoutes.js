@@ -6,6 +6,9 @@ const router = express.Router();
 
 router.use(protect);
 
+router.get('/directory/supervisors', teamController.getSupervisorDirectory);
+router.get('/invitations/mine', teamController.getMySupervisorInvitations);
+
 // Ownership rules live in the controller: students create teams for their own
 // projects and become Leader; only leader/supervisor/admin may modify (proposal §4.2)
 router
@@ -21,5 +24,7 @@ router
 
 router.post('/:id/leader/nominate', teamController.nominateLeader);
 router.post('/:id/leader/confirm', teamController.confirmLeader);
+router.post('/:id/supervisor-invitations', teamController.inviteSupervisor);
+router.post('/:id/supervisor-invitations/:invitationId/respond', teamController.respondToSupervisorInvitation);
 
 module.exports = router;

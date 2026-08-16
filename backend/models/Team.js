@@ -4,7 +4,8 @@ const teamSchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, 'Please add a team name'],
-    trim: true
+    trim: true,
+    maxlength: 100
   },
   project: {
     type: mongoose.Schema.ObjectId,
@@ -22,6 +23,18 @@ const teamSchema = new mongoose.Schema({
   },
   activeLeader: { type: mongoose.Schema.ObjectId, ref: 'User', default: null },
   pendingLeader: { type: mongoose.Schema.ObjectId, ref: 'User', default: null },
+  supervisorInvitations: [{
+    supervisor: { type: mongoose.Schema.ObjectId, ref: 'User', required: true },
+    invitedBy: { type: mongoose.Schema.ObjectId, ref: 'User', required: true },
+    status: {
+      type: String,
+      enum: ['pending', 'accepted', 'declined', 'cancelled'],
+      default: 'pending'
+    },
+    message: { type: String, trim: true, maxlength: 500, default: '' },
+    createdAt: { type: Date, default: Date.now },
+    respondedAt: { type: Date, default: null }
+  }],
   members: [
     {
       user: {

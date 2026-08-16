@@ -55,6 +55,8 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
 
     loadNotifications();
     loadProjects();
+    window.addEventListener('projects-changed', loadProjects);
+    return () => window.removeEventListener('projects-changed', loadProjects);
   }, [token, activeProjectId, setActiveProject]);
 
   // Close dropdowns on outside click

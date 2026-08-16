@@ -100,6 +100,13 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  expertise: [{ type: String, trim: true, maxlength: 80 }],
+  maxActiveTeams: {
+    type: Number,
+    min: 1,
+    max: 50,
+    default: 6
+  },
   createdAt: {
     type: Date,
     default: Date.now

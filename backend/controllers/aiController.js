@@ -55,6 +55,60 @@ exports.getStatus = (req, res) => {
   res.json({ success: true, data: status });
 };
 
+exports.academicAssistant = async (req, res) => {
+  try {
+    if (!requireEnabledFeature(req, res, 'aiChatbot', 'AI Supervisor Assistant')) return;
+    const message = String(req.body?.message || '').trim();
+    const mode = String(req.body?.mode || 'research').toLowerCase();
+    if (!message) return res.status(422).json({ success: false, error: 'Write a question or describe the decision you need help with' });
+    if (message.length > 6000) return res.status(422).json({ success: false, error: 'Assistant messages are limited to 6,000 characters' });
+    if (!['research', 'career', 'planning'].includes(mode)) return res.status(422).json({ success: false, error: 'Mode must be research, career, or planning' });
+
+    let projectContext = null;
+    if (req.body?.project) {
+      const project = await Project.findById(req.body.project).populate('supervisor', 'name').populate('students', 'name');
+      if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
+      if (!canAccessProject(project, req.user)) return res.status(403).json({ success: false, error: 'Not authorized to use this project context' });
+      const [tasks, submissions, progressLogs] = await Promise.all([
+        Task.find({ project: project._id }).select('title status dueDate assignedTo').sort({ dueDate: 1 }).limit(30).lean(),
+        Submission.find({ project: project._id }).select('title status grade submittedAt').sort({ submittedAt: -1 }).limit(12).lean(),
+        ProgressLog.find({ project: project._id }).select('summary blockers state weekStart').sort({ weekStart: -1 }).limit(8).lean()
+      ]);
+      projectContext = {
+        title: project.title,
+        description: project.description,
+        status: project.status,
+        proposalState: project.proposalState,
+        department: project.department,
+        section: project.section,
+        supervisor: project.supervisor?.name || null,
+        teamMembers: project.students.map((student) => student.name),
+        tasks,
+        submissions,
+        progressLogs
+      };
+    }
+    const recentHistory = Array.isArray(req.body?.history) ? req.body.history.slice(-6).map((item) => ({
+      role: item?.role === 'assistant' ? 'assistant' : 'user',
+      content: String(item?.content || '').slice(0, 1200)
+    })) : [];
+    const result = await geminiService.academicAssistant({
+      message,
+      mode,
+      role: req.user.role,
+      userProfile: { name: req.user.name, department: req.user.department, studentId: req.user.role === 'student' ? req.user.studentId : undefined },
+      projectContext,
+      recentHistory,
+      guidance: userGuidance(req)
+    });
+    await recordInteraction(req, `assistant_${mode}`, { messageLength: message.length, hasProjectContext: Boolean(projectContext), role: req.user.role }, { output: result, status: 'succeeded' });
+    res.json({ success: true, data: result });
+  } catch (error) {
+    await recordInteraction(req, `assistant_${req.body?.mode || 'research'}`, { messageLength: String(req.body?.message || '').length }, { status: 'failed', error: error.message });
+    res.status(aiErrorStatus(error)).json({ success: false, error: aiErrorMessage(error) });
+  }
+};
+
 exports.rateInteraction = async (req, res) => {
   try {
     const rating = Number(req.body.rating);

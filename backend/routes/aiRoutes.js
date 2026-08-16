@@ -1,6 +1,6 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const { generateFeedback, checkPlagiarism, suggestIdeas, reviewProposal, generateProposalOutline, generateProjectReportDraft, recommendTask, getInteractions, rateInteraction, getStatus } = require('../controllers/aiController');
+const { academicAssistant, generateFeedback, checkPlagiarism, suggestIdeas, reviewProposal, generateProposalOutline, generateProjectReportDraft, recommendTask, getInteractions, rateInteraction, getStatus } = require('../controllers/aiController');
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
@@ -20,6 +20,7 @@ router.get('/interactions', getInteractions);
 router.put('/interactions/:id/rating', rateInteraction);
 
 router.post('/feedback', generateFeedback);
+router.post('/assistant', academicAssistant);
 router.post('/plagiarism', authorize('supervisor', 'admin'), checkPlagiarism);
 router.post('/suggest-ideas', suggestIdeas);
 router.post('/review-proposal', reviewProposal);

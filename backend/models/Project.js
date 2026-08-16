@@ -8,6 +8,18 @@ const projectSchema = new mongoose.Schema({
   description: {
     type: String
   },
+  department: {
+    type: String,
+    trim: true,
+    maxlength: 120,
+    default: null
+  },
+  section: {
+    type: String,
+    trim: true,
+    maxlength: 80,
+    default: null
+  },
   supervisor: {
     type: mongoose.Schema.ObjectId,
     ref: 'User',
@@ -30,6 +42,20 @@ const projectSchema = new mongoose.Schema({
   approvedProposalVersion: {
     type: mongoose.Schema.ObjectId,
     ref: 'ProposalVersion',
+    default: null
+  },
+  supervisionSource: {
+    type: String,
+    enum: ['unassigned', 'student_invitation', 'supervisor_claim', 'admin_assignment'],
+    default: 'unassigned'
+  },
+  supervisorAssignedAt: {
+    type: Date,
+    default: null
+  },
+  supervisorAssignedBy: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User',
     default: null
   },
   createdAt: {

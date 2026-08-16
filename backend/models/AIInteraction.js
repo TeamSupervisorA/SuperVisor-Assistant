@@ -5,7 +5,7 @@ const aiInteractionSchema = new mongoose.Schema({
   actor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
   model: String,
-  promptVersion: { type: String, default: 'v1' },
+  promptVersion: { type: String, default: 'v2' },
   input: { type: mongoose.Schema.Types.Mixed, required: true },
   output: mongoose.Schema.Types.Mixed,
   status: { type: String, enum: ['succeeded', 'failed'], required: true },

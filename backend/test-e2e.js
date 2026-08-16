@@ -88,6 +88,25 @@ async function runTests() {
     if (!statusData.success) throw new Error(statusData.error);
     console.log(`✅ AI service status retrieved (configured: ${statusData.data.configured})`);
 
+    const assistantRes = await fetch(`${API_BASE}/ai/assistant`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${studentToken}` },
+      body: JSON.stringify({
+        project: projectId,
+        mode: 'career',
+        message: 'How can I turn this research project into evidence for graduate job applications?'
+      })
+    });
+    const assistantData = await assistantRes.json();
+    if (assistantData.success) {
+      if (!assistantData.data.answer || !Array.isArray(assistantData.data.nextActions) || assistantData.data.role !== 'student' || assistantData.data.mode !== 'career') {
+        throw new Error('AI assistant returned an invalid role-aware response contract');
+      }
+      console.log('✅ Role-aware career assistant returned structured, project-grounded guidance');
+    } else {
+      console.log(`⚠️ Role-aware assistant unavailable: ${assistantData.error}`);
+    }
+
     const outlineRes = await fetch(`${API_BASE}/ai/proposal-outline`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${studentToken}` },

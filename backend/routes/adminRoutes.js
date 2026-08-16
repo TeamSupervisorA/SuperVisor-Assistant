@@ -8,4 +8,7 @@ router.patch('/users/:id/status', controller.setUserStatus);
 router.patch('/users/:id/role', controller.setUserRole);
 router.get('/departments', controller.getDepartments);
 router.post('/departments', controller.createDepartment);
+router.get('/supervision', controller.getSupervisionOverview);
+router.put('/projects/:projectId/supervisor', controller.assignProjectSupervisor);
+router.put('/teams/:teamId/supervisor', controller.assignTeamSupervisor);
 module.exports = router;

@@ -13,6 +13,7 @@ process.env.CODE_RUNNER_SHARED_SECRET = 'smoke-code-runner-secret-do-not-expose'
 
 require('./server');
 const User = require('./models/User');
+const jwt = require('jsonwebtoken');
 
 const BASE = 'http://localhost:5099';
 const runId = `${process.pid}-${Date.now()}`;
@@ -21,6 +22,8 @@ const emails = {
   bob: `bob-${runId}@test.com`,
   eve: `eve-${runId}@test.com`,
   supervisor: `sup-${runId}@test.com`,
+  supervisorTwo: `sup-two-${runId}@test.com`,
+  admin: `admin-${runId}@test.com`,
   inactive: `inactive-${runId}@test.com`,
   modern: `modern-${runId}@research.technology`,
   pending: `pending-${runId}@test.com`,
@@ -78,6 +81,9 @@ const run = async () => {
   const bob = await reg('Bob', emails.bob, 'student');
   const eve = await reg('Eve', emails.eve, 'student');
   const sup = await reg('Dr. Sup', emails.supervisor, 'supervisor');
+  const supTwo = await reg('Dr. Guide', emails.supervisorTwo, 'supervisor');
+  const adminUser = await User.create({ name: 'Academic Admin', email: emails.admin, password: 'pass1234', role: 'admin', emailVerified: true, onboardingStatus: 'complete' });
+  const admin = { token: jwt.sign({ id: adminUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' }), user: { id: String(adminUser._id) } };
   const modernDomain = await api('/api/auth/register/request-verification', { method: 'POST', body: { name: 'Modern Domain', email: emails.modern, password: 'pass1234' } });
   const modernDomainVerified = await api('/api/auth/register/verify', { method: 'POST', body: { email: emails.modern, code: '000000' } });
   check('registration accepts a valid modern top-level domain after email verification', modernDomain.status === 202 && modernDomainVerified.status === 201 && !!modernDomainVerified.data.token);
@@ -130,6 +136,10 @@ const run = async () => {
   check('proposal outline validates its topic without calling the provider', invalidOutline.status === 422);
   const outsiderReportDraft = await api(`/api/ai/projects/${pid}/report-draft`, { method: 'POST', token: eve.token });
   check('outsider cannot generate a project report narrative (403)', outsiderReportDraft.status === 403);
+  const emptyAssistant = await api('/api/ai/assistant', { method: 'POST', token: alice.token, body: { project: pid, message: '' } });
+  check('role-aware assistant validates an empty message without calling the provider', emptyAssistant.status === 422);
+  const outsiderAssistant = await api('/api/ai/assistant', { method: 'POST', token: eve.token, body: { project: pid, message: 'What should I do next?', mode: 'planning' } });
+  check('role-aware assistant cannot read an outsider project context', outsiderAssistant.status === 403);
 
   // ---- member management
   const studentAdd = await api(`/api/projects/${pid}/members`, { method: 'POST', token: alice.token, body: { email: emails.bob } });
@@ -282,6 +292,33 @@ const run = async () => {
 
   const teamUpd = await api(`/api/teams/${team.data.data._id}`, { method: 'PUT', token: eve.token, body: { name: 'Hacked' } });
   check('non-leader cannot update team (403)', teamUpd.status === 403);
+
+  // ---- connected student invitation and administrator allocation
+  const inviteProject = await api('/api/projects', { method: 'POST', token: eve.token, body: { title: 'Invitation Project', description: 'Needs a supervisor.', department: 'CSE', section: 'CSE-4A' } });
+  const inviteTeam = await api('/api/teams', { method: 'POST', token: eve.token, body: { name: 'Invitation Team', project: inviteProject.data.data._id } });
+  const directory = await api('/api/teams/directory/supervisors', { token: eve.token });
+  check('student sees a privacy-limited supervisor directory with workload', directory.status === 200 && directory.data.data.some((item) => item._id === supTwo.user.id && Number.isInteger(item.activeProjects)) && !JSON.stringify(directory.data).includes(emails.supervisorTwo));
+  const nonLeaderInvite = await api(`/api/teams/${inviteTeam.data.data._id}/supervisor-invitations`, { method: 'POST', token: alice.token, body: { supervisorId: supTwo.user.id } });
+  check('student outside the team cannot invite a supervisor', nonLeaderInvite.status === 403);
+  const supervisorInvite = await api(`/api/teams/${inviteTeam.data.data._id}/supervisor-invitations`, { method: 'POST', token: eve.token, body: { supervisorId: supTwo.user.id, message: 'We need guidance on our evaluation plan.' } });
+  const invitationId = supervisorInvite.data?.data?.supervisorInvitations?.find((item) => item.status === 'pending')?._id;
+  check('student team leader can invite an available supervisor', supervisorInvite.status === 201 && !!invitationId);
+  const wrongSupervisorResponse = await api(`/api/teams/${inviteTeam.data.data._id}/supervisor-invitations/${invitationId}/respond`, { method: 'POST', token: sup.token, body: { decision: 'accept' } });
+  check('only the invited supervisor can respond', wrongSupervisorResponse.status === 403);
+  const pendingInvitations = await api('/api/teams/invitations/mine', { token: supTwo.token });
+  check('invited supervisor can see pending team context', pendingInvitations.status === 200 && pendingInvitations.data.data.some((item) => item._id === inviteTeam.data.data._id));
+  const acceptedInvitation = await api(`/api/teams/${inviteTeam.data.data._id}/supervisor-invitations/${invitationId}/respond`, { method: 'POST', token: supTwo.token, body: { decision: 'accept' } });
+  const acceptedProject = await api(`/api/projects/${inviteProject.data.data._id}`, { token: eve.token });
+  check('accepting an invitation synchronizes project and team supervision', acceptedInvitation.status === 200 && acceptedInvitation.data.data.supervisor?._id === supTwo.user.id && acceptedProject.data.data.supervisor?._id === supTwo.user.id && acceptedProject.data.data.supervisionSource === 'student_invitation');
+
+  const adminProject = await api('/api/projects', { method: 'POST', token: bob.token, body: { title: 'Admin Allocation Project', department: 'CSE', section: 'CSE-4B' } });
+  const studentAdminAccess = await api('/api/admin/supervision', { token: bob.token });
+  check('students cannot access administration allocation data', studentAdminAccess.status === 403);
+  const adminOverview = await api('/api/admin/supervision', { token: admin.token });
+  check('admin receives connected project, team, and supervisor workload data', adminOverview.status === 200 && adminOverview.data.data.projects.some((item) => item._id === adminProject.data.data._id) && adminOverview.data.data.supervisors.some((item) => item._id === sup.user.id));
+  const adminAssign = await api(`/api/admin/projects/${adminProject.data.data._id}/supervisor`, { method: 'PUT', token: admin.token, body: { supervisorId: sup.user.id, department: 'CSE', section: 'CSE-4B' } });
+  const adminAssignedProject = await api(`/api/projects/${adminProject.data.data._id}`, { token: bob.token });
+  check('admin can assign a supervisor by section with audited ownership metadata', adminAssign.status === 200 && adminAssignedProject.data.data.supervisor?._id === sup.user.id && adminAssignedProject.data.data.section === 'CSE-4B' && adminAssignedProject.data.data.supervisionSource === 'admin_assignment');
 
   // ---- evaluation ownership and score integrity
   const evaluation = await api('/api/evaluations', { method: 'POST', token: sup.token, body: {

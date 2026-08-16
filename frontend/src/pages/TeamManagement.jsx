@@ -30,6 +30,13 @@ const TeamManagement = () => {
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [activity, setActivity] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [supervisors, setSupervisors] = useState([]);
+  const [supervisorInvitations, setSupervisorInvitations] = useState([]);
+  const [teamName, setTeamName] = useState('');
+  const [selectedSupervisor, setSelectedSupervisor] = useState('');
+  const [invitationMessage, setInvitationMessage] = useState('');
+  const [workflowBusy, setWorkflowBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviting, setInviting] = useState(false);
@@ -42,13 +49,17 @@ const TeamManagement = () => {
     if (!projectId) return;
     setLoading(true);
     try {
-      const [projRes, taskRes, subRes] = await Promise.all([
+      const [projRes, taskRes, subRes, teamRes, supervisorRes] = await Promise.all([
         apiFetch(`/api/projects/${projectId}`),
         apiFetch(`/api/tasks?project=${projectId}`).catch(() => ({ data: [] })),
-        apiFetch(`/api/submissions?project=${projectId}`).catch(() => ({ data: [] }))
+        apiFetch(`/api/submissions?project=${projectId}`).catch(() => ({ data: [] })),
+        apiFetch(`/api/teams?project=${projectId}`).catch(() => ({ data: [] })),
+        apiFetch('/api/teams/directory/supervisors').catch(() => ({ data: [] }))
       ]);
       setProject(projRes.data);
       setTasks(taskRes.data || []);
+      setTeams(teamRes.data || []);
+      setSupervisors(supervisorRes.data || []);
 
       // Merge tasks + submissions into one recent-activity timeline
       const events = [
@@ -81,11 +92,62 @@ const TeamManagement = () => {
     else { setProject(null); setTasks([]); setActivity([]); setLoading(false); }
   }, [projectId, loadData]);
 
+  useEffect(() => {
+    if (user?.role !== 'supervisor') {
+      setSupervisorInvitations([]);
+      return;
+    }
+    let cancelled = false;
+    apiFetch('/api/teams/invitations/mine')
+      .then((response) => { if (!cancelled) setSupervisorInvitations(response.data || []); })
+      .catch((requestError) => { if (!cancelled) setError(requestError.message); });
+    return () => { cancelled = true; };
+  }, [user?.role]);
+
   const currentUserId = String(user?._id || user?.id || '');
   const assignedSupervisorId = String(project?.supervisor?._id || project?.supervisor || '');
   // A supervisor may manage only the roster for their own project.  Keeping
   // this check in the UI avoids presenting controls that the API must reject.
   const canManage = user?.role === 'admin' || (user?.role === 'supervisor' && currentUserId === assignedSupervisorId);
+  const myLedTeam = teams.find((team) => String(team.activeLeader?._id || team.activeLeader || '') === currentUserId
+    || team.members?.some((member) => String(member.user?._id || member.user || '') === currentUserId && member.role === 'Leader' && member.state !== 'removed'));
+
+  const createProjectTeam = async (event) => {
+    event.preventDefault();
+    if (!teamName.trim()) return;
+    setWorkflowBusy(true); setError(''); setNotice('');
+    try {
+      const response = await apiFetch('/api/teams', { method: 'POST', body: JSON.stringify({ name: teamName.trim(), project: projectId, members: [] }) });
+      setTeams((current) => [...current, response.data]);
+      setTeamName('');
+      setNotice('Team created. Membership and supervision now remain linked to this project.');
+    } catch (requestError) { setError(requestError.message); }
+    finally { setWorkflowBusy(false); }
+  };
+
+  const inviteProjectSupervisor = async (event) => {
+    event.preventDefault();
+    if (!myLedTeam || !selectedSupervisor) return;
+    setWorkflowBusy(true); setError(''); setNotice('');
+    try {
+      const response = await apiFetch(`/api/teams/${myLedTeam._id}/supervisor-invitations`, { method: 'POST', body: JSON.stringify({ supervisorId: selectedSupervisor, message: invitationMessage }) });
+      setTeams((current) => current.map((team) => team._id === response.data._id ? response.data : team));
+      setSelectedSupervisor(''); setInvitationMessage('');
+      setNotice('Invitation sent. The supervisor must accept before gaining project access.');
+    } catch (requestError) { setError(requestError.message); }
+    finally { setWorkflowBusy(false); }
+  };
+
+  const respondToInvitation = async (teamId, invitationId, decision) => {
+    setWorkflowBusy(true); setError(''); setNotice('');
+    try {
+      await apiFetch(`/api/teams/${teamId}/supervisor-invitations/${invitationId}/respond`, { method: 'POST', body: JSON.stringify({ decision }) });
+      setSupervisorInvitations((current) => current.filter((team) => team._id !== teamId));
+      if (decision === 'accept') window.dispatchEvent(new Event('projects-changed'));
+      setNotice(decision === 'accept' ? 'Invitation accepted. The project is now available in your supervised projects.' : 'Invitation declined. The team has been notified.');
+    } catch (requestError) { setError(requestError.message); }
+    finally { setWorkflowBusy(false); }
+  };
 
   const handleInvite = async (e) => {
     e.preventDefault();
@@ -126,10 +188,17 @@ const TeamManagement = () => {
     return (
       <div className="w-full min-h-screen bg-background relative flex items-center justify-center p-6">
         <div className="absolute inset-0 bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
-        <div className="relative z-10 text-center bg-surface/80 backdrop-blur-xl border border-outline-variant/30 p-12 rounded-[32px] shadow-lg max-w-md w-full">
+        <div className="relative z-10 bg-surface/80 backdrop-blur-xl border border-outline-variant/30 p-8 rounded-[32px] shadow-lg max-w-3xl w-full">
+          {error && <p role="alert" className="mb-4 rounded-xl border border-error/30 bg-error/10 p-3 text-error">{error}</p>}
+          {notice && <p role="status" className="mb-4 rounded-xl border border-primary/30 bg-primary/10 p-3 text-primary">{notice}</p>}
+          {supervisorInvitations.length > 0 ? <div><div className="mb-6 text-center"><span className="material-symbols-outlined text-5xl text-tertiary">mark_email_unread</span><h2 className="mt-2 text-2xl font-black text-on-surface">Supervision invitations</h2><p className="text-on-surface-variant">Review the project and team context before accepting responsibility.</p></div><div className="space-y-4">{supervisorInvitations.map((team) => {
+            const invitation = team.supervisorInvitations?.find((item) => String(item.supervisor?._id || item.supervisor) === currentUserId && item.status === 'pending');
+            return <article key={team._id} className="rounded-2xl border border-outline-variant/40 bg-surface-container-low p-5"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-wider text-tertiary">{team.project?.department || 'Department not set'}{team.project?.section ? ` · ${team.project.section}` : ''}</p><h3 className="mt-1 text-lg font-black">{team.name}</h3><p className="text-sm text-on-surface-variant">Project: {team.project?.title}</p>{invitation?.message && <p className="mt-3 rounded-lg bg-surface p-3 text-sm">“{invitation.message}”</p>}<p className="mt-2 text-xs text-secondary">Invited by {invitation?.invitedBy?.name || 'team leader'} · {team.members?.length || 0} team member(s)</p></div><div className="flex gap-2"><button disabled={workflowBusy} onClick={() => respondToInvitation(team._id, invitation?._id, 'decline')} className="rounded-xl border border-outline-variant px-4 py-2 text-sm font-bold">Decline</button><button disabled={workflowBusy} onClick={() => respondToInvitation(team._id, invitation?._id, 'accept')} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-on-primary">Accept</button></div></div></article>;
+          })}</div></div> : <div className="text-center">
           <span className="material-symbols-outlined text-6xl text-secondary mb-4 opacity-50">group_off</span>
           <h2 className="font-display text-[24px] font-bold text-on-surface mb-2 tracking-tight">No Project Selected</h2>
           <p className="font-body-md text-on-surface-variant">Please select an active project from the top navigation to view and manage its team.</p>
+          </div>}
         </div>
       </div>
     );
@@ -197,6 +266,27 @@ const TeamManagement = () => {
             <button onClick={() => setNotice('')} className="ml-auto"><span className="material-symbols-outlined text-[18px]">close</span></button>
           </motion.div>
         )}
+
+        <motion.section variants={itemVariants} className="rounded-[28px] border border-outline-variant/30 bg-surface/80 p-6 shadow-sm backdrop-blur-xl">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-xl">
+              <p className="text-xs font-black uppercase tracking-wider text-primary">Connected supervision workflow</p>
+              <h2 className="mt-1 text-xl font-black text-on-surface">Project teams and supervisor ownership</h2>
+              <p className="mt-1 text-sm text-on-surface-variant">Teams share the project’s assigned supervisor, project chat, tasks, reviews, and progress record. Accepting an invitation grants the supervisor access to that same project.</p>
+            </div>
+            <form onSubmit={createProjectTeam} className="flex w-full max-w-xl gap-2">
+              <input required maxLength={100} value={teamName} onChange={(event) => setTeamName(event.target.value)} placeholder={user?.role === 'supervisor' ? 'Add a working team to this project' : 'Create your project team'} className="min-w-0 flex-1 rounded-xl border border-outline-variant bg-surface-container-lowest px-4 py-3 text-sm" />
+              <button disabled={workflowBusy} className="rounded-xl bg-primary px-5 py-3 text-sm font-bold text-on-primary disabled:opacity-60">Create team</button>
+            </form>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {teams.length ? teams.map((team) => <article key={team._id} className="rounded-2xl border border-outline-variant/40 bg-surface-container-low p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-bold text-on-surface">{team.name}</h3><p className="mt-1 text-xs text-secondary">{team.members?.length || 0} member(s) · {String(team.status || 'forming').replace('_', ' ')}</p></div><span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${team.supervisor ? 'bg-primary/10 text-primary' : 'bg-tertiary-container text-tertiary'}`}>{team.supervisor ? 'Supervised' : 'Needs supervisor'}</span></div>{team.activeLeader?.name && <p className="mt-3 text-xs text-on-surface-variant">Leader: <strong>{team.activeLeader.name}</strong></p>}</article>) : <p className="rounded-2xl border border-dashed border-outline-variant p-4 text-sm text-secondary md:col-span-2 xl:col-span-3">No working team exists yet. Create one to establish leadership and invite a supervisor.</p>}
+          </div>
+
+          {user?.role === 'student' && !project?.supervisor && <div className="mt-6 border-t border-outline-variant/30 pt-5">
+            {myLedTeam ? <form onSubmit={inviteProjectSupervisor} className="grid gap-3 lg:grid-cols-[minmax(220px,0.8fr)_minmax(280px,1.5fr)_auto] lg:items-end"><label className="text-xs font-bold uppercase tracking-wider text-secondary">Available supervisor<select required value={selectedSupervisor} onChange={(event) => setSelectedSupervisor(event.target.value)} className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest p-3 text-sm font-normal normal-case text-on-surface"><option value="">Choose by expertise and workload</option>{supervisors.map((supervisor) => <option key={supervisor._id} value={supervisor._id} disabled={!supervisor.available}>{supervisor.name} · {supervisor.department || 'Department not set'} · {supervisor.activeProjects}/{supervisor.maxActiveTeams || 6} projects{!supervisor.available ? ' (at capacity)' : ''}</option>)}</select></label><label className="text-xs font-bold uppercase tracking-wider text-secondary">Invitation context<input maxLength={500} value={invitationMessage} onChange={(event) => setInvitationMessage(event.target.value)} placeholder="Briefly explain the topic, method, and support needed" className="mt-2 w-full rounded-xl border border-outline-variant bg-surface-container-lowest p-3 text-sm font-normal normal-case text-on-surface" /></label><button disabled={workflowBusy || !selectedSupervisor} className="rounded-xl bg-tertiary px-5 py-3 text-sm font-bold text-on-tertiary disabled:opacity-50">Invite supervisor</button></form> : <p className="rounded-xl bg-tertiary-container/40 p-4 text-sm text-on-surface-variant">Create a team first. Its student creator becomes the accountable leader and can invite a supervisor.</p>}
+          </div>}
+        </motion.section>
 
         {/* Bento Grid Layout */}
         <motion.div variants={containerVariants} className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
