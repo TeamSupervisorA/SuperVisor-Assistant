@@ -168,6 +168,149 @@
   }
 }
 
+/* Overleaf-style paper workbench. The two panes share one bounded desktop
+   height, while their editor/PDF viewers own their scroll positions. */
+.paper-workspace {
+  display: grid;
+  grid-template-columns: minmax(320px, var(--paper-source-width, 50%)) 14px minmax(320px, 1fr);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background: #f1f5f9;
+}
+
+.paper-workspace__pane {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.paper-workspace__source {
+  display: flex;
+  flex-direction: column;
+  overscroll-behavior: contain;
+}
+
+.paper-workspace__editor {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.paper-workspace .monaco-scrollable-element {
+  overscroll-behavior: contain;
+}
+
+.paper-workspace__preview {
+  display: flex;
+  padding: 12px;
+  overscroll-behavior: contain;
+}
+
+.paper-preview-card {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.paper-preview-frame,
+.paper-preview-empty {
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.paper-preview-frame {
+  width: 100%;
+  border: 0;
+  overscroll-behavior: contain;
+}
+
+.paper-preview-empty {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.paper-splitter {
+  display: grid;
+  width: 14px;
+  min-height: 0;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+  place-items: center;
+  background: #e2e8f0;
+  transition: background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.paper-splitter:hover,
+.paper-splitter:focus-visible,
+.paper-splitter--dragging {
+  z-index: 2;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 22%, transparent);
+  outline: 0;
+}
+
+.paper-splitter__grip {
+  width: 3px;
+  height: 44px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-outline) 60%, transparent);
+}
+
+.paper-splitter:hover .paper-splitter__grip,
+.paper-splitter:focus-visible .paper-splitter__grip,
+.paper-splitter--dragging .paper-splitter__grip {
+  background: var(--color-on-primary);
+}
+
+.dark .paper-workspace {
+  background: var(--color-surface-container-low);
+}
+
+.dark .paper-splitter {
+  background: var(--color-outline-variant);
+}
+
+@media (max-width: 1023px) {
+  .paper-editor-page,
+  .paper-editor-page__content {
+    height: auto;
+    min-height: calc(100vh - 64px);
+    overflow: visible;
+  }
+
+  .paper-editor-workbench-shell {
+    min-height: 0;
+    flex: none;
+    overflow: visible;
+  }
+
+  .paper-workspace {
+    display: flex;
+    min-height: 0;
+    flex: none;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .paper-workspace__source {
+    min-height: 460px;
+  }
+
+  .paper-workspace__preview {
+    min-height: 560px;
+  }
+
+  .paper-splitter {
+    display: none;
+  }
+}
+
 /* Print styles — used by the Project Report "Download / Print" action */
 @media print {
   aside,
