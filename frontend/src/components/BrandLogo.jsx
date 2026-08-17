@@ -1,7 +1,13 @@
 import React from 'react';
+import { useTheme } from '../hooks/useTheme';
 
 const BrandLogo = ({ compact = false, className = '', decorative = false }) => {
-  const src = compact ? '/supervisor-mark.svg' : '/supervisor-logo-horizontal-dark.svg';
+  const { isDark } = useTheme();
+  const src = compact
+    ? '/supervisor-mark.svg'
+    : isDark
+      ? '/supervisor-logo-horizontal-dark.svg'
+      : '/supervisor-logo-horizontal-light.svg';
   const alt = 'Supervisor Assistant';
 
   return (

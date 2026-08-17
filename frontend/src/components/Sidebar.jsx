@@ -81,7 +81,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
               to={role === 'admin' ? '/admin-dashboard' : role === 'supervisor' ? '/supervisor-dashboard' : '/dashboard'}
               onClick={closeMobile}
               aria-label="Supervisor Assistant home"
-              className={`flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#11131a] shadow-md shadow-primary/15 ${isCollapsed ? 'h-11 w-11 p-1.5' : 'h-12 w-[174px] px-3 py-2'}`}
+              className={`flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-md shadow-primary/10 dark:border-white/10 dark:bg-[#11131a] dark:shadow-primary/15 ${isCollapsed ? 'h-11 w-11 p-1.5' : 'h-12 w-[174px] px-3 py-2'}`}
             >
               <BrandLogo compact={isCollapsed} className={isCollapsed ? 'h-full w-full' : 'h-auto w-full'} />
             </Link>

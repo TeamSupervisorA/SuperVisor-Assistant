@@ -134,7 +134,7 @@ const Register = () => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="mb-8 flex h-14 w-[260px] items-center justify-center rounded-2xl bg-[#11131a] px-4 py-2.5 shadow-lg shadow-primary/15"
+          className="mb-8 flex h-14 w-[260px] items-center justify-center rounded-2xl border border-outline-variant/35 bg-white px-4 py-2.5 shadow-lg shadow-primary/10 dark:border-white/10 dark:bg-[#11131a] dark:shadow-primary/15"
         >
           <BrandLogo className="h-auto w-full" />
         </motion.div>

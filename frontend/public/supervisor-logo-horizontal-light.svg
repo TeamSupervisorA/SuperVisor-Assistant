@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="300" viewBox="0 0 1320 300" role="img" aria-labelledby="title desc">
+  <title id="title">Supervisor Assistant logo for light backgrounds</title>
+  <desc id="desc">An abstract S and V supervision mark with a cyan focus point, followed by the dark Supervisor Assistant wordmark.</desc>
+  <g transform="translate(24 17)">
+    <path
+      d="M191 52C160 22 91 21 58 56C29 87 47 121 101 130C157 139 177 164 153 194L116 241L67 188M116 241L173 184"
+      fill="none"
+      stroke="#5B4CF0"
+      stroke-width="30"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <circle cx="116" cy="73" r="15" fill="#168BD2"/>
+  </g>
+  <text x="275" y="187" fill="#141827" font-family="Inter, Arial, sans-serif" font-size="86" font-weight="800" letter-spacing="-4">Supervisor</text>
+  <text x="780" y="187" fill="#5B4CF0" font-family="Inter, Arial, sans-serif" font-size="86" font-weight="800" letter-spacing="-4">Assistant</text>
+</svg>

@@ -70,7 +70,7 @@ const CompleteGoogleProfile = () => {
       <div className="absolute -bottom-24 -right-10 h-80 w-80 rounded-full bg-tertiary-container/20 blur-3xl" />
       <section className="relative w-full max-w-2xl rounded-[2rem] border border-outline-variant/30 bg-surface/90 p-7 shadow-2xl backdrop-blur-xl sm:p-10">
         <Link to="/register" className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:underline">← Back to sign up</Link>
-        <div className="mt-7 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#11131a] p-2 shadow-md shadow-primary/15">
+        <div className="mt-7 flex h-14 w-14 items-center justify-center rounded-2xl border border-outline-variant/30 bg-white p-2 shadow-md shadow-primary/10 dark:border-white/10 dark:bg-[#11131a] dark:shadow-primary/15">
           <BrandLogo compact className="h-full w-full" />
         </div>
         <h1 className="mt-5 text-3xl font-extrabold tracking-tight text-on-surface">Complete your profile</h1>

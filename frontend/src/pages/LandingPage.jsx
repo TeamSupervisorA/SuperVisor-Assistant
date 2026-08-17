@@ -150,7 +150,7 @@ const LandingPage = () => {
           className="flex items-center gap-3 group cursor-pointer"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         >
-          <div className="flex h-11 w-[210px] items-center justify-center rounded-[14px] bg-[#11131a] px-3 py-2 shadow-lg shadow-primary/20 transition-transform group-hover:scale-[1.02]">
+          <div className="flex h-11 w-[210px] items-center justify-center rounded-[14px] border border-outline-variant/30 bg-white px-3 py-2 shadow-lg shadow-primary/10 transition-transform group-hover:scale-[1.02] dark:border-white/10 dark:bg-[#11131a] dark:shadow-primary/20">
             <BrandLogo className="h-auto w-full" />
           </div>
         </motion.div>
@@ -508,7 +508,7 @@ const LandingPage = () => {
                        </div>
                      </div>
                     <div className="flex-1 order-1 md:order-2">
-                      <div className="mb-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#11131a] p-2 text-on-primary shadow-lg shadow-tertiary/30">
+                      <div className="mb-8 flex h-16 w-16 items-center justify-center rounded-2xl border border-outline-variant/30 bg-white p-2 shadow-lg shadow-primary/10 dark:border-white/10 dark:bg-[#11131a] dark:shadow-tertiary/30">
                         <BrandLogo compact decorative className="h-full w-full" />
                       </div>
                       <h3 className="font-headline-lg text-[36px] font-black text-on-surface mb-6 tracking-tight">Focus on research.</h3>
@@ -635,7 +635,7 @@ const LandingPage = () => {
         <div className="w-full max-w-container_max px-margin_desktop mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-4 mb-20">
             <div className="col-span-1 md:col-span-4 lg:col-span-5">
-              <div className="mb-6 flex h-12 w-[230px] items-center rounded-xl bg-[#11131a] px-3 py-2">
+              <div className="mb-6 flex h-12 w-[230px] items-center rounded-xl border border-outline-variant/30 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#11131a]">
                 <BrandLogo className="h-auto w-full" />
               </div>
               <p className="font-body-md text-[16px] text-on-surface-variant max-w-sm leading-relaxed mb-8 font-light">
