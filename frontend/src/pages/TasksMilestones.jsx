@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../hooks/useAuth";
 
@@ -425,6 +426,35 @@ const TasksMilestones = () => {
     },
   ];
 
+  const handleDragEnd = (result) => {
+    if (!result.destination) return;
+    const { source, destination, draggableId } = result;
+    if (source.droppableId === destination.droppableId) return;
+
+    const task = tasks.find((t) => String(t._id) === draggableId);
+    if (!task) return;
+
+    const fromCol = source.droppableId;
+    const toCol = destination.droppableId;
+    const status = normalizeStatus(task.status);
+    const isSupervisor = ["supervisor", "admin"].includes(user?.role);
+
+    if (fromCol === "todo" && toCol === "in_progress") {
+      transition(task, "in_progress");
+    } else if (fromCol === "in_progress" && toCol === "review") {
+      requestReview(task);
+    } else if (fromCol === "review" && toCol === "in_progress") {
+      if (status === "review" && isSupervisor) decideReview(task, "revision");
+      else if (status === "review" && !isSupervisor) withdrawReview(task);
+      else transition(task, "in_progress"); 
+    } else if (fromCol === "review" && toCol === "done") {
+      if (status === "review" && isSupervisor) decideReview(task, "approve");
+      else setError("Only a supervisor can approve a task.");
+    } else {
+      setError(`Cannot move task from ${fromCol} to ${toCol} directly. Please use the action buttons.`);
+    }
+  };
+
   if (!activeProject)
     return (
       <div className="grid min-h-[70vh] place-items-center bg-background p-6">
@@ -654,13 +684,19 @@ const TasksMilestones = () => {
           {canCreateTask && <button onClick={createMilestone} className={secondaryActionClass}><span className="material-symbols-outlined mr-1 text-base">flag</span>New milestone</button>}
         </div>
 
-        <section className="mt-4 grid gap-4 xl:grid-cols-4">
-          {columns.map((column) => (
-            <section
-              key={column.id}
-              className="min-h-[360px] rounded-2xl border border-outline-variant/30 bg-surface-container-low p-3"
-            >
-              <header className="mb-3 flex items-start justify-between gap-3 px-2 pt-2">
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <section className="mt-4 grid gap-4 xl:grid-cols-4">
+            {columns.map((column) => (
+              <Droppable droppableId={column.id} key={column.id}>
+                {(provided, snapshot) => (
+                  <section
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`min-h-[360px] rounded-2xl border ${
+                      snapshot.isDraggingOver ? "border-primary bg-primary/5" : "border-outline-variant/30 bg-surface-container-low"
+                    } p-3 transition-colors duration-200`}
+                  >
+                    <header className="mb-3 flex items-start justify-between gap-3 px-2 pt-2">
                 <div>
                   <h2 className="font-bold text-on-surface">{column.label}</h2>
                   <p className="mt-1 text-xs text-secondary">{column.helper}</p>
@@ -672,104 +708,127 @@ const TasksMilestones = () => {
               <div className="space-y-3">
                 {loading ? (
                   <div className="rounded-xl bg-surface p-4 text-sm text-secondary">
-                    Loading tasks…
-                  </div>
-                ) : (
-                  column.tasks.map((task) => {
-                    const status = normalizeStatus(task.status);
-                    const meta = statusMeta[status] || statusMeta.todo;
-                    const waiting = waitingOnDependencies(task);
-                    return (
-                      <article
-                        key={task._id}
-                        className="rounded-xl border border-outline-variant/25 bg-surface p-4 shadow-sm"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <span
-                            className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${meta.tone}`}
-                          >
-                            {meta.label}
-                          </span>
-                          <span
-                            className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase ${priorityMeta[task.priority || "medium"]}`}
-                          >
-                            {task.priority || "medium"}
-                          </span>
+                      <div>
+                        <h2 className="font-bold text-on-surface">{column.label}</h2>
+                        <p className="mt-1 text-xs text-secondary">{column.helper}</p>
+                      </div>
+                      <span className="rounded-full bg-surface px-2 py-1 text-xs font-bold text-secondary">
+                        {column.tasks.length}
+                      </span>
+                    </header>
+                    <div className="space-y-3">
+                      {loading ? (
+                        <div className="rounded-xl bg-surface p-4 text-sm text-secondary">
+                          Loading tasks…
                         </div>
-                        <h3 className="mt-3 text-sm font-extrabold leading-snug text-on-surface">
-                          {task.title}
-                        </h3>
-                        {task.kind === "suggestion" && task.suggestionState === "pending" && <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-200">Task suggestion · not yet official</p>}
-                        {(task.phase || task.milestone) && <p className="mt-2 text-xs font-semibold text-primary">{task.phase || "Milestone-linked work"}</p>}
-                        {task.description && (
-                          <p className="mt-2 text-xs leading-relaxed text-secondary">
-                            {task.description}
-                          </p>
-                        )}
-                        <div className="mt-3 rounded-lg bg-surface-container-low px-3 py-2">
-                          <p className="text-[10px] font-bold uppercase tracking-wide text-secondary">
-                            Expected outcome
-                          </p>
-                          <p className="mt-1 text-xs leading-relaxed text-on-surface">
-                            {task.acceptanceCriteria ||
-                              "No outcome defined yet."}
-                          </p>
+                      ) : (
+                        column.tasks.map((task, index) => {
+                          const status = normalizeStatus(task.status);
+                          const meta = statusMeta[status] || statusMeta.todo;
+                          const waiting = waitingOnDependencies(task);
+                          return (
+                            <Draggable draggableId={String(task._id)} index={index} key={task._id}>
+                              {(provided, snapshot) => (
+                                <article
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  className={`rounded-xl border ${
+                                    snapshot.isDragging ? "border-primary bg-surface shadow-xl ring-2 ring-primary/20" : "border-outline-variant/25 bg-surface shadow-sm"
+                                  } p-4 transition-all duration-200`}
+                                >
+                                  <div className="flex items-start justify-between gap-2">
+                                    <span
+                                      className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${meta.tone}`}
+                                    >
+                                      {meta.label}
+                                    </span>
+                                    <span
+                                      className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase ${priorityMeta[task.priority || "medium"]}`}
+                                    >
+                                      {task.priority || "medium"}
+                                    </span>
+                                  </div>
+                                  <h3 className="mt-3 text-sm font-extrabold leading-snug text-on-surface">
+                                    {task.title}
+                                  </h3>
+                                  {task.kind === "suggestion" && task.suggestionState === "pending" && <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-200">Task suggestion · not yet official</p>}
+                                  {(task.phase || task.milestone) && <p className="mt-2 text-xs font-semibold text-primary">{task.phase || "Milestone-linked work"}</p>}
+                                  {task.description && (
+                                    <p className="mt-2 text-xs leading-relaxed text-secondary">
+                                      {task.description}
+                                    </p>
+                                  )}
+                                  <div className="mt-3 rounded-lg bg-surface-container-low px-3 py-2">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-secondary">
+                                      Expected outcome
+                                    </p>
+                                    <p className="mt-1 text-xs leading-relaxed text-on-surface">
+                                      {task.acceptanceCriteria ||
+                                        "No outcome defined yet."}
+                                    </p>
+                                  </div>
+                                  {(task.dependencies || []).length > 0 && (
+                                    <p
+                                      className={`mt-3 text-xs ${waiting ? "text-amber-700 dark:text-amber-200" : "text-secondary"}`}
+                                    >
+                                      <span className="material-symbols-outlined mr-1 align-[-3px] text-[15px]">
+                                        account_tree
+                                      </span>
+                                      {waiting
+                                        ? "Waiting for: "
+                                        : "Prerequisite complete: "}
+                                      {dependencyNames(task).join(", ")}
+                                    </p>
+                                  )}
+                                  {task.dueDate && (
+                                    <p
+                                      className={`mt-3 text-xs font-semibold ${overdue(task) ? "text-error" : "text-secondary"}`}
+                                    >
+                                      <span className="material-symbols-outlined mr-1 align-[-3px] text-[15px]">
+                                        event
+                                      </span>
+                                      {overdue(task) ? "Overdue · " : "Due · "}
+                                      {dateOnly(task.dueDate)}
+                                    </p>
+                                  )}
+                                  {task.status === "blocked" && (
+                                    <p className="mt-3 rounded-lg bg-error/10 px-3 py-2 text-xs text-error">
+                                      Blocker: {task.blockedReason}
+                                    </p>
+                                  )}
+                                  <div className="mt-4">
+                                    {updatingId === task._id ? (
+                                      <span className="text-xs font-semibold text-secondary">
+                                        Updating…
+                                      </span>
+                                    ) : (
+                                      taskActions(task)
+                                    )}
+                                  </div>
+                                  <div className="mt-3 flex flex-wrap gap-2 border-t border-outline-variant/25 pt-3">
+                                    <button onClick={() => addComment(task)} className="text-xs font-bold text-primary hover:underline">Comment ({task.comments?.length || 0})</button>
+                                    {["supervisor", "admin"].includes(user?.role) && <button onClick={() => addComment(task, true)} className="text-xs font-bold text-secondary hover:text-primary">Add instruction</button>}
+                                  </div>
+                                </article>
+                              )}
+                            </Draggable>
+                          );
+                        })
+                      )}
+                      {provided.placeholder}
+                      {!loading && column.tasks.length === 0 && (
+                        <div className="rounded-xl border border-dashed border-outline-variant/40 p-5 text-center text-xs leading-relaxed text-secondary">
+                          No {column.label.toLowerCase()} tasks.
                         </div>
-                        {(task.dependencies || []).length > 0 && (
-                          <p
-                            className={`mt-3 text-xs ${waiting ? "text-amber-700 dark:text-amber-200" : "text-secondary"}`}
-                          >
-                            <span className="material-symbols-outlined mr-1 align-[-3px] text-[15px]">
-                              account_tree
-                            </span>
-                            {waiting
-                              ? "Waiting for: "
-                              : "Prerequisite complete: "}
-                            {dependencyNames(task).join(", ")}
-                          </p>
-                        )}
-                        {task.dueDate && (
-                          <p
-                            className={`mt-3 text-xs font-semibold ${overdue(task) ? "text-error" : "text-secondary"}`}
-                          >
-                            <span className="material-symbols-outlined mr-1 align-[-3px] text-[15px]">
-                              event
-                            </span>
-                            {overdue(task) ? "Overdue · " : "Due · "}
-                            {dateOnly(task.dueDate)}
-                          </p>
-                        )}
-                        {task.status === "blocked" && (
-                          <p className="mt-3 rounded-lg bg-error/10 px-3 py-2 text-xs text-error">
-                            Blocker: {task.blockedReason}
-                          </p>
-                        )}
-                        <div className="mt-4">
-                          {updatingId === task._id ? (
-                            <span className="text-xs font-semibold text-secondary">
-                              Updating…
-                            </span>
-                          ) : (
-                            taskActions(task)
-                          )}
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-2 border-t border-outline-variant/25 pt-3">
-                          <button onClick={() => addComment(task)} className="text-xs font-bold text-primary hover:underline">Comment ({task.comments?.length || 0})</button>
-                          {["supervisor", "admin"].includes(user?.role) && <button onClick={() => addComment(task, true)} className="text-xs font-bold text-secondary hover:text-primary">Add instruction</button>}
-                        </div>
-                      </article>
-                    );
-                  })
+                      )}
+                    </div>
+                  </section>
                 )}
-                {!loading && column.tasks.length === 0 && (
-                  <div className="rounded-xl border border-dashed border-outline-variant/40 p-5 text-center text-xs leading-relaxed text-secondary">
-                    No {column.label.toLowerCase()} tasks.
-                  </div>
-                )}
-              </div>
-            </section>
-          ))}
-        </section>
+              </Droppable>
+            ))}
+          </section>
+        </DragDropContext>
 
         {showCreate && (
           <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 p-4 backdrop-blur-sm">
