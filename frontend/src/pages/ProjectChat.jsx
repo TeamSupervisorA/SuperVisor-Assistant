@@ -5,6 +5,20 @@ import { motion } from 'framer-motion';
 
 const messageId = (message) => String(message?._id || '');
 const sameUser = (left, right) => String(left || '') === String(right || '');
+const cleanAssistantMessage = (value) => String(value || '')
+  .replace(/```(?:[a-z0-9_-]+)?/gi, '')
+  .split(/\r?\n/)
+  .filter((line) => !/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line))
+  .map((line) => line
+    .replace(/^\s*#{1,6}\s+/, '')
+    .replace(/^\s*[-+*]\s+/, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .trimEnd())
+  .join('\n')
+  .replace(/\n{3,}/g, '\n\n')
+  .trim();
 
 const ProjectChat = () => {
   const { activeProject, user } = useAuth();
@@ -118,7 +132,7 @@ const ProjectChat = () => {
     setAiError('');
     setIsAiTyping(true);
     try {
-      const history = aiMessages.slice(-6).map((message) => ({
+      const history = aiMessages.slice(-10).map((message) => ({
         role: (message.sender?._id || message.sender) === 'ai' ? 'assistant' : 'user',
         content: message.content
       }));
@@ -216,7 +230,7 @@ const ProjectChat = () => {
               <div className={`flex flex-col ${isSelf ? 'items-end' : 'items-start'}`}>
                 {!isSelf && <span className="font-label-sm text-[11px] font-bold text-on-surface-variant mb-1.5 ml-1 uppercase tracking-wider">{message.sender?.name || 'User'}</span>}
                 <div className={`px-5 py-3.5 rounded-[20px] shadow-sm ${isSelf ? 'bg-primary text-on-primary rounded-br-[4px]' : isAi ? 'bg-tertiary-container/30 border border-tertiary/20 text-on-surface rounded-bl-[4px]' : 'bg-surface border border-outline-variant/30 text-on-surface rounded-bl-[4px]'}`}>
-                  <p className="font-body-md text-[15px] whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                  <p className="font-body-md text-[15px] whitespace-pre-wrap leading-relaxed">{isAi ? cleanAssistantMessage(message.content) : message.content}</p>
                   {isAi && message.assistantData?.nextActions?.length > 0 && <div className="mt-4 border-t border-tertiary/15 pt-3"><p className="mb-2 text-xs font-black uppercase tracking-wider text-tertiary">Recommended next actions</p><ol className="space-y-2">{message.assistantData.nextActions.map((action, actionIndex) => <li key={`${action.title}-${actionIndex}`} className="rounded-xl bg-surface/70 p-3 text-sm"><span className="font-bold">{actionIndex + 1}. {action.title}</span>{action.reason && <span className="mt-1 block text-xs text-on-surface-variant">{action.reason}</span>}<span className="mt-1 block text-[10px] font-bold uppercase tracking-wider text-secondary">Owner: {action.owner}</span></li>)}</ol></div>}
                   {isAi && message.assistantData?.questionsToConsider?.length > 0 && <div className="mt-3"><p className="mb-1 text-xs font-black uppercase tracking-wider text-tertiary">Questions to consider</p><ul className="list-disc space-y-1 pl-5 text-sm">{message.assistantData.questionsToConsider.map((question, questionIndex) => <li key={`${question}-${questionIndex}`}>{question}</li>)}</ul></div>}
                   {isAi && message.assistantData?.humanCheckpoint && <p className="mt-3 rounded-lg border border-outline-variant/30 bg-surface/60 px-3 py-2 text-xs text-on-surface-variant"><strong>Human checkpoint:</strong> {message.assistantData.humanCheckpoint}</p>}

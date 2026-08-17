@@ -25,6 +25,36 @@ const normalizeText = (value, label = 'Text') => {
   return text;
 };
 
+// Assistant replies are displayed as conversational text and structured UI
+// cards. Strip presentation-only Markdown if a model returns it despite the
+// response contract so users never see raw heading or emphasis tokens.
+const plainAssistantText = (value, limit = 8000) => String(value || '')
+  .replace(/```(?:[a-z0-9_-]+)?/gi, '')
+  .split(/\r?\n/)
+  .filter((line) => !/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line))
+  .map((line) => line
+    .replace(/^\s*#{1,6}\s+/, '')
+    .replace(/^\s*[-+*]\s+/, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .trimEnd())
+  .join('\n')
+  .replace(/\n{3,}/g, '\n\n')
+  .trim()
+  .slice(0, limit);
+
+const conversationalReply = (message) => {
+  const compact = message.toLowerCase().replace(/[^a-z\s']/g, ' ').replace(/\s+/g, ' ').trim();
+  if (/^(?:hi|hello|hey|hiya|good morning|good afternoon|good evening)(?: are you there| is anyone there| how are you)?$/.test(compact)) {
+    return 'Yes, I’m here. What would you like help with—your research, project plan, academic writing, or career preparation?';
+  }
+  if (/^(?:thanks|thank you|thank you very much|got it|okay thanks|ok thanks)$/.test(compact)) {
+    return 'You’re welcome. Send me the next question whenever you’re ready.';
+  }
+  return '';
+};
+
 const parseJson = (responseText, label) => {
   const text = String(responseText || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
   try {
@@ -144,24 +174,35 @@ exports.academicAssistant = async ({ message, mode, role, userProfile, projectCo
     career: 'Use career-readiness areas such as self-development, communication, critical thinking, teamwork, professionalism, leadership, and technology. Connect advice to the user’s project evidence and recommend concrete portfolio or skill-building actions.',
     planning: 'Turn the verified project state into a dependency-aware plan with ownership, acceptance criteria, risks, and a check-in point.'
   };
+  const casualAnswer = conversationalReply(question);
+  if (casualAnswer) {
+    return {
+      answer: casualAnswer,
+      nextActions: [],
+      questionsToConsider: [],
+      humanCheckpoint: '',
+      mode: selectedMode,
+      role
+    };
+  }
   const response = await request({
-    prompt: `Mode: ${selectedMode}\nRole: ${role}\nUser profile: ${JSON.stringify(userProfile)}\nVerified project context: ${JSON.stringify(projectContext || null)}\nRecent conversation: ${JSON.stringify((recentHistory || []).slice(-6))}\n\nUser message:\n${question}\n\nReturn JSON only with this shape: {"answer":"a direct, plain-language response without markdown headings","nextActions":[{"title":"","reason":"","owner":"student|supervisor|admin|team"}],"questionsToConsider":[""],"humanCheckpoint":"what should be verified with a person or source"}. Return no more than four next actions and three questions. When information is missing, ask targeted questions instead of making assumptions.`,
-    systemInstruction: withUserGuidance(`You are a role-aware academic supervision and career-development assistant. ${roleInstructions[role] || roleInstructions.student} ${modeInstructions[selectedMode]} Preserve human agency, protect privacy, label uncertainty, and distinguish verified project records from user claims. Do not fabricate sources, institutional policy, deadlines, people, progress, grades, job outcomes, or capabilities. Never claim to have contacted anyone or completed an action.`, guidance),
+    prompt: `Mode: ${selectedMode}\nRole: ${role}\nUser profile: ${JSON.stringify(userProfile)}\nVerified project context: ${JSON.stringify(projectContext || null)}\nRecent conversation: ${JSON.stringify((recentHistory || []).slice(-10))}\n\nCurrent user message:\n${question}\n\nRespond to the current message itself. Return JSON only with this shape: {"answer":"a natural direct reply","nextActions":[{"title":"","reason":"","owner":"student|supervisor|admin|team"}],"questionsToConsider":[""],"humanCheckpoint":""}. Every string must be plain text with no Markdown symbols, headings, bullets, code fences, or horizontal dividers. For a greeting, acknowledgement, simple clarification, or casual question, reply naturally in one to three sentences and return empty arrays and an empty humanCheckpoint. Do not evaluate a casual message as academic work. For a substantive request, answer first and add no more than four genuinely useful actions and three relevant questions. Include a human checkpoint only when the answer contains an important academic, institutional, ethical, privacy, or career decision that a person or reliable source should verify. When necessary information is missing, ask one focused question instead of producing a generic review.`,
+    systemInstruction: withUserGuidance(`You are a warm, interactive, role-aware academic supervision and career-development assistant. Continue the conversation naturally and directly; never force every message into a review template. ${roleInstructions[role] || roleInstructions.student} ${modeInstructions[selectedMode]} Preserve human agency, protect privacy, label uncertainty, and distinguish verified project records from user claims. Do not fabricate sources, institutional policy, deadlines, people, progress, grades, job outcomes, or capabilities. Never claim to have contacted anyone or completed an action.`, guidance),
     json: true
   });
   const result = parseJson(response.text, 'academic-assistant');
   if (!result?.answer || typeof result.answer !== 'string') throw new Error('The AI did not return a usable assistant response.');
   return {
-    answer: result.answer.trim().slice(0, 8000),
+    answer: plainAssistantText(result.answer),
     nextActions: Array.isArray(result.nextActions) ? result.nextActions.slice(0, 4).map((action) => ({
-      title: String(action?.title || '').trim().slice(0, 200),
-      reason: String(action?.reason || '').trim().slice(0, 500),
+      title: plainAssistantText(action?.title, 200),
+      reason: plainAssistantText(action?.reason, 500),
       owner: ['student', 'supervisor', 'admin', 'team'].includes(action?.owner) ? action.owner : role
     })).filter((action) => action.title) : [],
     questionsToConsider: Array.isArray(result.questionsToConsider)
-      ? result.questionsToConsider.slice(0, 3).map((questionItem) => String(questionItem || '').trim().slice(0, 500)).filter(Boolean)
+      ? result.questionsToConsider.slice(0, 3).map((questionItem) => plainAssistantText(questionItem, 500)).filter(Boolean)
       : [],
-    humanCheckpoint: String(result.humanCheckpoint || 'Verify important academic and career decisions with your assigned supervisor or institution.').trim().slice(0, 1000),
+    humanCheckpoint: plainAssistantText(result.humanCheckpoint, 1000),
     mode: selectedMode,
     role
   };

@@ -88,7 +88,7 @@ exports.academicAssistant = async (req, res) => {
         progressLogs
       };
     }
-    const recentHistory = Array.isArray(req.body?.history) ? req.body.history.slice(-6).map((item) => ({
+    const recentHistory = Array.isArray(req.body?.history) ? req.body.history.slice(-10).map((item) => ({
       role: item?.role === 'assistant' ? 'assistant' : 'user',
       content: String(item?.content || '').slice(0, 1200)
     })) : [];
