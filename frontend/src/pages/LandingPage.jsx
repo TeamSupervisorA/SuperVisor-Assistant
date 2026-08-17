@@ -255,31 +255,43 @@ const LandingPage = () => {
             </motion.div>
           </motion.section>
 
-          {/* Hero Dashboard Preview Image (Placeholder abstract visualization) */}
+          {/* Theme-aware product preview */}
           <motion.div
             initial={{ opacity: 0, y: 100 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.8, ease: "easeOut" }}
             className="w-full max-w-5xl mx-auto mb-40 perspective-[2000px]"
           >
-            <div className="rounded-[24px] overflow-hidden border border-outline-variant/20 shadow-[0_30px_100px_-20px_rgba(53,37,205,0.25)] bg-surface-container/50 backdrop-blur-xl aspect-video relative rotate-x-[5deg] scale-95 hover:rotate-x-0 hover:scale-100 transition-all duration-700 ease-out flex flex-col">
-              {/* Fake Mac Header */}
-              <div className="h-12 border-b border-outline-variant/20 flex items-center px-4 gap-2 bg-surface/50">
-                <div className="w-3 h-3 rounded-full bg-error/80"></div>
-                <div className="w-3 h-3 rounded-full bg-secondary-fixed-dim/80"></div>
-                <div className="w-3 h-3 rounded-full bg-tertiary-fixed-dim/80"></div>
+            <div className="relative flex aspect-video scale-95 rotate-x-[5deg] flex-col overflow-hidden rounded-[24px] border border-slate-200/90 bg-white shadow-[0_30px_100px_-20px_rgba(53,37,205,0.22)] transition-all duration-700 ease-out hover:scale-100 hover:rotate-x-0 dark:border-white/10 dark:bg-[#10131d] dark:shadow-[0_30px_100px_-20px_rgba(96,82,255,0.32)]">
+              <div className="relative z-10 flex h-11 shrink-0 items-center justify-between border-b border-slate-200/90 bg-white/95 px-4 backdrop-blur-xl dark:border-white/10 dark:bg-[#151823]/95">
+                <div className="flex items-center gap-2" aria-hidden="true">
+                  <span className="h-3 w-3 rounded-full bg-[#ff7f7f] ring-1 ring-black/5 dark:bg-[#ff8f8f]" />
+                  <span className="h-3 w-3 rounded-full bg-[#f3c969] ring-1 ring-black/5 dark:bg-[#f2d38a]" />
+                  <span className="h-3 w-3 rounded-full bg-[#62b9df] ring-1 ring-black/5 dark:bg-[#75c8eb]" />
+                </div>
+                <div className="absolute left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                  <span className="material-symbols-outlined text-[13px] text-primary">dashboard</span>
+                  Supervisor dashboard
+                </div>
+                <span className="hidden text-[10px] font-semibold text-slate-400 sm:block dark:text-slate-500">Live workspace</span>
               </div>
-              <div className="flex-1 p-8 grid grid-cols-3 gap-6 opacity-80">
-                <div className="col-span-1 space-y-4">
-                  <div className="h-32 rounded-2xl bg-surface-variant/30 border border-outline-variant/10"></div>
-                  <div className="h-64 rounded-2xl bg-surface-variant/30 border border-outline-variant/10"></div>
-                </div>
-                <div className="col-span-2 space-y-4">
-                  <div className="h-16 rounded-2xl bg-primary/10 border border-primary/20"></div>
-                  <div className="h-80 rounded-2xl bg-surface-variant/30 border border-outline-variant/10 flex items-center justify-center">
-                    <span className="font-display text-4xl text-on-surface-variant/30 font-black tracking-widest uppercase">SuperVisor Dashboard</span>
-                  </div>
-                </div>
+              <div className="relative min-h-0 flex-1 overflow-hidden bg-slate-50 dark:bg-[#111827]">
+                <AnimatePresence mode="wait">
+                  <motion.img
+                    key={isDark ? 'dashboard-dark' : 'dashboard-light'}
+                    src={isDark ? '/supervisor-dashboard-dark.png' : '/supervisor-dashboard-light.png'}
+                    alt="Supervisor Assistant dashboard showing supervised teams, pending reviews, plagiarism alerts, meetings, and recent submissions"
+                    initial={{ opacity: 0, scale: 1.015 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.995 }}
+                    transition={{ duration: 0.25, ease: 'easeOut' }}
+                    className="h-full w-full object-cover object-top"
+                    decoding="async"
+                    fetchPriority="high"
+                    draggable="false"
+                  />
+                </AnimatePresence>
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-white/35 to-transparent dark:from-[#10131d]/35" />
               </div>
             </div>
           </motion.div>
