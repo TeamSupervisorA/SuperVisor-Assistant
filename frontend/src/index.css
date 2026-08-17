@@ -250,7 +250,7 @@
 .paper-editor-workbench-shell {
   display: flex;
   width: 100%;
-  height: auto;
+  height: 100%;
   min-height: 0;
   flex: 1 1 0;
   overflow: hidden;
@@ -260,7 +260,7 @@
 .paper-editor-workbench {
   display: flex;
   width: 100%;
-  height: auto;
+  height: 100%;
   flex: 1 1 0;
 }
 
@@ -284,7 +284,7 @@
   grid-template-columns: minmax(320px, var(--paper-source-width, 50%)) 10px minmax(320px, 1fr);
   grid-template-rows: minmax(0, 1fr);
   flex: 1 1 0;
-  height: auto;
+  height: 100%;
   min-height: 0;
   overflow: hidden;
   background: #f1f5f9;
