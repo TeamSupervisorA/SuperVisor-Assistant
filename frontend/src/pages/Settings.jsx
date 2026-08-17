@@ -122,7 +122,7 @@ const Settings = () => {
                   { id: 'aiChatbot', label: 'AI Supervisor Chatbot', desc: 'Enable the 24/7 student query assistant.' },
                   { id: 'ideaGenerator', label: 'Project Idea Generator', desc: 'Allow students to generate research topics.' },
                   { id: 'proposalFeedback', label: 'Proposal Feedback', desc: 'Automated critique on initial draft submissions.' },
-                  { id: 'plagiarismAutoCheck', label: 'Automatic Integrity Screen', desc: 'Run a grounded similarity screen when a student submits at least 200 characters of text.', color: 'tertiary', supervisorOnly: true }
+                  { id: 'plagiarismAutoCheck', label: 'Automatic Integrity Screen', desc: 'Compare stored project submissions and add grounded public-web evidence when available after a student submits at least 200 characters.', color: 'tertiary', supervisorOnly: true }
                 ].filter((feature) => !feature.supervisorOnly || canConfigureIntegrity).map((feature) => (
                   <div key={feature.id} className="flex items-center justify-between p-5 bg-surface-container-lowest/50 border border-outline-variant/40 rounded-[20px] hover:border-outline-variant/80 hover:shadow-sm transition-all group">
                     <div>

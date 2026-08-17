@@ -1,4 +1,5 @@
 const geminiService = require('../services/geminiService');
+const { screenIntegrity } = require('../services/integrityService');
 const AIInteraction = require('../models/AIInteraction');
 const Task = require('../models/Task');
 const Submission = require('../models/Submission');
@@ -156,7 +157,9 @@ exports.checkPlagiarism = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Please provide text to check' });
     }
 
-    const result = await geminiService.checkPlagiarism(text);
+    // This compatibility endpoint has no project corpus. The formal checker at
+    // /api/plagiarism adds project-scoped stored-submission comparison.
+    const result = await screenIntegrity({ text, comparisonSubmissions: [] });
 
     await recordInteraction(req, 'plagiarism', { textLength: text.length }, { output: result, status: 'succeeded' });
 

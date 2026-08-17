@@ -4,7 +4,8 @@ const { Project, canAccessProject, projectIdsForUser } = require('../utils/proje
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const PlagiarismReport = require('../models/PlagiarismReport');
-const geminiService = require('../services/geminiService');
+const { screenIntegrity } = require('../services/integrityService');
+const { integrityFingerprint, normalizeIntegrityText } = require('../utils/integrity');
 const { sendServerError } = require('../utils/errorResponse');
 
 // Notifications are best-effort — never fail the main operation over one
@@ -17,21 +18,49 @@ const notify = async (fields) => {
 // Automatic checks are opt-in per supervisor and only run when the student has
 // supplied enough text. A provider error never rejects the academic submission.
 const runAutomaticIntegrityScreen = async (submission, project) => {
-  if (!project.supervisor || submission.content.trim().length < 200) return;
+  const text = normalizeIntegrityText(submission.content);
+  if (!project.supervisor || text.length < 200) return;
   const supervisor = await User.findById(project.supervisor).select('settings.plagiarismAutoCheck settings.plagiarismTolerance');
   if (!supervisor?.settings?.plagiarismAutoCheck) return;
+  const contentHash = integrityFingerprint(text);
+  let pendingReport;
   try {
-    const result = await geminiService.checkPlagiarism(submission.content);
-    await PlagiarismReport.create({
+    const currentReport = await PlagiarismReport.exists({ submission: submission._id, contentHash, status: 'Completed', isCurrent: true });
+    if (currentReport) return;
+    pendingReport = await PlagiarismReport.create({
       submission: submission._id,
       project: project._id,
+      requestedBy: project.supervisor,
+      contentHash,
+      checkedCharacterCount: text.length,
+      status: 'Pending',
+      isCurrent: false
+    });
+    const comparisonSubmissions = await Submission.find({
+      project: project._id,
+      _id: { $ne: submission._id },
+      content: { $exists: true, $ne: '' }
+    }).sort({ submittedAt: -1 }).limit(100).select('_id title content').lean();
+    const result = await screenIntegrity({ text, comparisonSubmissions });
+    await PlagiarismReport.updateMany(
+      { submission: submission._id, status: 'Completed', _id: { $ne: pendingReport._id } },
+      { $set: { isCurrent: false } }
+    );
+    await PlagiarismReport.findByIdAndUpdate(pendingReport._id, {
       overallSimilarity: result.overallSimilarity,
       summary: result.summary,
       method: result.method,
+      providerModel: result.model,
       disclaimer: result.disclaimer,
       sourcesSearched: result.sourcesSearched,
+      searchQueryCount: result.searchQueryCount || 0,
+      searchSuggestionsHtml: result.searchSuggestionsHtml || '',
+      coverage: result.coverage || [],
+      providerNotice: result.providerNotice || '',
       matchedSources: result.matchedSources,
-      status: 'Completed'
+      status: 'Completed',
+      completedAt: new Date(),
+      isCurrent: true
     });
     const threshold = Number.isFinite(supervisor.settings?.plagiarismTolerance) ? supervisor.settings.plagiarismTolerance : 20;
     const needsReview = result.overallSimilarity > threshold;
@@ -43,6 +72,13 @@ const runAutomaticIntegrityScreen = async (submission, project) => {
       link: '/plagiarism-checker'
     });
   } catch (error) {
+    if (pendingReport?._id) {
+      await PlagiarismReport.findByIdAndUpdate(pendingReport._id, {
+        status: 'Failed',
+        summary: 'The automatic screening provider did not return a usable report.',
+        completedAt: new Date()
+      }).catch(() => {});
+    }
     console.warn('Automatic integrity screen unavailable:', error.message);
   }
 };
@@ -173,7 +209,11 @@ exports.updateSubmission = async (req, res) => {
     const wasGraded = req.user.role !== 'student' && (
       updates.grade || updates.feedback || ['Graded', 'Needs Revision'].includes(updates.status)
     );
+    const invalidatesIntegrityReport = req.user.role === 'student' && (updates.content !== undefined || updates.fileUrl !== undefined);
     submission = await Submission.findByIdAndUpdate(req.params.id, updates, { returnDocument: 'after', runValidators: true });
+    if (invalidatesIntegrityReport) {
+      await PlagiarismReport.updateMany({ submission: submission._id }, { $set: { isCurrent: false } });
+    }
 
     if (wasGraded) {
       await notify({
@@ -205,7 +245,10 @@ exports.deleteSubmission = async (req, res) => {
       return res.status(403).json({ success: false, error: 'Not authorized to delete this submission' });
     }
 
-    await submission.deleteOne();
+    await Promise.all([
+      submission.deleteOne(),
+      PlagiarismReport.deleteMany({ submission: submission._id })
+    ]);
     res.status(200).json({ success: true, data: {} });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });

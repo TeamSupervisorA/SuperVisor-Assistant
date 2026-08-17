@@ -75,8 +75,10 @@ Set `GEMINI_API_KEY` and, if needed, a Gemini model available to that key in `GE
 
 - Students can generate a proposal planning outline, edit it, and save it as their own draft. They can also request project ideas and formative feedback.
 - Students and the assigned supervisor can generate a report narrative draft from the project’s stored tasks, submissions, and progress logs. The draft explicitly requires review before formal use.
-- Supervisors and administrators can run an integrity screen for a submission that includes at least 200 characters of pasted text. It uses Gemini Google Search grounding and stores only grounded source metadata. It is a similarity-screening aid, **not** a plagiarism verdict; review the original sources and follow institutional policy before acting.
-- A supervisor may opt into automatic integrity screening in Settings. It runs only when submitted text is available; an AI/provider failure never blocks submission.
+- Supervisors and administrators can run a project-scoped plagiarism/integrity screen for a submission that includes at least 200 characters of stored text. A deterministic eight-word-sequence comparison checks up to 100 recent text submissions in the selected project, and Gemini Google Search grounding adds substantiated public-web sources when configured and available. The UI reports exactly which coverage ran.
+- Identical text reuses the current report, concurrent duplicate checks are blocked, and editing a submission marks its earlier reports as superseded. Students see only reports for their own submissions; internal source details remain available to assigned reviewers without exposing another student’s draft.
+- A supervisor may opt into automatic screening in Settings. It runs only when submitted text is available. Missing or exhausted Gemini quota does not block the submission or the local project-corpus comparison; the report clearly marks public-web coverage as unavailable and can retry it later.
+- Every result is a similarity-screening aid, **not** a plagiarism verdict or proof of originality. Review the original wording, quotations, citations, templates, context, and institutional policy before acting.
 
 Gemini use is subject to Google’s policies and data handling terms. Do not submit sensitive personal, unpublished, or restricted research data unless your institution has approved that use. The app prompts Gemini not to invent citations, sources, findings, or grades, but students and supervisors must verify all output.
 

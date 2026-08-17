@@ -71,9 +71,12 @@ const withUserGuidance = (coreInstruction, guidance) => {
     : coreInstruction;
 };
 
-const request = async ({ prompt, systemInstruction, json = false, grounded = false }) => {
+const request = async ({ prompt, systemInstruction, json = false, jsonSchema, grounded = false }) => {
   const config = { systemInstruction };
-  if (json) config.responseMimeType = 'application/json';
+  if (json) {
+    config.responseMimeType = 'application/json';
+    if (jsonSchema) config.responseJsonSchema = jsonSchema;
+  }
   // Google Search grounding is used only where a web source is useful. It is
   // never presented as proof of plagiarism, and sources are retained only from
   // the provider's grounding metadata.
@@ -81,19 +84,87 @@ const request = async ({ prompt, systemInstruction, json = false, grounded = fal
   return getClient().models.generateContent({ model: MODEL, contents: prompt, config });
 };
 
-const groundingSources = (response) => {
-  const chunks = response?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-  const seen = new Set();
-  return chunks.map((chunk) => {
+const safeWebUrl = (value) => {
+  try {
+    const parsed = new URL(String(value || ''));
+    return ['http:', 'https:'].includes(parsed.protocol) ? parsed.href : '';
+  } catch {
+    return '';
+  }
+};
+
+const sourceKey = (value) => String(value || '')
+  .toLowerCase()
+  .replace(/^https?:\/\/(?:www\.)?/, '')
+  .replace(/[^a-z0-9]+/g, ' ')
+  .trim();
+
+const sourceTokenOverlap = (left, right) => {
+  const leftTokens = new Set(sourceKey(left).split(' ').filter((token) => token.length > 2));
+  const rightTokens = new Set(sourceKey(right).split(' ').filter((token) => token.length > 2));
+  if (!leftTokens.size || !rightTokens.size) return 0;
+  const matches = [...leftTokens].filter((token) => rightTokens.has(token)).length;
+  return matches / Math.min(leftTokens.size, rightTokens.size);
+};
+
+const groundedMatches = (response, proposedMatches) => {
+  const metadata = response?.candidates?.[0]?.groundingMetadata || {};
+  const chunks = metadata.groundingChunks || [];
+  const supports = metadata.groundingSupports || [];
+  const sources = chunks.map((chunk, index) => {
     const web = chunk?.web || chunk?.retrievedContext;
-    const url = web?.uri || web?.url;
-    const title = web?.title || web?.name;
-    if (!url || seen.has(url)) return null;
-    seen.add(url);
-    let fallbackName = 'Grounded web source';
-    try { fallbackName = new URL(url).hostname; } catch { /* provider URL is shown as supplied */ }
-    return { sourceName: title || fallbackName, sourceUrl: url };
+    const sourceUrl = safeWebUrl(web?.uri || web?.url);
+    if (!sourceUrl) return null;
+    let hostname = '';
+    try { hostname = new URL(sourceUrl).hostname.replace(/^www\./, ''); } catch { /* already validated */ }
+    const supportText = supports
+      .filter((support) => support?.groundingChunkIndices?.includes(index))
+      .map((support) => String(support?.segment?.text || '').trim())
+      .filter(Boolean)
+      .join(' ')
+      .slice(0, 700);
+    return {
+      sourceName: String(web?.title || hostname || 'Grounded web source').trim().slice(0, 300),
+      sourceUrl,
+      hostname,
+      supportText
+    };
   }).filter(Boolean);
+
+  const used = new Set();
+  const matchedSources = (Array.isArray(proposedMatches) ? proposedMatches : []).map((match) => {
+    const proposedUrl = safeWebUrl(match?.sourceUrl);
+    let proposedHost = '';
+    try { proposedHost = proposedUrl ? new URL(proposedUrl).hostname.replace(/^www\./, '') : ''; } catch { /* already validated */ }
+    let bestIndex = -1;
+    let bestScore = 0;
+    sources.forEach((source, index) => {
+      if (used.has(index)) return;
+      const score = Math.max(
+        proposedUrl && proposedUrl === source.sourceUrl ? 1 : 0,
+        proposedHost && (source.hostname === proposedHost || source.sourceName.toLowerCase().includes(proposedHost)) ? 0.95 : 0,
+        sourceTokenOverlap(match?.sourceName, source.sourceName)
+      );
+      if (score > bestScore) { bestScore = score; bestIndex = index; }
+    });
+    if (bestIndex < 0 || bestScore < 0.45) return null;
+    used.add(bestIndex);
+    const source = sources[bestIndex];
+    const score = Number(match?.matchPercentage);
+    return {
+      sourceName: source.sourceName,
+      sourceUrl: source.sourceUrl,
+      matchPercentage: Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : 0,
+      reason: plainAssistantText(match?.reason || source.supportText || 'The grounded search returned evidence that needs manual comparison.', 700)
+    };
+  }).filter(Boolean);
+
+  return {
+    sourcesSearched: sources.map(({ sourceName, sourceUrl }) => ({ sourceName, sourceUrl })),
+    matchedSources,
+    searchQueryCount: Array.isArray(metadata.webSearchQueries) ? metadata.webSearchQueries.filter(Boolean).length : 0,
+    searchSuggestionsHtml: String(metadata.searchEntryPoint?.renderedContent || '').slice(0, 50000)
+  };
 };
 
 exports.getStatus = () => ({ configured: Boolean(process.env.GEMINI_API_KEY), model: MODEL });
@@ -211,28 +282,61 @@ exports.academicAssistant = async ({ message, mode, role, userProfile, projectCo
 exports.checkPlagiarism = async (text) => {
   const submission = normalizeText(text, 'Submission text');
   if (submission.length < 200) throw new Error('Provide at least 200 characters of submission text for an integrity screen.');
+  const integritySchema = {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      overallSimilarity: {
+        type: 'integer',
+        minimum: 0,
+        maximum: 100,
+        description: 'A conservative web-overlap screening indicator, not a plagiarism probability or verdict.'
+      },
+      summary: { type: 'string', description: 'A cautious plain-language explanation of what the search did and did not find.' },
+      matchedSources: {
+        type: 'array',
+        maxItems: 10,
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            sourceName: { type: 'string' },
+            sourceUrl: { type: 'string' },
+            matchPercentage: { type: 'integer', minimum: 0, maximum: 100 },
+            reason: { type: 'string', description: 'The concrete phrase, idea, or passage that a reviewer should compare.' }
+          },
+          required: ['sourceName', 'sourceUrl', 'matchPercentage', 'reason']
+        }
+      }
+    },
+    required: ['overallSimilarity', 'summary', 'matchedSources']
+  };
   const response = await request({
-    prompt: `Screen the submitted text for possible web-source overlap. Use Google Search when useful. Return JSON only: {"overallSimilarity":number,"summary":"","matchedSources":[{"sourceUrl":"","matchPercentage":number,"reason":""}]}. overallSimilarity is an evidence-based screening indicator from 0 to 100, NOT a plagiarism verdict. Include a matched source only when it appears in grounding results and there is a concrete textual-overlap reason. Never invent sources, quotations, or percentages.\n\nSubmitted text:\n${submission}`,
-    systemInstruction: 'You are an academic-integrity screening assistant. Be conservative: absence of search evidence is not proof of originality. Report uncertainty and require human review.',
+    prompt: `Search the public web for distinctive phrases and close paraphrases in the submitted academic text. Return only the requested JSON. The overallSimilarity value is a conservative screening indicator from 0 to 100, not a plagiarism probability or verdict. Include a matched source only when Google Search actually returned that source and there is a concrete overlap a human reviewer can compare. A citation, common phrase, technical term, bibliography entry, or standard definition alone is not evidence of misconduct. If no grounded overlap is found, return an empty matchedSources array and explain that the result is not proof of originality. Never invent a source, quotation, URL, or score.\n\nSubmitted text:\n${submission}`,
+    systemInstruction: 'You are an academic-integrity screening assistant. Find possible public-web textual overlap for human review. Be conservative, protect student privacy, distinguish properly attributed material from unattributed overlap, and never make a misconduct determination.',
     json: true,
+    jsonSchema: integritySchema,
     grounded: true
   });
   const result = parseJson(response.text, 'integrity-screen');
-  const sources = groundingSources(response);
-  const sourceByUrl = new Map(sources.map((source) => [source.sourceUrl, source]));
-  const matchedSources = Array.isArray(result.matchedSources) ? result.matchedSources
-    .map((match) => {
-      const source = sourceByUrl.get(match?.sourceUrl);
-      const score = Number(match?.matchPercentage);
-      if (!source || !Number.isFinite(score)) return null;
-      return { ...source, matchPercentage: Math.max(0, Math.min(100, Math.round(score))), reason: String(match.reason || '').slice(0, 500) };
-    }).filter(Boolean) : [];
+  const grounded = groundedMatches(response, result.matchedSources);
+  const requestedScore = Number(result.overallSimilarity);
+  // A score without grounded matched sources would give false precision. When
+  // the provider cannot substantiate a proposed match, retain the searched
+  // sources for transparency but set the indicator to zero.
+  const overallSimilarity = grounded.matchedSources.length && Number.isFinite(requestedScore)
+    ? Math.max(0, Math.min(100, Math.round(requestedScore)))
+    : 0;
   return {
-    overallSimilarity: Math.max(0, Math.min(100, Math.round(Number(result.overallSimilarity) || 0))),
-    summary: String(result.summary || 'No explanatory summary was returned. Human review is required.').slice(0, 2000),
-    matchedSources,
-    sourcesSearched: sources,
+    overallSimilarity,
+    summary: plainAssistantText(result.summary || 'No explanatory summary was returned. Human review is required.', 2000),
+    matchedSources: grounded.matchedSources,
+    sourcesSearched: grounded.sourcesSearched,
+    searchQueryCount: grounded.searchQueryCount,
+    searchSuggestionsHtml: grounded.searchSuggestionsHtml,
+    checkedCharacterCount: submission.length,
+    model: MODEL,
     method: 'Gemini Google Search-grounded integrity screen',
-    disclaimer: 'This is a similarity-screening aid, not a plagiarism determination. Review the source material and institutional policy before taking action.'
+    disclaimer: 'This screen checks selected public-web evidence only. It is not a comprehensive similarity database, plagiarism probability, or misconduct determination. A qualified reviewer must compare the cited sources, attribution, context, and institutional policy.'
   };
 };

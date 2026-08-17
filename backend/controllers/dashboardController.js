@@ -16,6 +16,7 @@ exports.getAdminMetrics = async (req, res) => {
     const assignmentsSubmitted = await Submission.countDocuments();
     const plagiarismAlerts = await PlagiarismReport.countDocuments({
       status: 'Completed',
+      isCurrent: { $ne: false },
       overallSimilarity: { $gte: 20 }
     });
 
@@ -60,10 +61,14 @@ exports.getSupervisorMetrics = async (req, res) => {
     });
 
     // Plagiarism alerts: completed reports above a similarity threshold
+    const integrityReviewThreshold = Number.isFinite(req.user.settings?.plagiarismTolerance)
+      ? req.user.settings.plagiarismTolerance
+      : 20;
     const plagiarismAlerts = await PlagiarismReport.countDocuments({
       project: { $in: projectIds },
       status: 'Completed',
-      overallSimilarity: { $gte: 20 }
+      isCurrent: { $ne: false },
+      overallSimilarity: { $gt: integrityReviewThreshold }
     });
 
     const projectHealth = await Promise.all(supervisedProjects.map(async (project) => {

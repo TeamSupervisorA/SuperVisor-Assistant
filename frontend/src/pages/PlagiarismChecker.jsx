@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { motion } from 'framer-motion';
+import { Link, useSearchParams } from 'react-router-dom';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -21,8 +22,15 @@ const PlagiarismChecker = () => {
   const [selectedSub, setSelectedSub] = useState('');
   const [running, setRunning] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [searchParams] = useSearchParams();
   const canRunChecks = ['supervisor', 'admin'].includes(user?.role);
   const projectId = activeProject?._id;
+  const requestedSubmission = searchParams.get('submission');
+  const screenableSubmissions = useMemo(
+    () => submissions.filter((submission) => String(submission.content || '').trim().length >= 200),
+    [submissions]
+  );
 
   const loadData = useCallback(async () => {
     if (!projectId) return;
@@ -34,6 +42,7 @@ const PlagiarismChecker = () => {
       ]);
       if (repRes.data) setReports(repRes.data);
       if (subRes.data) setSubmissions(subRes.data);
+      setError('');
     } catch (e) {
       console.error(e);
       setError(e.message || 'Unable to load integrity data.');
@@ -47,10 +56,17 @@ const PlagiarismChecker = () => {
     else { setReports([]); setSubmissions([]); setLoading(false); }
   }, [projectId, loadData]);
 
+  useEffect(() => {
+    if (!selectedSub && requestedSubmission && screenableSubmissions.some((submission) => submission._id === requestedSubmission)) {
+      setSelectedSub(requestedSubmission);
+    }
+  }, [requestedSubmission, screenableSubmissions, selectedSub]);
+
   const handleRunCheck = async () => {
     if (!canRunChecks) { setError('Only the assigned supervisor or an administrator can run an integrity screen. Students can view shared reports.'); return; }
     if (!selectedSub) { setError('Select a submission first.'); return; }
     setError('');
+    setNotice('');
     setRunning(true);
     try {
       // No client-side mock fallback here: fabricating a similarity score for an
@@ -61,9 +77,10 @@ const PlagiarismChecker = () => {
       });
 
       if (res.success && res.data) {
-        // The POST response isn't populated — attach the known submission for display
-        const submissionDoc = submissions.find(s => s._id === selectedSub);
-        setReports([{ ...res.data, submission: res.data.submission?.title ? res.data.submission : submissionDoc }, ...reports]);
+        const submissionDoc = submissions.find((submission) => submission._id === selectedSub);
+        const report = { ...res.data, submission: res.data.submission?.title ? res.data.submission : submissionDoc };
+        setReports((current) => [report, ...current.filter((item) => item._id !== report._id)]);
+        setNotice(res.reused ? 'The current submission text was already screened recently, so its existing report was reused.' : 'The integrity screen is complete. Review every cited source before making an academic decision.');
       }
     } catch (e) {
       setError(e.message || 'Integrity screening failed.');
@@ -101,7 +118,8 @@ const PlagiarismChecker = () => {
           <div>
             <span className="inline-block px-3 py-1 rounded-full bg-tertiary/10 text-tertiary font-label-md text-[12px] font-bold mb-3 border border-tertiary/20 uppercase tracking-wide">Integrity</span>
             <h1 className="font-display text-[32px] md:text-[42px] font-black text-on-surface tracking-tight leading-none mb-2">Integrity Screen</h1>
-            <p className="font-title-md text-[16px] text-on-surface-variant font-medium">Gemini uses grounded web search to flag possible overlap for human review; it is not a plagiarism verdict.</p>
+            <p className="font-title-md text-[16px] text-on-surface-variant font-medium">Screen stored submission text against grounded public-web evidence, then review the sources yourself.</p>
+            <Link to="/student-submissions" className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-primary hover:underline"><span className="material-symbols-outlined text-[17px]">upload_file</span>Open project submissions</Link>
           </div>
           
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-surface/80 backdrop-blur-xl p-2 rounded-[20px] border border-outline-variant/50 shadow-sm w-full md:w-auto">
@@ -110,9 +128,9 @@ const PlagiarismChecker = () => {
               value={selectedSub}
               onChange={(e) => setSelectedSub(e.target.value)}
             >
-              <option value="">-- Select Submission --</option>
+              <option value="">Select a text submission</option>
               {submissions.map(sub => (
-                <option key={sub._id} value={sub._id}>{sub.title}</option>
+                <option key={sub._id} value={sub._id} disabled={String(sub.content || '').trim().length < 200}>{sub.title}{String(sub.content || '').trim().length < 200 ? ' — add at least 200 characters of text' : ` — ${String(sub.content || '').trim().length.toLocaleString()} characters`}</option>
               ))}
             </select>
             <button 
@@ -124,7 +142,7 @@ const PlagiarismChecker = () => {
               {running ? (
                 <><motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="material-symbols-outlined text-[18px]">sync</motion.span> Scanning...</>
               ) : (
-                <><span className="material-symbols-outlined text-[18px]">search</span> Run Check</>
+                <><span className="material-symbols-outlined text-[18px]">search</span> Run grounded screen</>
               )}
             </button>
           </div>
@@ -132,7 +150,12 @@ const PlagiarismChecker = () => {
 
         {!canRunChecks && <div className="rounded-2xl border border-primary/25 bg-primary/5 px-5 py-3 text-sm text-on-surface-variant">Students can view integrity reports shared for this project. The assigned supervisor or an administrator runs the screen after reviewing a submission.</div>}
 
+        {canRunChecks && <div className="rounded-2xl border border-outline-variant/40 bg-surface-container-low px-5 py-3 text-sm leading-relaxed text-on-surface-variant"><strong className="text-on-surface">Before screening:</strong> the stored submission text is sent to the project’s configured Google Gemini service and compared with selected public-web search evidence. Do not submit confidential or restricted material without institutional approval.</div>}
+
+        {canRunChecks && submissions.length > 0 && screenableSubmissions.length === 0 && <div className="rounded-2xl border border-tertiary/25 bg-tertiary/10 px-5 py-3 text-sm text-on-surface-variant">None of this project’s submissions contains the minimum 200 characters of stored text. Open <Link to="/student-submissions" className="font-bold text-primary hover:underline">project submissions</Link> and ask the student to paste the text; attachments are not fetched or read automatically.</div>}
+
         {error && <div role="alert" className="rounded-2xl border border-error/30 bg-error/10 px-5 py-3 text-sm font-medium text-error">{error}</div>}
+        {notice && <div role="status" className="rounded-2xl border border-primary/25 bg-primary/10 px-5 py-3 text-sm font-medium text-on-surface">{notice}</div>}
 
         {loading ? (
           <div className="flex-1 flex justify-center items-center py-20">
@@ -149,7 +172,8 @@ const PlagiarismChecker = () => {
         ) : (
           <motion.div variants={containerVariants} className="grid grid-cols-1 gap-6 lg:gap-8 flex-1 overflow-y-auto pb-8 custom-scrollbar">
             {reports.map((report, idx) => {
-              const simScore = report.overallSimilarity;
+              const rawScore = Number(report.overallSimilarity);
+              const simScore = Number.isFinite(rawScore) ? Math.max(0, Math.min(100, Math.round(rawScore))) : 0;
               const isDanger = simScore >= 30;
               const isWarning = simScore >= 15 && simScore < 30;
               const statusColorClass = isDanger ? 'text-error' : isWarning ? 'text-tertiary' : 'text-primary';
@@ -161,7 +185,10 @@ const PlagiarismChecker = () => {
                   
                   {/* Score section */}
                   <div className="flex flex-col items-center justify-center w-full md:w-[320px] p-8 border-b md:border-b-0 md:border-r border-outline-variant/30 relative z-10 bg-surface/50">
-                    <h3 className="font-title-md text-[18px] font-bold text-on-surface mb-6 text-center leading-snug">{report.submission?.title || 'Unknown Submission'}</h3>
+                    <div className="mb-6 flex flex-col items-center gap-2 text-center">
+                      <h3 className="font-title-md text-[18px] font-bold text-on-surface leading-snug">{report.submission?.title || 'Unknown Submission'}</h3>
+                      <span className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider ${report.isCurrent === false ? 'bg-tertiary/10 text-tertiary' : 'bg-primary/10 text-primary'}`}>{report.isCurrent === false ? 'Earlier version' : 'Current submission'}</span>
+                    </div>
                     
                     <div className="relative w-40 h-40 flex items-center justify-center mb-6">
                       <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
@@ -178,14 +205,19 @@ const PlagiarismChecker = () => {
                         <span className={`font-display text-[42px] font-black leading-none ${statusColorClass}`}>
                           {simScore}<span className="text-[20px]">%</span>
                         </span>
+                        <span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-secondary">web indicator</span>
                       </div>
                     </div>
                     
                     <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-bold uppercase tracking-wider ${isDanger ? 'bg-error/10 text-error border border-error/20' : isWarning ? 'bg-tertiary/10 text-tertiary border border-tertiary/20' : 'bg-primary/10 text-primary border border-primary/20'} shadow-sm`}>
                       <span className="material-symbols-outlined text-[16px]">{isDanger ? 'error' : isWarning ? 'warning' : 'check_circle'}</span>
-                      {isDanger ? 'High Risk' : isWarning ? 'Moderate' : 'Low Risk'}
+                      {isDanger ? 'Higher overlap to review' : isWarning ? 'Some overlap to review' : 'Limited grounded overlap'}
                     </div>
                     <span className="font-label-sm text-[11px] font-semibold text-secondary uppercase tracking-widest mt-6">Checked: {new Date(report.createdAt).toLocaleDateString()}</span>
+                    <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px] text-secondary">
+                      <span>{Number(report.checkedCharacterCount || 0).toLocaleString()} characters</span>
+                      <span>{Number(report.searchQueryCount || 0).toLocaleString()} search queries</span>
+                    </div>
                     <p className="mt-4 text-center text-xs leading-relaxed text-secondary">{report.disclaimer || 'Review the underlying sources and follow your institution’s policy before making a decision.'}</p>
                   </div>
 
@@ -195,7 +227,10 @@ const PlagiarismChecker = () => {
                       <div className="w-10 h-10 rounded-xl bg-surface-container-high text-on-surface flex items-center justify-center shadow-sm">
                         <span className="material-symbols-outlined text-[20px]">source</span>
                       </div>
-                      <h4 className="font-title-lg text-[22px] font-bold text-on-surface">Matched Sources</h4>
+                      <div>
+                        <h4 className="font-title-lg text-[22px] font-bold text-on-surface">Grounded sources to review</h4>
+                        <p className="mt-1 text-xs text-secondary">Open each source and compare wording, attribution, and context.</p>
+                      </div>
                     </div>
                     
                     {report.matchedSources && report.matchedSources.length > 0 ? (
@@ -204,25 +239,41 @@ const PlagiarismChecker = () => {
                           <motion.div key={idx} whileHover={{ scale: 1.02 }} className="p-5 rounded-[20px] border border-outline-variant/40 bg-surface-container-lowest/50 hover:bg-surface hover:shadow-sm hover:border-outline-variant/80 transition-all flex flex-col">
                             <div className="flex justify-between items-start mb-2">
                               <span className={`font-label-md text-[13px] font-bold px-2 py-1 rounded-md ${source.matchPercentage > 20 ? 'bg-error/10 text-error' : 'bg-tertiary/10 text-tertiary'}`}>
-                                {source.matchPercentage}% Match
+                                {Math.max(0, Math.min(100, Math.round(Number(source.matchPercentage) || 0)))}% source indicator
                               </span>
+                              <span className="rounded-full bg-surface-container px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-secondary">{source.sourceType === 'project-corpus' ? 'Project corpus' : 'Public web'}</span>
                             </div>
                             <h5 className="font-title-sm text-[15px] font-bold text-on-surface line-clamp-2 mb-2 leading-tight">{source.sourceName}</h5>
                             {source.reason && <p className="mb-2 text-xs leading-relaxed text-secondary">{source.reason}</p>}
-                            <a href={source.sourceUrl} target="_blank" rel="noreferrer" className="text-[13px] font-medium text-primary hover:text-primary-fixed-variant hover:underline truncate inline-flex items-center gap-1 mt-auto mt-2">
-                              {source.sourceUrl}
-                              <span className="material-symbols-outlined text-[14px]">open_in_new</span>
-                            </a>
+                            {source.sourceUrl ? <a href={source.sourceUrl} target="_blank" rel="noreferrer" className="text-[13px] font-medium text-primary hover:text-primary-fixed-variant hover:underline truncate inline-flex items-center gap-1 mt-auto mt-2">
+                              {source.sourceUrl}<span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                            </a> : canRunChecks ? <Link to="/student-submissions" className="mt-auto inline-flex items-center gap-1 pt-2 text-[13px] font-bold text-primary hover:underline">Open project submissions<span className="material-symbols-outlined text-[14px]">arrow_forward</span></Link> : <p className="mt-auto pt-2 text-[12px] text-secondary">The assigned reviewer can compare the stored source while protecting another student’s draft.</p>}
                           </motion.div>
                         ))}
                       </div>
                     ) : (
                       <div className="h-full flex flex-col items-center justify-center text-center py-10 opacity-60">
                         <span className="material-symbols-outlined text-[48px] text-outline mb-4">task_alt</span>
-                        <p className="font-body-lg text-secondary">No significant matches found.</p>
+                        <p className="font-body-lg text-secondary">No grounded public-web overlap was substantiated in this screen.</p>
+                        <p className="mt-2 max-w-xl text-xs leading-relaxed text-secondary">This does not prove originality and does not cover private journals, institutional databases, unpublished work, or every page on the web.</p>
                       </div>
                     )}
                     {report.summary && <div className="mt-6 rounded-xl border border-outline-variant/30 bg-surface-container-low p-4 text-sm leading-relaxed text-on-surface-variant"><strong className="text-on-surface">Screening summary:</strong> {report.summary}</div>}
+                    {report.providerNotice && <div className="mt-4 rounded-xl border border-tertiary/30 bg-tertiary/10 p-4 text-sm leading-relaxed text-on-surface-variant"><strong className="text-on-surface">Coverage notice:</strong> {report.providerNotice}</div>}
+                    {Array.isArray(report.coverage) && report.coverage.length > 0 && <div className="mt-4 flex flex-wrap gap-2">{report.coverage.map((item) => <span key={item} className="rounded-full border border-outline-variant/40 bg-surface-container-low px-3 py-1 text-[11px] font-semibold text-secondary">{item}</span>)}</div>}
+                    {report.searchSuggestionsHtml && (
+                      <div className="mt-4 overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-3">
+                        <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-secondary">Google Search suggestions</p>
+                        <iframe
+                          title={`Search suggestions for ${report.submission?.title || 'submission'}`}
+                          srcDoc={report.searchSuggestionsHtml}
+                          sandbox="allow-popups allow-popups-to-escape-sandbox"
+                          referrerPolicy="no-referrer"
+                          className="h-14 w-full border-0 bg-transparent"
+                        />
+                      </div>
+                    )}
+                    <p className="mt-4 text-[11px] leading-relaxed text-secondary">Method: {report.method || 'Google Search-grounded integrity screen'}{report.providerModel ? ` · Model: ${report.providerModel}` : ''}</p>
                   </div>
                 </motion.div>
               );
