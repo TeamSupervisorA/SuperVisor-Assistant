@@ -98,7 +98,11 @@ exports.getAllSubmissions = async (req, res) => {
     if (req.user.role === 'student') filter.student = req.user.id;
     else if (req.user.role === 'supervisor') filter.project = filter.project || { $in: await projectIdsForUser(req.user) };
 
-    const submissions = await Submission.find(filter).populate('student', 'name email').populate('project', 'title').sort({ submittedAt: -1 });
+    const submissions = await Submission.find(filter)
+      .populate('student', 'name email')
+      .populate('project', 'title')
+      .populate('task', 'title status assignedTo')
+      .sort({ submittedAt: -1 });
     res.status(200).json({ success: true, count: submissions.length, data: submissions });
   } catch (error) {
     return sendServerError(res, error, 'Unable to load submissions');
@@ -115,6 +119,9 @@ exports.createSubmission = async (req, res) => {
     if (!canAccessProject(project, req.user)) {
       return res.status(403).json({ success: false, error: 'Not authorized to submit to this project' });
     }
+    if (project.status !== 'active') {
+      return res.status(409).json({ success: false, error: 'Deliverables open after the supervisor accepts and the proposal activates the project' });
+    }
 
     const { title, task, fileUrl } = req.body;
     const content = typeof req.body.content === 'string' ? req.body.content.trim() : '';
@@ -122,12 +129,14 @@ exports.createSubmission = async (req, res) => {
     if (!normalizedFileUrl && !content) {
       return res.status(422).json({ success: false, error: 'Provide a file or paste the submission text' });
     }
-    if (task) {
-      const projectTask = await Task.findOne({ _id: task, project: project._id });
-      if (!projectTask) return res.status(422).json({ success: false, error: 'The selected task does not belong to this project' });
-      if (projectTask.assignedTo && projectTask.assignedTo.toString() !== req.user.id) {
-        return res.status(403).json({ success: false, error: 'You can submit only work assigned to you' });
-      }
+    if (!task) return res.status(422).json({ success: false, error: 'Choose the project task this deliverable satisfies' });
+    const projectTask = await Task.findOne({ _id: task, project: project._id });
+    if (!projectTask) return res.status(422).json({ success: false, error: 'The selected task does not belong to this project' });
+    if (projectTask.assignedTo && projectTask.assignedTo.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, error: 'You can submit only work assigned to you' });
+    }
+    if (projectTask.status !== 'in_progress') {
+      return res.status(409).json({ success: false, error: 'Start the linked task before submitting its deliverable' });
     }
     // Submission metadata is owned by the server: a student must never be able
     // to pre-grade a submission, submit as another user, or change its project.
@@ -180,6 +189,9 @@ exports.updateSubmission = async (req, res) => {
       const studentFields = ['title', 'task', 'fileUrl', 'content'];
       updates = Object.fromEntries(Object.entries(req.body).filter(([field]) => studentFields.includes(field)));
     } else {
+      if (submission.task && (req.body.grade !== undefined || req.body.feedback !== undefined || req.body.status !== undefined)) {
+        return res.status(409).json({ success: false, error: 'Task-linked deliverables must be decided from the task review workflow so task and submission state stay synchronized' });
+      }
       const reviewerFields = ['grade', 'feedback', 'status'];
       updates = Object.fromEntries(Object.entries(req.body).filter(([field]) => reviewerFields.includes(field)));
     }
@@ -243,6 +255,9 @@ exports.deleteSubmission = async (req, res) => {
 
     if (req.user.role === 'student' && submission.student.toString() !== req.user.id) {
       return res.status(403).json({ success: false, error: 'Not authorized to delete this submission' });
+    }
+    if (['Under Review', 'Graded'].includes(submission.status)) {
+      return res.status(409).json({ success: false, error: 'A deliverable under review or already graded is an academic record and cannot be deleted' });
     }
 
     await Promise.all([

@@ -12,7 +12,10 @@ exports.getProgressLogs = async (req, res) => {
     const project = await Project.findById(req.params.projectId);
     if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
     if (!canAccessProject(project, req.user)) return res.status(403).json({ success: false, error: 'Not authorized to view progress logs' });
-    const logs = await ProgressLog.find({ project: project._id }).populate('author', 'name email').sort({ weekStart: -1, createdAt: -1 });
+    const logs = await ProgressLog.find({ project: project._id })
+      .populate('author', 'name email')
+      .populate('supervisorResponse.respondedBy', 'name role')
+      .sort({ weekStart: -1, createdAt: -1 });
     res.json({ success: true, data: logs });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
@@ -27,6 +30,7 @@ exports.createProgressLog = async (req, res) => {
     const project = await Project.findById(req.params.projectId);
     if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
     if (!canAccessProject(project, req.user)) return res.status(403).json({ success: false, error: 'Not authorized to add a progress log' });
+    if (project.status !== 'active') return res.status(409).json({ success: false, error: 'Weekly progress logging opens when the approved project becomes active' });
     // State, author, project and timestamps are workflow-owned fields. A
     // client can create only an editable draft; submission is explicit.
     const data = {};
@@ -80,5 +84,32 @@ exports.submitProgressLog = async (req, res) => {
     res.json({ success: true, data: log });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+exports.respondToProgressLog = async (req, res) => {
+  try {
+    const log = await ProgressLog.findById(req.params.id);
+    if (!log) return res.status(404).json({ success: false, error: 'Progress log not found' });
+    const project = await Project.findById(log.project);
+    if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
+    const isAssignedSupervisor = req.user.role === 'supervisor' && project.supervisor?.toString() === req.user.id;
+    if (req.user.role !== 'admin' && !isAssignedSupervisor) return res.status(403).json({ success: false, error: 'Only the assigned supervisor can respond to this progress log' });
+    if (log.state !== 'submitted') return res.status(409).json({ success: false, error: 'Only submitted progress logs can receive a supervisor response' });
+    const message = String(req.body?.message || '').trim();
+    if (!message) return res.status(422).json({ success: false, error: 'A useful supervisor response is required' });
+    if (message.length > 3000) return res.status(422).json({ success: false, error: 'The response must be 3000 characters or fewer' });
+
+    log.supervisorResponse = { message, respondedBy: req.user.id, respondedAt: new Date() };
+    await log.save();
+    await Promise.all([
+      notify({ user: log.author, title: 'Progress update response', message: `${req.user.name} responded to your weekly progress update.`, type: 'info', link: '/progress-logs' }),
+      recordAudit({ actor: req.user.id, action: 'progress_log.responded', entityType: 'progressLog', entityId: log._id, metadata: { project: project._id } })
+    ]);
+    await log.populate('author', 'name email');
+    await log.populate('supervisorResponse.respondedBy', 'name role');
+    res.json({ success: true, data: log });
+  } catch (error) {
+    res.status(error.statusCode || 400).json({ success: false, error: error.message });
   }
 };

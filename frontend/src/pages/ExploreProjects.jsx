@@ -137,7 +137,7 @@ const ExploreProjects = () => {
   const pageIntro = isStudent
     ? 'Your projects and proposals. A proposal without a supervisor remains visible here while it awaits assignment.'
     : isSupervisor
-      ? 'Your supervised projects and unassigned student proposals available to claim.'
+      ? 'Your supervised projects. New projects appear after you accept an invitation or an administrator assigns them.'
       : 'Assign active supervisors to proposals, then open a project to review its institutional record.';
 
   return (

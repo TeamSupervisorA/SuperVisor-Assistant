@@ -5,6 +5,7 @@ const ProgressLog = require('../models/ProgressLog');
 const Review = require('../models/Review');
 const { Project, canAccessProject } = require('../utils/projectAccess');
 const { recordAudit } = require('../services/auditService');
+const { taskMetrics, projectHealth } = require('../utils/projectWorkflow');
 
 const makeSnapshot = async (project) => {
   const [tasks, submissions, logs, reviews] = await Promise.all([
@@ -13,11 +14,12 @@ const makeSnapshot = async (project) => {
     ProgressLog.find({ project: project._id }).lean(),
     Review.find({ project: project._id }).lean()
   ]);
-  const completed = tasks.filter((task) => ['done', 'completed'].includes(task.status)).length;
-  const overdue = tasks.filter((task) => task.dueDate && new Date(task.dueDate) < new Date() && !['done', 'completed', 'cancelled'].includes(task.status)).length;
+  const metrics = taskMetrics(tasks);
+  const health = projectHealth({ project, tasks, submissions });
   return {
     generatedAt: new Date(), project: { title: project.title, status: project.status, proposalState: project.proposalState },
-    tasks: { total: tasks.length, completed, overdue, progressPercentage: tasks.length ? Math.round((completed / tasks.length) * 100) : 0 },
+    tasks: metrics,
+    health: { label: health.label, reasons: health.reasons },
     submissions: { total: submissions.length, graded: submissions.filter((item) => item.status === 'Graded').length },
     progressLogs: { total: logs.length, submitted: logs.filter((log) => log.state === 'submitted').length },
     reviews: { total: reviews.length, submitted: reviews.filter((review) => review.state === 'submitted').length }

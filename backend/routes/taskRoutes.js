@@ -4,6 +4,9 @@ const {
   createTask,
   updateTask,
   transitionTask,
+  requestTaskReview,
+  withdrawTaskReview,
+  decideTaskReview,
   deleteTask
 } = require('../controllers/taskController');
 const { protect, authorize } = require('../middleware/auth');
@@ -21,5 +24,8 @@ router.route('/:id')
   .delete(authorize('supervisor', 'admin'), deleteTask);
 
 router.post('/:id/transition', transitionTask);
+router.post('/:id/request-review', requestTaskReview);
+router.post('/:id/withdraw-review', withdrawTaskReview);
+router.post('/:id/review-decision', authorize('supervisor', 'admin'), decideTaskReview);
 
 module.exports = router;

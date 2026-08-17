@@ -22,7 +22,12 @@ exports.getAllMeetings = async (req, res) => {
       filter.project = { $in: await projectIdsForUser(req.user) };
     }
 
-    const meetings = await Meeting.find(filter).populate('project', 'title').sort({ date: 1 });
+    const meetings = await Meeting.find(filter)
+      .populate('project', 'title')
+      .populate('organizer', 'name role')
+      .populate('attendees', 'name role')
+      .populate('followUpActions.owner', 'name')
+      .sort({ date: 1 });
     res.status(200).json({ success: true, count: meetings.length, data: meetings });
   } catch (error) {
     return sendServerError(res, error, 'Unable to load meetings');
@@ -36,10 +41,21 @@ exports.createMeeting = async (req, res) => {
     if (!canAccessProject(project, req.user)) {
       return res.status(403).json({ success: false, error: 'Not authorized to create a meeting for this project' });
     }
+    if (project.status !== 'active') {
+      return res.status(409).json({ success: false, error: 'Project meetings open after supervision and proposal approval activate the project' });
+    }
     if (!attendeesBelongToProject(req.body.attendees, project)) {
       return res.status(422).json({ success: false, error: 'Meeting attendees must belong to the project' });
     }
-    const meeting = await Meeting.create({ ...req.body, organizer: req.user.id });
+    if (!String(req.body.agenda || '').trim()) {
+      return res.status(422).json({ success: false, error: 'Add an agenda so every participant knows the decisions needed' });
+    }
+    const allowedFields = ['title', 'date', 'time', 'timezone', 'type', 'project', 'attendees', 'agenda', 'meetingLink', 'location', 'notes', 'minutes', 'followUpActions'];
+    const input = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowedFields.includes(key)));
+    if (!input.attendees?.length) {
+      input.attendees = [...new Set([...(project.students || []).map(String), project.supervisor?.toString()].filter(Boolean))];
+    }
+    const meeting = await Meeting.create({ ...input, organizer: req.user.id });
     res.status(201).json({ success: true, data: meeting });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
@@ -61,11 +77,15 @@ exports.updateMeeting = async (req, res) => {
     if (!canModifyMeeting(meeting, project, req.user)) {
       return res.status(403).json({ success: false, error: 'Not authorized to update this meeting' });
     }
-    const allowedFields = ['title', 'date', 'time', 'type', 'status', 'attendees', 'agenda', 'notes'];
+    const allowedFields = ['title', 'date', 'time', 'timezone', 'type', 'status', 'attendees', 'agenda', 'meetingLink', 'location', 'notes', 'minutes', 'followUpActions', 'cancellationReason'];
     const updates = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowedFields.includes(key)));
     if (!attendeesBelongToProject(updates.attendees, project)) {
       return res.status(422).json({ success: false, error: 'Meeting attendees must belong to the project' });
     }
+    if (updates.status === 'Cancelled' && !String(updates.cancellationReason || '').trim()) {
+      return res.status(422).json({ success: false, error: 'Cancelled meetings require a reason' });
+    }
+    if (updates.date && new Date(updates.date).getTime() !== new Date(meeting.date).getTime()) updates.rescheduledFrom = meeting.date;
 
     meeting = await Meeting.findByIdAndUpdate(req.params.id, updates, { returnDocument: 'after', runValidators: true });
     res.status(200).json({ success: true, data: meeting });

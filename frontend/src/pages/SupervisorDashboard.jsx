@@ -1,45 +1,378 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../lib/api';
-import { useAuth } from '../hooks/useAuth';
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../lib/api";
+import { useAuth } from "../hooks/useAuth";
 
-const ActionCard = ({ icon, label, value, detail, tone = 'primary', onClick }) => <button onClick={onClick} className="group min-h-40 rounded-2xl border border-outline-variant/30 bg-surface p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md"><div className="flex items-start justify-between"><span className={`grid size-10 place-items-center rounded-xl ${tone === 'error' ? 'bg-error/10 text-error' : tone === 'warning' ? 'bg-amber-500/10 text-amber-700' : 'bg-primary/10 text-primary'}`}><span className="material-symbols-outlined">{icon}</span></span><span className="material-symbols-outlined text-secondary transition group-hover:translate-x-0.5 group-hover:text-primary">arrow_forward</span></div><p className="mt-5 text-xs font-bold uppercase tracking-wider text-secondary">{label}</p><p className="mt-1 text-3xl font-black text-on-surface">{value}</p><p className="mt-1 text-sm text-secondary">{detail}</p></button>;
+const ActionCard = ({
+  icon,
+  label,
+  value,
+  detail,
+  tone = "primary",
+  onClick,
+}) => (
+  <button
+    onClick={onClick}
+    className="group min-h-40 rounded-2xl border border-outline-variant/30 bg-surface p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md"
+  >
+    <div className="flex items-start justify-between">
+      <span
+        className={`grid size-10 place-items-center rounded-xl ${tone === "error" ? "bg-error/10 text-error" : tone === "warning" ? "bg-amber-500/10 text-amber-700" : "bg-primary/10 text-primary"}`}
+      >
+        <span className="material-symbols-outlined">{icon}</span>
+      </span>
+      <span className="material-symbols-outlined text-secondary transition group-hover:translate-x-0.5 group-hover:text-primary">
+        arrow_forward
+      </span>
+    </div>
+    <p className="mt-5 text-xs font-bold uppercase tracking-wider text-secondary">
+      {label}
+    </p>
+    <p className="mt-1 text-3xl font-black text-on-surface">{value}</p>
+    <p className="mt-1 text-sm text-secondary">{detail}</p>
+  </button>
+);
 
 const SupervisorDashboard = () => {
   const { user, activeProject, setActiveProject } = useAuth();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [projects, setProjects] = useState([]);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true); setError('');
+      setLoading(true);
+      setError("");
       try {
-        const [dashboardResult, projectResult] = await Promise.all([apiFetch('/api/dashboard/supervisor'), apiFetch('/api/projects')]);
+        const [dashboardResult, projectResult] = await Promise.all([
+          apiFetch("/api/dashboard/supervisor"),
+          apiFetch("/api/projects"),
+        ]);
         setData(dashboardResult.data);
         setProjects(projectResult.data || []);
-      } catch (requestError) { setError(requestError.message || 'Unable to load supervision data.'); }
-      finally { setLoading(false); }
+      } catch (requestError) {
+        setError(requestError.message || "Unable to load supervision data.");
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, []);
 
-  const healthById = useMemo(() => new Map((data?.projectHealth || []).map((project) => [String(project.projectId), project])), [data?.projectHealth]);
-  const projectForAction = (preferred) => projects.find((project) => project._id === String(preferred?.projectId || preferred?._id)) || activeProject || projects[0];
-  const openProject = (project, path) => { if (!project) return navigate('/create-new-work'); setActiveProject(project); navigate(path); };
-  const attentionProject = (data?.projectHealth || []).find((project) => project.pendingSubmissions || project.delayedTasks) || data?.projectHealth?.[0];
-  const visibleProjects = projects.filter((project) => `${project.title} ${project.status} ${project.students?.map((student) => student.name).join(' ')}`.toLowerCase().includes(query.toLowerCase()));
+  const healthById = useMemo(
+    () =>
+      new Map(
+        (data?.projectHealth || []).map((project) => [
+          String(project.projectId),
+          project,
+        ]),
+      ),
+    [data?.projectHealth],
+  );
+  const projectForAction = (preferred) =>
+    projects.find(
+      (project) =>
+        project._id === String(preferred?.projectId || preferred?._id),
+    ) ||
+    activeProject ||
+    projects[0];
+  const openProject = (project, path) => {
+    if (!project) return navigate("/create-new-work");
+    setActiveProject(project);
+    navigate(path);
+  };
+  const pendingInvitation = data?.pendingInvitations?.[0];
+  const attentionProject =
+    (data?.projectHealth || []).find(
+      (project) =>
+        project.pendingSubmissions ||
+        project.delayedTasks ||
+        project.blockedTasks,
+    ) || data?.projectHealth?.[0];
+  const visibleProjects = projects.filter((project) =>
+    `${project.title} ${project.status} ${project.students?.map((student) => student.name).join(" ")}`
+      .toLowerCase()
+      .includes(query.toLowerCase()),
+  );
 
-  return <main className="min-h-[calc(100vh-80px)] bg-background p-5 md:p-8 lg:p-10"><div className="mx-auto max-w-7xl space-y-6">
-    <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-sm font-bold uppercase tracking-widest text-primary">Supervisor workspace</p><h1 className="mt-1 text-3xl font-black tracking-tight text-on-surface md:text-4xl">Welcome back, {user?.name || 'Supervisor'}</h1><p className="mt-2 text-secondary">Prioritise reviews, unblock teams, and keep project work moving.</p></div><div className="flex flex-wrap gap-2"><button onClick={() => navigate('/create-new-work')} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary">New project</button><button onClick={() => openProject(activeProject || projects[0], '/reviews')} className="rounded-xl border border-outline-variant/50 bg-surface px-4 py-2.5 text-sm font-bold text-on-surface">Open reviews</button></div></header>
-    {error && <div role="alert" className="rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">{error}</div>}
-    <section className="rounded-2xl border border-primary/20 bg-primary/5 p-5"><div className="flex flex-col justify-between gap-4 md:flex-row md:items-center"><div><p className="text-xs font-bold uppercase tracking-wider text-primary">Priority queue</p><h2 className="mt-1 text-xl font-extrabold text-on-surface">{loading ? 'Loading project health…' : attentionProject ? `${attentionProject.pendingSubmissions || attentionProject.delayedTasks} item${(attentionProject.pendingSubmissions || attentionProject.delayedTasks) === 1 ? '' : 's'} need attention in ${attentionProject.title}` : 'Create your first supervised project'}</h2><p className="mt-1 text-sm text-secondary">{attentionProject ? `${attentionProject.pendingSubmissions} submission(s) awaiting review · ${attentionProject.delayedTasks} overdue task(s)` : 'Add students and milestones to start supervising work.'}</p></div><button onClick={() => openProject(projectForAction(attentionProject), attentionProject?.pendingSubmissions ? '/student-submissions' : '/tasks-milestones')} className="shrink-0 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary">{attentionProject?.pendingSubmissions ? 'Review deliverables' : attentionProject ? 'Open tasks' : 'Create project'}</button></div></section>
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><ActionCard icon="rate_review" label="Pending reviews" value={loading ? '—' : data?.pendingReviews || 0} detail="Open submitted deliverables" onClick={() => openProject(projectForAction(attentionProject), '/student-submissions')} /><ActionCard icon="timer" label="Overdue tasks" value={loading ? '—' : data?.delayedTasks || 0} detail="Open project milestones" tone={(data?.delayedTasks || 0) ? 'error' : 'primary'} onClick={() => openProject(projectForAction((data?.projectHealth || []).find((project) => project.delayedTasks)), '/tasks-milestones')} /><ActionCard icon="policy" label="Similarity alerts" value={loading ? '—' : data?.plagiarismAlerts || 0} detail="Open plagiarism checks" tone={(data?.plagiarismAlerts || 0) ? 'warning' : 'primary'} onClick={() => openProject(activeProject || projects[0], '/plagiarism-checker')} /><ActionCard icon="event" label="Upcoming meetings" value={loading ? '—' : data?.upcomingMeetings || 0} detail="Open meeting schedule" onClick={() => openProject(activeProject || projects[0], '/meeting-management')} /></section>
-    <section className="grid gap-6 lg:grid-cols-[1.35fr_.65fr]"><div className="overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface shadow-sm"><div className="flex flex-col justify-between gap-3 border-b border-outline-variant/30 p-5 sm:flex-row sm:items-center"><div><h2 className="text-lg font-extrabold text-on-surface">Projects and teams</h2><p className="mt-1 text-sm text-secondary">Choose a project, then go directly to its work.</p></div><label className="relative"><span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-[18px]">search</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search projects or students" className="w-full rounded-xl border border-outline-variant/40 bg-surface-container-lowest py-2 pl-9 pr-3 text-sm outline-none focus:border-primary sm:w-64"/></label></div><div className="divide-y divide-outline-variant/20">{!loading && visibleProjects.length === 0 && <div className="p-6 text-sm text-secondary">{projects.length ? 'No project matches your search.' : 'No supervised projects yet. Create one to begin.'}</div>}{visibleProjects.map((project) => { const health = healthById.get(String(project._id)); return <div key={project._id} className="flex flex-col justify-between gap-4 p-5 md:flex-row md:items-center"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="truncate font-bold text-on-surface">{project.title}</h3><span className="rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-bold capitalize text-secondary">{project.status?.replace('_', ' ')}</span>{health?.delayedTasks > 0 && <span className="rounded-full bg-error/10 px-2 py-0.5 text-[10px] font-bold text-error">{health.delayedTasks} overdue</span>}</div><p className="mt-1 text-sm text-secondary">{project.students?.length || 0} student(s) · {health?.completedTasks || 0}/{health?.totalTasks || 0} tasks complete · {health?.pendingSubmissions || 0} pending submission(s)</p><div className="mt-3 h-2 max-w-md overflow-hidden rounded-full bg-surface-container"><div className="h-full rounded-full bg-primary" style={{ width: `${health?.progress || 0}%` }}/></div></div><div className="flex shrink-0 gap-2"><button onClick={() => openProject(project, '/tasks-milestones')} className="rounded-lg border border-outline-variant/50 px-3 py-2 text-xs font-bold text-on-surface">Tasks</button><button onClick={() => openProject(project, '/student-submissions')} className="rounded-lg bg-primary px-3 py-2 text-xs font-bold text-on-primary">Deliverables</button></div></div>; })}</div></div><aside className="rounded-2xl border border-outline-variant/30 bg-surface p-5 shadow-sm"><h2 className="text-lg font-extrabold text-on-surface">Recent submissions</h2><p className="mt-1 text-sm text-secondary">Latest work submitted by your teams.</p><div className="mt-4 space-y-2">{!loading && !(data?.recentSubmissions || []).length && <p className="rounded-xl bg-surface-container-low p-4 text-sm text-secondary">No submissions yet.</p>}{(data?.recentSubmissions || []).map((submission) => <button key={submission._id} onClick={() => openProject(projectForAction({ projectId: submission.project?._id }), '/student-submissions')} className="w-full rounded-xl bg-surface-container-low p-3 text-left hover:bg-primary/10"><p className="truncate text-sm font-bold text-on-surface">{submission.title}</p><p className="mt-1 text-xs text-secondary">{submission.student?.name || 'Student'} · {submission.project?.title || 'Project'} · {submission.status}</p></button>)}</div><button onClick={() => openProject(activeProject || projects[0], '/student-submissions')} className="mt-4 w-full rounded-xl border border-primary/30 px-4 py-2.5 text-sm font-bold text-primary">Open all submissions</button></aside></section>
-  </div></main>;
+  return (
+    <main className="min-h-[calc(100vh-80px)] bg-background p-5 md:p-8 lg:p-10">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-widest text-primary">
+              Supervisor workspace
+            </p>
+            <h1 className="mt-1 text-3xl font-black tracking-tight text-on-surface md:text-4xl">
+              Welcome back, {user?.name || "Supervisor"}
+            </h1>
+            <p className="mt-2 text-secondary">
+              Prioritise reviews, unblock teams, and keep project work moving.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => navigate("/create-new-work")}
+              className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary"
+            >
+              New project
+            </button>
+            <button
+              onClick={() =>
+                openProject(activeProject || projects[0], "/reviews")
+              }
+              className="rounded-xl border border-outline-variant/50 bg-surface px-4 py-2.5 text-sm font-bold text-on-surface"
+            >
+              Open reviews
+            </button>
+          </div>
+        </header>
+        {error && (
+          <div
+            role="alert"
+            className="rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error"
+          >
+            {error}
+          </div>
+        )}
+        <section className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-primary">
+                Priority queue
+              </p>
+              <h2 className="mt-1 text-xl font-extrabold text-on-surface">
+                {loading
+                  ? "Loading project health…"
+                  : pendingInvitation
+                    ? `Supervision invitation: ${pendingInvitation.title}`
+                    : attentionProject
+                      ? `${attentionProject.pendingSubmissions + attentionProject.delayedTasks + (attentionProject.blockedTasks || 0)} item${attentionProject.pendingSubmissions + attentionProject.delayedTasks + (attentionProject.blockedTasks || 0) === 1 ? "" : "s"} need attention in ${attentionProject.title}`
+                      : "Create your first supervised project"}
+              </h2>
+              <p className="mt-1 text-sm text-secondary">
+                {pendingInvitation
+                  ? `${pendingInvitation.students?.length || 0} student(s) · ${pendingInvitation.department || "Department not set"}${pendingInvitation.section ? ` · ${pendingInvitation.section}` : ""}. Review the project context and your workload before accepting.`
+                  : attentionProject
+                    ? `${attentionProject.pendingSubmissions} submission(s) awaiting review · ${attentionProject.delayedTasks} overdue · ${attentionProject.blockedTasks || 0} blocked task(s)`
+                    : "Add students and milestones to start supervising work."}
+              </p>
+            </div>
+            <button
+              onClick={() =>
+                pendingInvitation
+                  ? navigate("/team-management")
+                  : openProject(
+                      projectForAction(attentionProject),
+                      attentionProject?.pendingSubmissions
+                        ? "/student-submissions"
+                        : "/tasks-milestones",
+                    )
+              }
+              className="shrink-0 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary"
+            >
+              {pendingInvitation
+                ? "Review invitation"
+                : attentionProject?.pendingSubmissions
+                  ? "Review deliverables"
+                  : attentionProject
+                    ? "Open tasks"
+                    : "Create project"}
+            </button>
+          </div>
+        </section>
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <ActionCard
+            icon="rate_review"
+            label="Pending reviews"
+            value={loading ? "—" : data?.pendingReviews || 0}
+            detail="Open submitted deliverables"
+            onClick={() =>
+              openProject(
+                projectForAction(attentionProject),
+                "/student-submissions",
+              )
+            }
+          />
+          <ActionCard
+            icon="timer"
+            label="Overdue tasks"
+            value={loading ? "—" : data?.delayedTasks || 0}
+            detail="Open project milestones"
+            tone={data?.delayedTasks || 0 ? "error" : "primary"}
+            onClick={() =>
+              openProject(
+                projectForAction(
+                  (data?.projectHealth || []).find(
+                    (project) => project.delayedTasks,
+                  ),
+                ),
+                "/tasks-milestones",
+              )
+            }
+          />
+          <ActionCard
+            icon="policy"
+            label="Similarity alerts"
+            value={loading ? "—" : data?.plagiarismAlerts || 0}
+            detail="Open plagiarism checks"
+            tone={data?.plagiarismAlerts || 0 ? "warning" : "primary"}
+            onClick={() =>
+              openProject(activeProject || projects[0], "/plagiarism-checker")
+            }
+          />
+          <ActionCard
+            icon="event"
+            label="Upcoming meetings"
+            value={loading ? "—" : data?.upcomingMeetings || 0}
+            detail="Open meeting schedule"
+            onClick={() =>
+              openProject(activeProject || projects[0], "/meeting-management")
+            }
+          />
+        </section>
+        <section className="grid gap-6 lg:grid-cols-[1.35fr_.65fr]">
+          <div className="overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface shadow-sm">
+            <div className="flex flex-col justify-between gap-3 border-b border-outline-variant/30 p-5 sm:flex-row sm:items-center">
+              <div>
+                <h2 className="text-lg font-extrabold text-on-surface">
+                  Projects and teams
+                </h2>
+                <p className="mt-1 text-sm text-secondary">
+                  Choose a project, then go directly to its work.
+                </p>
+              </div>
+              <label className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-[18px]">
+                  search
+                </span>
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search projects or students"
+                  className="w-full rounded-xl border border-outline-variant/40 bg-surface-container-lowest py-2 pl-9 pr-3 text-sm outline-none focus:border-primary sm:w-64"
+                />
+              </label>
+            </div>
+            <div className="divide-y divide-outline-variant/20">
+              {!loading && visibleProjects.length === 0 && (
+                <div className="p-6 text-sm text-secondary">
+                  {projects.length
+                    ? "No project matches your search."
+                    : "No supervised projects yet. Create one to begin."}
+                </div>
+              )}
+              {visibleProjects.map((project) => {
+                const health = healthById.get(String(project._id));
+                return (
+                  <div
+                    key={project._id}
+                    className="flex flex-col justify-between gap-4 p-5 md:flex-row md:items-center"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="truncate font-bold text-on-surface">
+                          {project.title}
+                        </h3>
+                        <span className="rounded-full bg-surface-container px-2 py-0.5 text-[10px] font-bold capitalize text-secondary">
+                          {project.status?.replace("_", " ")}
+                        </span>
+                        {health?.delayedTasks > 0 && (
+                          <span className="rounded-full bg-error/10 px-2 py-0.5 text-[10px] font-bold text-error">
+                            {health.delayedTasks} overdue
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-sm text-secondary">
+                        {project.students?.length || 0} student(s) ·{" "}
+                        {health?.completedTasks || 0}/{health?.totalTasks || 0}{" "}
+                        tasks complete · {health?.pendingSubmissions || 0}{" "}
+                        pending submission(s)
+                      </p>
+                      <div className="mt-3 h-2 max-w-md overflow-hidden rounded-full bg-surface-container">
+                        <div
+                          className="h-full rounded-full bg-primary"
+                          style={{ width: `${health?.progress || 0}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <button
+                        onClick={() =>
+                          openProject(project, "/tasks-milestones")
+                        }
+                        className="rounded-lg border border-outline-variant/50 px-3 py-2 text-xs font-bold text-on-surface"
+                      >
+                        Tasks
+                      </button>
+                      <button
+                        onClick={() =>
+                          openProject(project, "/student-submissions")
+                        }
+                        className="rounded-lg bg-primary px-3 py-2 text-xs font-bold text-on-primary"
+                      >
+                        Deliverables
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <aside className="rounded-2xl border border-outline-variant/30 bg-surface p-5 shadow-sm">
+            <h2 className="text-lg font-extrabold text-on-surface">
+              Recent submissions
+            </h2>
+            <p className="mt-1 text-sm text-secondary">
+              Latest work submitted by your teams.
+            </p>
+            <div className="mt-4 space-y-2">
+              {!loading && !(data?.recentSubmissions || []).length && (
+                <p className="rounded-xl bg-surface-container-low p-4 text-sm text-secondary">
+                  No submissions yet.
+                </p>
+              )}
+              {(data?.recentSubmissions || []).map((submission) => (
+                <button
+                  key={submission._id}
+                  onClick={() =>
+                    openProject(
+                      projectForAction({ projectId: submission.project?._id }),
+                      "/student-submissions",
+                    )
+                  }
+                  className="w-full rounded-xl bg-surface-container-low p-3 text-left hover:bg-primary/10"
+                >
+                  <p className="truncate text-sm font-bold text-on-surface">
+                    {submission.title}
+                  </p>
+                  <p className="mt-1 text-xs text-secondary">
+                    {submission.student?.name || "Student"} ·{" "}
+                    {submission.project?.title || "Project"} ·{" "}
+                    {submission.status}
+                  </p>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() =>
+                openProject(
+                  activeProject || projects[0],
+                  "/student-submissions",
+                )
+              }
+              className="mt-4 w-full rounded-xl border border-primary/30 px-4 py-2.5 text-sm font-bold text-primary"
+            >
+              Open all submissions
+            </button>
+          </aside>
+        </section>
+      </div>
+    </main>
+  );
 };
 
 export default SupervisorDashboard;

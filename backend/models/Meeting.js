@@ -13,6 +13,7 @@ const meetingSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please add a time']
   },
+  timezone: { type: String, trim: true, default: 'Asia/Dhaka' },
   type: {
     type: String,
     enum: ['Online', 'In-Person', 'Hybrid'],
@@ -39,11 +40,25 @@ const meetingSchema = new mongoose.Schema({
     }
   ],
   agenda: {
-    type: String
+    type: String,
+    required: [true, 'Please add a meeting agenda'],
+    trim: true,
+    maxlength: 5000
   },
+  meetingLink: { type: String, trim: true, maxlength: 2000, default: '' },
+  location: { type: String, trim: true, maxlength: 300, default: '' },
   notes: {
     type: String
   },
+  minutes: { type: String, default: '' },
+  followUpActions: [{
+    text: { type: String, required: true },
+    owner: { type: mongoose.Schema.ObjectId, ref: 'User', default: null },
+    dueDate: Date,
+    completed: { type: Boolean, default: false }
+  }],
+  cancellationReason: { type: String, default: '' },
+  rescheduledFrom: { type: Date, default: null },
   createdAt: {
     type: Date,
     default: Date.now

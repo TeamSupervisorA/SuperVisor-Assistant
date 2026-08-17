@@ -18,7 +18,8 @@ const MeetingManagement = () => {
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [newMeeting, setNewMeeting] = useState({ title: '', date: '', time: '', type: 'Online' });
+  const [submitting, setSubmitting] = useState(false);
+  const [newMeeting, setNewMeeting] = useState({ title: '', date: '', time: '', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Dhaka', type: 'Online', meetingLink: '', location: '', agenda: '' });
   const [viewDate, setViewDate] = useState(() => new Date());
   const [error, setError] = useState('');
   const projectId = activeProject?._id;
@@ -46,8 +47,9 @@ const MeetingManagement = () => {
 
   const handleCreateMeeting = async (e) => {
     e.preventDefault();
-    if (!activeProject) return;
+    if (!activeProject || submitting) return;
     setError('');
+    setSubmitting(true);
     try {
       const res = await apiFetch('/api/meetings', {
         method: 'POST',
@@ -56,7 +58,7 @@ const MeetingManagement = () => {
       
       if (res.success) {
         setShowModal(false);
-        setNewMeeting({ title: '', date: '', time: '', type: 'Online' });
+        setNewMeeting({ title: '', date: '', time: '', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Dhaka', type: 'Online', meetingLink: '', location: '', agenda: '' });
         if (res.data) {
           setMeetings([...meetings, res.data]);
         } else {
@@ -65,7 +67,7 @@ const MeetingManagement = () => {
       }
     } catch (error) {
       setError(error.message || 'Unable to schedule this meeting.');
-    }
+    } finally { setSubmitting(false); }
   };
 
   const localDateKey = (value) => {
@@ -244,8 +246,9 @@ const MeetingManagement = () => {
                           </p>
                           <p className="font-body-sm text-[13px] text-secondary flex items-center gap-2">
                             <span className="material-symbols-outlined text-[16px] text-on-surface-variant">schedule</span>
-                            {meeting.time}
+                            {meeting.time} · {meeting.timezone || 'Asia/Dhaka'}
                           </p>
+                          {(meeting.meetingLink || meeting.location) && <p className="truncate text-xs text-primary">{meeting.meetingLink || meeting.location}</p>}
                         </div>
                       </motion.div>
                     )
@@ -268,7 +271,7 @@ const MeetingManagement = () => {
               
               <motion.div 
                 initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                className="bg-surface rounded-[32px] w-full max-w-lg shadow-2xl overflow-hidden relative z-10 border border-outline-variant/30 flex flex-col"
+                className="relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col overflow-y-auto rounded-[32px] border border-outline-variant/30 bg-surface shadow-2xl"
               >
                 <div className="p-8 pb-6 border-b border-surface-container relative">
                   <button onClick={() => setShowModal(false)} className="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-full bg-surface-container hover:bg-surface-variant text-secondary transition-colors">
@@ -286,6 +289,15 @@ const MeetingManagement = () => {
                     <label className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">Meeting Title</label>
                     <input required value={newMeeting.title} onChange={e => setNewMeeting({...newMeeting, title: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface font-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-on-surface-variant/50" placeholder="e.g. Chapter 3 Review" />
                   </div>
+                  <div className="space-y-2">
+                    <label className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">Timezone</label>
+                    <input required value={newMeeting.timezone} onChange={e => setNewMeeting({...newMeeting, timezone: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface" placeholder="Asia/Dhaka" />
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <label className="space-y-2"><span className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">Meeting link</span><input type="url" value={newMeeting.meetingLink} onChange={e => setNewMeeting({...newMeeting, meetingLink: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface" placeholder="https://meet.google.com/..." /></label>
+                    <label className="space-y-2"><span className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">Room / location</span><input value={newMeeting.location} onChange={e => setNewMeeting({...newMeeting, location: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface" placeholder="Room 402" /></label>
+                  </div>
+                  <label className="space-y-2"><span className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">Agenda</span><textarea required rows="3" value={newMeeting.agenda} onChange={e => setNewMeeting({...newMeeting, agenda: e.target.value})} className="w-full resize-y px-4 py-3 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface" placeholder="Decisions and questions for this meeting" /></label>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
@@ -309,7 +321,7 @@ const MeetingManagement = () => {
                   
                   <div className="flex justify-end gap-3 pt-6 mt-6 border-t border-outline-variant/30">
                     <button type="button" onClick={() => setShowModal(false)} className="px-6 py-3 rounded-xl font-title-sm text-[14px] font-bold text-on-surface border border-outline-variant hover:bg-surface-container transition-colors">Cancel</button>
-                    <button type="submit" className="px-6 py-3 rounded-xl font-title-sm text-[14px] font-bold bg-primary text-on-primary hover:bg-primary-fixed-variant transition-colors shadow-sm hover:shadow-md active:scale-95">Schedule</button>
+                    <button disabled={submitting} type="submit" className="px-6 py-3 rounded-xl font-title-sm text-[14px] font-bold bg-primary text-on-primary hover:bg-primary-fixed-variant transition-colors shadow-sm hover:shadow-md active:scale-95 disabled:opacity-60">{submitting ? 'Scheduling…' : 'Schedule'}</button>
                   </div>
                 </form>
               </motion.div>

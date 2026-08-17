@@ -6,17 +6,17 @@ const { protect } = require('../middleware/auth');
 const { sendServerError } = require('../utils/errorResponse');
 
 // Only project members (students/supervisor) or admins may access a project's chat
-const canAccessProject = async (projectId, user) => {
-  if (user.role === 'admin') return true;
-  const project = await Project.findById(projectId).select('supervisor students');
-  if (!project) return false;
-  if (project.supervisor && project.supervisor.toString() === user.id) return true;
-  return project.students.some(s => s.toString() === user.id);
+const getAccessibleProject = async (projectId, user) => {
+  const project = await Project.findById(projectId).select('supervisor students status');
+  if (!project) return null;
+  if (user.role === 'admin') return project;
+  if (project.supervisor && project.supervisor.toString() === user.id) return project;
+  return project.students.some(s => s.toString() === user.id) ? project : null;
 };
 
 router.get('/:projectId', protect, async (req, res) => {
   try {
-    if (!(await canAccessProject(req.params.projectId, req.user))) {
+    if (!(await getAccessibleProject(req.params.projectId, req.user))) {
       return res.status(403).json({ success: false, error: 'Not authorized to view this project chat' });
     }
 
@@ -39,8 +39,12 @@ router.post('/', protect, async (req, res) => {
       return res.status(422).json({ success: false, error: 'A chat message cannot exceed 5,000 characters' });
     }
 
-    if (!(await canAccessProject(project, req.user))) {
+    const accessibleProject = await getAccessibleProject(project, req.user);
+    if (!accessibleProject) {
       return res.status(403).json({ success: false, error: 'Not authorized to post in this project chat' });
+    }
+    if (accessibleProject.status !== 'active') {
+      return res.status(409).json({ success: false, error: 'Project chat opens when the approved project becomes active' });
     }
 
     const message = await Message.create({

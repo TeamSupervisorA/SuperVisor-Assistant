@@ -9,6 +9,11 @@ const progressLogSchema = new mongoose.Schema({
   evidence: [{ name: String, fileUrl: String }],
   state: { type: String, enum: ['draft', 'submitted'], default: 'draft' },
   submittedAt: Date,
+  supervisorResponse: {
+    message: { type: String, trim: true, maxlength: 3000, default: '' },
+    respondedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    respondedAt: Date
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

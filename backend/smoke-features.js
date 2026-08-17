@@ -14,6 +14,7 @@ process.env.CODE_RUNNER_SHARED_SECRET = 'smoke-code-runner-secret-do-not-expose'
 
 require('./server');
 const User = require('./models/User');
+const ProposalVersion = require('./models/ProposalVersion');
 const jwt = require('jsonwebtoken');
 
 const BASE = 'http://localhost:5099';
@@ -122,21 +123,33 @@ const run = async () => {
 
   // ---- student proposal -> supervisor claim lifecycle and private discovery
   const unassignedProject = await api('/api/projects', { method: 'POST', token: alice.token, body: { title: 'Student Proposal', description: 'Awaiting a supervisor.' } });
-  check('student project begins unassigned and proposed', unassignedProject.status === 201 && !unassignedProject.data.data.supervisor && unassignedProject.data.data.status === 'proposed');
+  check('student project begins with a leader, Proposal Version 1, and no supervisor', unassignedProject.status === 201 && !unassignedProject.data.data.supervisor && unassignedProject.data.data.status === 'awaiting_supervisor' && String(unassignedProject.data.data.leaderUserId?._id || unassignedProject.data.data.leaderUserId) === alice.user.id && await ProposalVersion.countDocuments({ project: unassignedProject.data.data._id, versionNo: 1 }) === 1);
   const unassignedId = unassignedProject.data.data._id;
   const outsiderExplore = await api('/api/projects/explore', { token: eve.token });
   check('students cannot discover unrelated projects', outsiderExplore.status === 200 && !(outsiderExplore.data.data || []).some(project => project._id === unassignedId));
   const supervisorExplore = await api('/api/projects/explore', { token: sup.token });
-  check('supervisor can discover unassigned proposals without student email leakage', supervisorExplore.status === 200 && (supervisorExplore.data.data || []).some(project => project._id === unassignedId) && !JSON.stringify(supervisorExplore.data).includes(emails.alice));
+  check('supervisors see only assigned projects rather than browsing private proposals', supervisorExplore.status === 200 && !(supervisorExplore.data.data || []).some(project => project._id === unassignedId) && !JSON.stringify(supervisorExplore.data).includes(emails.alice));
   const claimed = await api(`/api/projects/${unassignedId}/claim`, { method: 'POST', token: sup.token });
-  check('supervisor can claim an unassigned student proposal', claimed.status === 200 && claimed.data.data.supervisor?._id === sup.user.id);
+  check('supervisor cannot self-claim an uninvited proposal', claimed.status === 403);
   const claimedAgain = await api(`/api/projects/${unassignedId}/claim`, { method: 'POST', token: sup.token });
-  check('supervisor claim is idempotent for the same supervisor', claimedAgain.status === 200 && claimedAgain.data.data.supervisor?._id === sup.user.id);
+  check('repeated unauthorized claims remain blocked', claimedAgain.status === 403);
+  const pendingTask = await api('/api/tasks', { method: 'POST', token: alice.token, body: { title: 'Premature task', project: unassignedId, acceptanceCriteria: 'Must not be created.' } });
+  const pendingSubmission = await api('/api/submissions', { method: 'POST', token: alice.token, body: { title: 'Premature deliverable', project: unassignedId, content: 'Must not be submitted.' } });
+  const pendingMeeting = await api('/api/meetings', { method: 'POST', token: alice.token, body: { project: unassignedId, title: 'Premature meeting', date: '2026-09-01', time: '10:00', agenda: 'Must not be scheduled.' } });
+  const pendingChat = await api('/api/messages', { method: 'POST', token: alice.token, body: { project: unassignedId, content: 'Must not be posted.' } });
+  const pendingHealth = await api(`/api/projects/${unassignedId}/report`, { token: alice.token });
+  check('pending projects allow setup but block active-work mutations', pendingTask.status === 403 && pendingSubmission.status === 409 && pendingMeeting.status === 409 && pendingChat.status === 409);
+  check('project health reports missing supervision honestly', pendingHealth.status === 200 && pendingHealth.data.data.health === 'Setup Required' && pendingHealth.data.data.healthReasons.some((reason) => /supervisor/i.test(reason)));
 
-  // ---- supervisor creates a project and assigns its first student
+  // ---- supervisor creates a project, assigns its first student, and follows approval
   const proj = await api('/api/projects', { method: 'POST', token: sup.token, body: { title: 'Smoke Project', description: 'x', students: [alice.user.id] } });
-  check('supervisor creates an active project workspace', proj.status === 201 && proj.data.data.status === 'active' && proj.data.data.supervisor === sup.user.id);
+  const supervisorProjectProposal = await ProposalVersion.findOne({ project: proj.data.data._id, versionNo: 1 });
+  check('supervisor-created project still requires student-owned proposal approval', proj.status === 201 && proj.data.data.status === 'awaiting_approval' && String(proj.data.data.supervisor?._id || proj.data.data.supervisor) === sup.user.id && supervisorProjectProposal?.createdBy?.toString() === alice.user.id);
   const pid = proj.data.data._id;
+  const supervisorProjectProposalSubmit = await api(`/api/proposals/${supervisorProjectProposal._id}/submit`, { method: 'POST', token: alice.token });
+  const supervisorProjectProposalDecision = await api(`/api/proposals/${supervisorProjectProposal._id}/decision`, { method: 'POST', token: sup.token, body: { decision: 'approved', comment: 'Approved for active work.' } });
+  const activeSupervisorProject = await api(`/api/projects/${pid}`, { token: alice.token });
+  check('proposal approval is the single path that activates connected work', supervisorProjectProposalSubmit.status === 200 && supervisorProjectProposalDecision.status === 200 && activeSupervisorProject.data.data.status === 'active');
 
   const membershipPatch = await api(`/api/projects/${pid}`, { method: 'PUT', token: sup.token, body: { students: [eve.user.id] } });
   check('general project update cannot alter team membership', membershipPatch.status === 422);
@@ -154,26 +167,26 @@ const run = async () => {
 
   // ---- member management
   const studentAdd = await api(`/api/projects/${pid}/members`, { method: 'POST', token: alice.token, body: { email: emails.bob } });
-  check('student cannot change a supervised project roster', studentAdd.status === 403);
+  check('project leader invites a student without silently adding them', studentAdd.status === 200 && studentAdd.data.data.students.length === 1 && studentAdd.data.data.memberInvitations.some((item) => item.email === emails.bob && item.state === 'pending'));
+  const memberInvitationId = studentAdd.data.data.memberInvitations.find((item) => item.email === emails.bob && item.state === 'pending')._id;
+  const add = await api(`/api/projects/${pid}/members/${memberInvitationId}/respond`, { method: 'POST', token: bob.token, body: { decision: 'accept' } });
+  check('invited student accepts and joins the canonical project roster', add.status === 200 && add.data.data.students.length === 2);
 
-  const add = await api(`/api/projects/${pid}/members`, { method: 'POST', token: sup.token, body: { email: emails.bob } });
-  check('assigned supervisor adds teammate by email', add.status === 200 && add.data.data.students.length === 2);
-
-  const inactiveAdd = await api(`/api/projects/${pid}/members`, { method: 'POST', token: sup.token, body: { email: emails.inactive } });
+  const inactiveAdd = await api(`/api/projects/${pid}/members`, { method: 'POST', token: alice.token, body: { email: emails.inactive } });
   check('inactive students cannot be added to an active project team', inactiveAdd.status === 400 && /active student/i.test(inactiveAdd.data.error));
 
-  const dup = await api(`/api/projects/${pid}/members`, { method: 'POST', token: sup.token, body: { email: emails.bob } });
+  const dup = await api(`/api/projects/${pid}/members`, { method: 'POST', token: alice.token, body: { email: emails.bob } });
   check('duplicate member rejected', dup.status === 400);
 
   const evil = await api(`/api/projects/${pid}/members`, { method: 'POST', token: eve.token, body: { email: emails.eve } });
   check('outsider cannot add members (403)', evil.status === 403);
 
-  const supAdd = await api(`/api/projects/${pid}/members`, { method: 'POST', token: sup.token, body: { email: emails.supervisor } });
+  const supAdd = await api(`/api/projects/${pid}/members`, { method: 'POST', token: alice.token, body: { email: emails.supervisor } });
   check('supervisor account rejected as member', supAdd.status === 400);
 
   // Bob got a notification
   const bobNotifs = await api('/api/notifications', { token: bob.token });
-  check('teammate received notification', bobNotifs.status === 200 && (bobNotifs.data.data || []).some(n => n.title.includes('Added to a project team')), JSON.stringify(bobNotifs.data).slice(0, 120));
+  check('teammate received invitation notification', bobNotifs.status === 200 && (bobNotifs.data.data || []).some(n => n.title.includes('Project invitation')), JSON.stringify(bobNotifs.data).slice(0, 120));
   const markBobNotifications = await api('/api/notifications/read-all', { method: 'PUT', token: bob.token });
   const bobReadNotifs = await api('/api/notifications', { token: bob.token });
   check('mark all notifications is stored for the current user', markBobNotifications.status === 200 && (bobReadNotifs.data.data || []).every(notification => notification.isRead));
@@ -226,11 +239,11 @@ const run = async () => {
 
   // ---- immutable proposal lifecycle
   const proposalDraft = await api(`/api/projects/${pid}/proposals`, { method: 'POST', token: alice.token, body: { title: 'Smoke Proposal', content: 'A versioned proposal for the smoke test.' } });
-  check('student creates proposal draft', proposalDraft.status === 201 && proposalDraft.data?.data?.versionNo === 1 && proposalDraft.data?.data?.state === 'draft', JSON.stringify(proposalDraft.data));
+  check('student creates Proposal Version 2 after the automatic Version 1 draft', proposalDraft.status === 201 && proposalDraft.data?.data?.versionNo === 2 && proposalDraft.data?.data?.state === 'draft', JSON.stringify(proposalDraft.data));
   if (proposalDraft.status !== 201) throw new Error(`Proposal draft failed: ${JSON.stringify(proposalDraft.data)}`);
 
   const proposalSubmit = await api(`/api/proposals/${proposalDraft.data.data._id}/submit`, { method: 'POST', token: alice.token });
-  check('student submits immutable proposal version', proposalSubmit.status === 200 && proposalSubmit.data.data.state === 'submitted');
+  check('student submits immutable follow-up proposal version', proposalSubmit.status === 200 && proposalSubmit.data.data.state === 'resubmitted');
 
   const proposalEve = await api(`/api/projects/${pid}/proposals`, { token: eve.token });
   check('outsider cannot view proposal versions (403)', proposalEve.status === 403);
@@ -250,6 +263,9 @@ const run = async () => {
   check('supervisor cannot impersonate a student progress update', supervisorProgress.status === 403);
   const progressSubmit = await api(`/api/progress-logs/${progress.data.data._id}/submit`, { method: 'POST', token: alice.token });
   check('student submits progress log', progressSubmit.status === 200 && progressSubmit.data.data.state === 'submitted');
+  const studentProgressResponse = await api(`/api/progress-logs/${progress.data.data._id}/respond`, { method: 'POST', token: alice.token, body: { message: 'Self approved.' } });
+  const supervisorProgressResponse = await api(`/api/progress-logs/${progress.data.data._id}/respond`, { method: 'POST', token: sup.token, body: { message: 'Blocker acknowledged. Complete the evidence table before the next meeting.' } });
+  check('only the assigned supervisor can respond to a submitted progress log', studentProgressResponse.status === 403 && supervisorProgressResponse.status === 200 && supervisorProgressResponse.data.data.supervisorResponse.message.includes('evidence table'));
   const progressEdit = await api(`/api/progress-logs/${progress.data.data._id}`, { method: 'PUT', token: alice.token, body: { summary: 'Attempted silent edit.' } });
   check('submitted progress log is immutable', progressEdit.status === 409);
 
@@ -263,12 +279,12 @@ const run = async () => {
   // ---- delay detection reflected in report
   await api('/api/tasks', { method: 'POST', token: alice.token, body: { title: 'Overdue Task', project: pid, dueDate: '2020-01-01' } });
   const studentAssignedTask = await api('/api/tasks', { method: 'POST', token: alice.token, body: { title: 'Cannot assign others', project: pid, assignedTo: bob.user.id } });
-  check('student-created tasks stay assigned to the student', studentAssignedTask.status === 201 && studentAssignedTask.data.data.assignedTo === alice.user.id);
+  check('project leader can assign a connected project task to another roster member', studentAssignedTask.status === 201 && studentAssignedTask.data.data.assignedTo === bob.user.id);
   const forgedDoneTask = await api('/api/tasks', { method: 'POST', token: alice.token, body: { title: 'Done Task', project: pid, status: 'completed' } });
   check('new tasks cannot be client-created as completed', forgedDoneTask.status === 201 && forgedDoneTask.data.data.status === 'todo');
   const teammateProjectTasks = await api(`/api/tasks?project=${pid}`, { token: bob.token });
   const teammatePersonalTasks = await api('/api/tasks', { token: bob.token });
-  check('team members can read shared task dependencies while personal task lists stay scoped', teammateProjectTasks.status === 200 && teammateProjectTasks.data.data.some(task => task._id === studentAssignedTask.data.data._id) && teammatePersonalTasks.status === 200 && !(teammatePersonalTasks.data.data || []).some(task => task._id === studentAssignedTask.data.data._id));
+  check('team members read shared project tasks while personal task lists include assigned work', teammateProjectTasks.status === 200 && teammateProjectTasks.data.data.some(task => task._id === studentAssignedTask.data.data._id) && teammatePersonalTasks.status === 200 && teammatePersonalTasks.data.data.some(task => task._id === studentAssignedTask.data.data._id));
   const rep2 = await api(`/api/projects/${pid}/report`, { token: alice.token });
   const ts = rep2.data.data.taskSummary;
   check('report detects delayed task without forged completion progress', ts.delayed === 1 && ts.completed === 0 && rep2.data.data.progressPercentage === 0, JSON.stringify(ts));
@@ -281,46 +297,44 @@ const run = async () => {
   const earlyStart = await api(`/api/tasks/${dependent.data.data._id}/transition`, { method: 'POST', token: alice.token, body: { status: 'in_progress' } });
   check('dependencies prevent premature task start', earlyStart.status === 422);
   const prerequisiteStart = await api(`/api/tasks/${prerequisite.data.data._id}/transition`, { method: 'POST', token: alice.token, body: { status: 'in_progress' } });
-  const prerequisiteDone = await api(`/api/tasks/${prerequisite.data.data._id}/transition`, { method: 'POST', token: alice.token, body: { status: 'done' } });
-  check('task can progress through its valid lifecycle', prerequisiteStart.status === 200 && prerequisiteDone.status === 200);
+  const prerequisiteSubmission = await api('/api/submissions', { method: 'POST', token: alice.token, body: { title: 'Evidence review deliverable', project: pid, task: prerequisite.data.data._id, content: 'The evidence review is complete with documented verification notes.' } });
+  const prerequisiteReview = await api(`/api/tasks/${prerequisite.data.data._id}/request-review`, { method: 'POST', token: alice.token, body: { submissionId: prerequisiteSubmission.data.data._id } });
+  const prerequisiteDone = await api(`/api/tasks/${prerequisite.data.data._id}/review-decision`, { method: 'POST', token: sup.token, body: { decision: 'approve', feedback: 'Evidence accepted.' } });
+  check('task completion requires a linked deliverable and supervisor decision', prerequisiteStart.status === 200 && prerequisiteReview.status === 200 && prerequisiteDone.status === 200 && prerequisiteDone.data.data.status === 'done' && prerequisiteDone.data.submission.status === 'Graded');
   const dependentStart = await api(`/api/tasks/${dependent.data.data._id}/transition`, { method: 'POST', token: alice.token, body: { status: 'in_progress' } });
-  const dependentReview = await api(`/api/tasks/${dependent.data.data._id}/transition`, { method: 'POST', token: alice.token, body: { status: 'review' } });
-  const studentAccept = await api(`/api/tasks/${dependent.data.data._id}/transition`, { method: 'POST', token: alice.token, body: { status: 'done' } });
-  const supervisorAccept = await api(`/api/tasks/${dependent.data.data._id}/transition`, { method: 'POST', token: sup.token, body: { status: 'done' } });
-  check('review tasks require supervisor acceptance', dependentStart.status === 200 && dependentReview.status === 200 && studentAccept.status === 403 && supervisorAccept.status === 200);
+  const missingSubmissionReview = await api(`/api/tasks/${dependent.data.data._id}/request-review`, { method: 'POST', token: alice.token, body: {} });
+  const dependentSubmission = await api('/api/submissions', { method: 'POST', token: alice.token, body: { title: 'Findings draft', project: pid, task: dependent.data.data._id, content: 'A complete findings draft linked to the task for supervisor review.' } });
+  const dependentReview = await api(`/api/tasks/${dependent.data.data._id}/request-review`, { method: 'POST', token: alice.token, body: { submissionId: dependentSubmission.data.data._id } });
+  const outsiderWithdraw = await api(`/api/tasks/${dependent.data.data._id}/withdraw-review`, { method: 'POST', token: bob.token });
+  const withdrawnReview = await api(`/api/tasks/${dependent.data.data._id}/withdraw-review`, { method: 'POST', token: alice.token, body: { note: 'Attaching an updated analysis.' } });
+  const resubmittedReview = await api(`/api/tasks/${dependent.data.data._id}/request-review`, { method: 'POST', token: alice.token, body: { submissionId: dependentSubmission.data.data._id } });
+  check('assigned student can safely withdraw and resubmit an undecided review', outsiderWithdraw.status === 403 && withdrawnReview.status === 200 && withdrawnReview.data.data.status === 'in_progress' && withdrawnReview.data.submission.status === 'Submitted' && resubmittedReview.status === 200);
+  const studentAccept = await api(`/api/tasks/${dependent.data.data._id}/review-decision`, { method: 'POST', token: alice.token, body: { decision: 'approve' } });
+  const supervisorAccept = await api(`/api/tasks/${dependent.data.data._id}/review-decision`, { method: 'POST', token: sup.token, body: { decision: 'approve', feedback: 'Accepted.' } });
+  check('review tasks reject missing evidence and require the assigned supervisor', dependentStart.status === 200 && missingSubmissionReview.status === 422 && dependentReview.status === 200 && studentAccept.status === 403 && supervisorAccept.status === 200);
 
   // ---- team policy
-  const team = await api('/api/teams', { method: 'POST', token: alice.token, body: { name: 'Smoke Team', project: pid, members: [{ user: bob.user.id, role: 'Developer' }] } });
-  check('student creates team for own project', team.status === 201 && team.data.data.members[0].role === 'Leader');
-
-  const nominateLeader = await api(`/api/teams/${team.data.data._id}/leader/nominate`, { method: 'POST', token: alice.token, body: { userId: bob.user.id } });
-  check('team member nominates eligible leader', nominateLeader.status === 200 && nominateLeader.data.data.pendingLeader === bob.user.id);
-  const confirmLeader = await api(`/api/teams/${team.data.data._id}/leader/confirm`, { method: 'POST', token: sup.token, body: { reason: 'Bob will coordinate implementation.' } });
-  check('assigned supervisor confirms leader with one active leader', confirmLeader.status === 200 && confirmLeader.data.data.activeLeader === bob.user.id && confirmLeader.data.data.members.filter(m => m.role === 'Leader').length === 1);
-
-  const teamEve = await api('/api/teams', { method: 'POST', token: eve.token, body: { name: 'Evil Team', project: pid } });
-  check('outsider cannot create team for project (403)', teamEve.status === 403);
-
-  const teamUpd = await api(`/api/teams/${team.data.data._id}`, { method: 'PUT', token: eve.token, body: { name: 'Hacked' } });
-  check('non-leader cannot update team (403)', teamUpd.status === 403);
+  const team = await api('/api/teams', { method: 'POST', token: alice.token, body: { name: 'Conflicting Team', project: pid } });
+  check('separate team creation is retired in favor of the project roster', team.status === 410 && /project People & Supervision/i.test(team.data.error));
 
   // ---- connected student invitation and administrator allocation
   const inviteProject = await api('/api/projects', { method: 'POST', token: eve.token, body: { title: 'Invitation Project', description: 'Needs a supervisor.', department: 'CSE', section: 'CSE-4A' } });
-  const inviteTeam = await api('/api/teams', { method: 'POST', token: eve.token, body: { name: 'Invitation Team', project: inviteProject.data.data._id } });
   const directory = await api('/api/teams/directory/supervisors', { token: eve.token });
   check('student sees a privacy-limited supervisor directory with workload', directory.status === 200 && directory.data.data.some((item) => item._id === supTwo.user.id && Number.isInteger(item.activeProjects)) && !JSON.stringify(directory.data).includes(emails.supervisorTwo));
-  const nonLeaderInvite = await api(`/api/teams/${inviteTeam.data.data._id}/supervisor-invitations`, { method: 'POST', token: alice.token, body: { supervisorId: supTwo.user.id } });
+  const nonLeaderInvite = await api(`/api/projects/${inviteProject.data.data._id}/supervisor-invitations`, { method: 'POST', token: alice.token, body: { supervisorId: supTwo.user.id } });
   check('student outside the team cannot invite a supervisor', nonLeaderInvite.status === 403);
-  const supervisorInvite = await api(`/api/teams/${inviteTeam.data.data._id}/supervisor-invitations`, { method: 'POST', token: eve.token, body: { supervisorId: supTwo.user.id, message: 'We need guidance on our evaluation plan.' } });
-  const invitationId = supervisorInvite.data?.data?.supervisorInvitations?.find((item) => item.status === 'pending')?._id;
-  check('student team leader can invite an available supervisor', supervisorInvite.status === 201 && !!invitationId);
-  const wrongSupervisorResponse = await api(`/api/teams/${inviteTeam.data.data._id}/supervisor-invitations/${invitationId}/respond`, { method: 'POST', token: sup.token, body: { decision: 'accept' } });
+  const supervisorInvite = await api(`/api/projects/${inviteProject.data.data._id}/supervisor-invitations`, { method: 'POST', token: eve.token, body: { supervisorId: supTwo.user.id, message: 'We need guidance on our evaluation plan.' } });
+  const invitationId = supervisorInvite.data?.data?.supervisorInvitations?.find((item) => item.state === 'pending')?._id;
+  check('project leader can invite an available supervisor', supervisorInvite.status === 201 && !!invitationId);
+  const wrongSupervisorResponse = await api(`/api/projects/${inviteProject.data.data._id}/supervisor-invitations/${invitationId}/respond`, { method: 'POST', token: sup.token, body: { decision: 'accept' } });
   check('only the invited supervisor can respond', wrongSupervisorResponse.status === 403);
-  const pendingInvitations = await api('/api/teams/invitations/mine', { token: supTwo.token });
-  check('invited supervisor can see pending team context', pendingInvitations.status === 200 && pendingInvitations.data.data.some((item) => item._id === inviteTeam.data.data._id));
-  const acceptedInvitation = await api(`/api/teams/${inviteTeam.data.data._id}/supervisor-invitations/${invitationId}/respond`, { method: 'POST', token: supTwo.token, body: { decision: 'accept' } });
+  const pendingInvitations = await api('/api/projects/invitations/mine', { token: supTwo.token });
+  check('invited supervisor can see pending project context', pendingInvitations.status === 200 && pendingInvitations.data.data.some((item) => item._id === inviteProject.data.data._id));
+  const supervisorInvitationDashboard = await api('/api/dashboard/supervisor', { token: supTwo.token });
+  check('supervisor dashboard prioritizes its invitation inbox', supervisorInvitationDashboard.status === 200 && supervisorInvitationDashboard.data.data.pendingInvitations.some((item) => item._id === inviteProject.data.data._id));
+  const acceptedInvitation = await api(`/api/projects/${inviteProject.data.data._id}/supervisor-invitations/${invitationId}/respond`, { method: 'POST', token: supTwo.token, body: { decision: 'accept' } });
   const acceptedProject = await api(`/api/projects/${inviteProject.data.data._id}`, { token: eve.token });
-  check('accepting an invitation synchronizes project and team supervision', acceptedInvitation.status === 200 && acceptedInvitation.data.data.supervisor?._id === supTwo.user.id && acceptedProject.data.data.supervisor?._id === supTwo.user.id && acceptedProject.data.data.supervisionSource === 'student_invitation');
+  check('accepting an invitation connects supervisor access to the canonical project', acceptedInvitation.status === 200 && acceptedInvitation.data.data.supervisor?._id === supTwo.user.id && acceptedProject.data.data.supervisor?._id === supTwo.user.id && acceptedProject.data.data.supervisionSource === 'student_invitation');
 
   const adminProject = await api('/api/projects', { method: 'POST', token: bob.token, body: { title: 'Admin Allocation Project', department: 'CSE', section: 'CSE-4B' } });
   const studentAdminAccess = await api('/api/admin/supervision', { token: bob.token });
@@ -367,21 +381,32 @@ const run = async () => {
   delete process.env.VERCEL;
 
   // ---- submission + grading notifications
-  const textOnly = await api('/api/submissions', { method: 'POST', token: alice.token, body: { title: 'Text-only reflection', project: pid, content: 'This text-only submission remains usable when production object storage is not configured.' } });
+  const uploadTask = await api('/api/tasks', { method: 'POST', token: alice.token, body: { title: 'Prepare final deliverable', project: pid, assignedTo: alice.user.id, acceptanceCriteria: 'A reviewable final deliverable is attached.' } });
+  await api(`/api/tasks/${uploadTask.data.data._id}/transition`, { method: 'POST', token: alice.token, body: { status: 'in_progress' } });
+  const unlinkedSubmission = await api('/api/submissions', { method: 'POST', token: alice.token, body: { title: 'Unlinked reflection', project: pid, content: 'This must be connected to an actual task.' } });
+  check('deliverables cannot exist outside the project task workflow', unlinkedSubmission.status === 422);
+  const textOnly = await api('/api/submissions', { method: 'POST', token: alice.token, body: { title: 'Text-only reflection', project: pid, task: uploadTask.data.data._id, content: 'This text-only submission remains usable when production object storage is not configured.' } });
   check('student can submit text without a local production upload', textOnly.status === 201 && !textOnly.data.data.fileUrl && textOnly.data.data.content.length > 0);
   const supervisorSubmission = await api('/api/submissions', { method: 'POST', token: sup.token, body: { title: 'Forged', project: pid, content: 'This must be rejected because only students submit deliverables.' } });
   check('supervisor cannot impersonate a student submission', supervisorSubmission.status === 403);
-  const sub = await api('/api/submissions', { method: 'POST', token: alice.token, body: { title: 'Draft 1', project: pid, fileUrl: upData.data.fileUrl, content: 'This is a sufficiently detailed research submission text used to preserve the original work for an integrity screen. It describes the study design, evaluation criteria, ethical safeguards, and limitations without asserting that any automated screen is a plagiarism verdict.', status: 'Graded', grade: 'A+', student: eve.user.id } });
+  const sub = await api('/api/submissions', { method: 'POST', token: alice.token, body: { title: 'Draft 1', project: pid, task: uploadTask.data.data._id, fileUrl: upData.data.fileUrl, content: 'This is a sufficiently detailed research submission text used to preserve the original work for an integrity screen. It describes the study design, evaluation criteria, ethical safeguards, and limitations without asserting that any automated screen is a plagiarism verdict.', status: 'Graded', grade: 'A+', student: eve.user.id } });
   check('submission created with uploaded file and text', sub.status === 201 && sub.data.data.content.length >= 200);
   check('student cannot pre-grade or impersonate a submission', sub.data.data.status === 'Submitted' && !sub.data.data.grade && sub.data.data.student === alice.user.id);
 
-  const grade = await api(`/api/submissions/${sub.data.data._id}`, { method: 'PUT', token: sup.token, body: { grade: 'A', feedback: 'Nice work', status: 'Graded' } });
-  check('supervisor grades submission', grade.status === 200 && grade.data.data.grade === 'A');
+  const finalReview = await api(`/api/tasks/${uploadTask.data.data._id}/request-review`, { method: 'POST', token: alice.token, body: { submissionId: sub.data.data._id } });
+  const grade = await api(`/api/tasks/${uploadTask.data.data._id}/review-decision`, { method: 'POST', token: sup.token, body: { decision: 'approve', grade: 'A', feedback: 'Nice work' } });
+  check('supervisor grades the linked submission through the task review', finalReview.status === 200 && grade.status === 200 && grade.data.submission.grade === 'A' && grade.data.data.status === 'done');
   const gradedEdit = await api(`/api/submissions/${sub.data.data._id}`, { method: 'PUT', token: alice.token, body: { content: 'Attempted post-grade replacement.' } });
   check('student cannot edit a graded submission', gradedEdit.status === 409);
 
   const aliceNotifs = await api('/api/notifications', { token: alice.token });
   check('student notified of feedback', (aliceNotifs.data.data || []).some(n => n.title === 'Feedback received'));
+
+  const leaderSelfRemoval = await api(`/api/projects/${pid}/members/${alice.user.id}`, { method: 'DELETE', token: alice.token });
+  const leadershipTransfer = await api(`/api/projects/${pid}/leader`, { method: 'PUT', token: alice.token, body: { userId: bob.user.id } });
+  const projectHistory = await api(`/api/projects/${pid}/history`, { token: bob.token });
+  check('project leader cannot leave before transferring ownership', leaderSelfRemoval.status === 409);
+  check('leadership transfer and immutable project history are available to the roster', leadershipTransfer.status === 200 && String(leadershipTransfer.data.data.leaderUserId?._id || leadershipTransfer.data.data.leaderUserId) === bob.user.id && projectHistory.status === 200 && projectHistory.data.data.some((event) => event.action === 'project.leadership_transferred'));
 
   const protectedDeletion = await api(`/api/projects/${pid}`, { method: 'DELETE', token: sup.token });
   check('project with academic records cannot be deleted and orphan data', protectedDeletion.status === 409);

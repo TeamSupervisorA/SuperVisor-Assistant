@@ -1,7 +1,6 @@
 const User = require('../models/User');
 const Department = require('../models/Department');
 const Project = require('../models/Project');
-const Team = require('../models/Team');
 const Notification = require('../models/Notification');
 const { recordAudit } = require('../services/auditService');
 
@@ -78,42 +77,29 @@ const notify = async (fields) => {
 
 exports.getSupervisionOverview = async (req, res) => {
   try {
-    const [supervisors, projects, teams] = await Promise.all([
+    const [supervisors, projects] = await Promise.all([
       User.find({ role: 'supervisor', status: 'active' })
         .select('name email department expertise maxActiveTeams')
         .sort({ name: 1 })
         .lean(),
-      Project.find({ status: { $in: ['proposed', 'active', 'on_hold'] } })
-        .select('title department section status proposalState supervisor students supervisionSource supervisorAssignedAt')
+      Project.find({ status: { $in: ['draft', 'awaiting_supervisor', 'awaiting_approval', 'proposed', 'active', 'on_hold'] } })
+        .select('title department section status proposalState supervisor students leaderUserId supervisionSource supervisorAssignedAt')
         .populate('supervisor', 'name department')
         .sort({ createdAt: -1 })
-        .lean(),
-      Team.find({ status: { $nin: ['completed', 'archived'] } })
-        .select('name project status supervisor members')
         .lean()
     ]);
     const projectCount = new Map();
-    const teamCount = new Map();
     projects.forEach((project) => {
       if (project.supervisor?._id) projectCount.set(String(project.supervisor._id), (projectCount.get(String(project.supervisor._id)) || 0) + 1);
-    });
-    teams.forEach((team) => {
-      if (team.supervisor) teamCount.set(String(team.supervisor), (teamCount.get(String(team.supervisor)) || 0) + 1);
-    });
-    const teamsByProject = new Map();
-    teams.forEach((team) => {
-      const key = String(team.project);
-      teamsByProject.set(key, [...(teamsByProject.get(key) || []), team]);
     });
     res.json({
       success: true,
       data: {
         supervisors: supervisors.map((supervisor) => ({
           ...supervisor,
-          activeProjects: projectCount.get(String(supervisor._id)) || 0,
-          activeTeams: teamCount.get(String(supervisor._id)) || 0
+          activeProjects: projectCount.get(String(supervisor._id)) || 0
         })),
-        projects: projects.map((project) => ({ ...project, teams: teamsByProject.get(String(project._id)) || [] }))
+        projects
       }
     });
   } catch (error) {
@@ -127,24 +113,20 @@ const assignSupervisorToProject = async ({ project, supervisor, actor, section, 
   if (typeof section === 'string') project.section = section.trim().slice(0, 80) || null;
   if (typeof department === 'string') project.department = department.trim().slice(0, 120) || null;
   project.supervisionSource = 'admin_assignment';
+  if (['draft', 'awaiting_supervisor', 'proposed'].includes(project.status)) project.status = project.proposalState === 'approved' ? 'active' : 'awaiting_approval';
   project.supervisorAssignedAt = new Date();
   project.supervisorAssignedBy = actor;
   await project.save();
-  const relatedTeams = await Team.find({ project: project._id });
-  await Promise.all(relatedTeams.map(async (team) => {
-    team.supervisor = supervisor._id;
-    team.supervisorInvitations.forEach((invitation) => {
-      if (invitation.status === 'pending') {
-        invitation.status = 'cancelled';
-        invitation.respondedAt = new Date();
-      }
-    });
-    if (team.status === 'pending_approval') team.status = 'forming';
-    await team.save();
-  }));
+  project.supervisorInvitations?.forEach((invitation) => {
+    if (invitation.state === 'pending') {
+      invitation.state = 'cancelled';
+      invitation.respondedAt = new Date();
+    }
+  });
+  await project.save();
   await Promise.all([
-    notify({ user: supervisor._id, title: 'Supervision assignment', message: `You were assigned to supervise “${project.title}”.`, type: 'info', link: '/team' }),
-    ...project.students.map((student) => notify({ user: student, title: 'Supervisor assigned', message: `${supervisor.name} is now supervising “${project.title}”.`, type: 'success', link: '/team' })),
+    notify({ user: supervisor._id, title: 'Supervision assignment', message: `You were assigned to supervise “${project.title}”.`, type: 'info', link: '/team-management' }),
+    ...project.students.map((student) => notify({ user: student, title: 'Supervisor assigned', message: `${supervisor.name} is now supervising “${project.title}”.`, type: 'success', link: '/team-management' })),
     previousSupervisor && String(previousSupervisor) !== String(supervisor._id)
       ? notify({ user: previousSupervisor, title: 'Supervision reassigned', message: `“${project.title}” has been reassigned by an administrator.`, type: 'info', link: '/supervisor-dashboard' })
       : Promise.resolve()
@@ -169,17 +151,6 @@ exports.assignProjectSupervisor = async (req, res) => {
     if (!supervisor) return res.status(422).json({ success: false, error: 'Choose an active supervisor account' });
     await assignSupervisorToProject({ project, supervisor, actor: req.user.id, section: req.body?.section, department: req.body?.department });
     res.json({ success: true, data: project });
-  } catch (error) {
-    res.status(error.statusCode || 400).json({ success: false, error: error.message });
-  }
-};
-
-exports.assignTeamSupervisor = async (req, res) => {
-  try {
-    const team = await Team.findById(req.params.teamId);
-    if (!team) return res.status(404).json({ success: false, error: 'Team not found' });
-    req.params.projectId = team.project;
-    return exports.assignProjectSupervisor(req, res);
   } catch (error) {
     res.status(error.statusCode || 400).json({ success: false, error: error.message });
   }

@@ -29,9 +29,30 @@ const projectSchema = new mongoose.Schema({
     type: mongoose.Schema.ObjectId,
     ref: 'User'
   }],
+  leaderUserId: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  memberInvitations: [{
+    email: { type: String, lowercase: true, trim: true },
+    user: { type: mongoose.Schema.ObjectId, ref: 'User', default: null },
+    invitedBy: { type: mongoose.Schema.ObjectId, ref: 'User', required: true },
+    state: { type: String, enum: ['pending', 'accepted', 'declined', 'cancelled'], default: 'pending' },
+    createdAt: { type: Date, default: Date.now },
+    respondedAt: Date
+  }],
+  supervisorInvitations: [{
+    supervisor: { type: mongoose.Schema.ObjectId, ref: 'User', required: true },
+    invitedBy: { type: mongoose.Schema.ObjectId, ref: 'User', required: true },
+    message: { type: String, maxlength: 500, default: '' },
+    state: { type: String, enum: ['pending', 'accepted', 'declined', 'cancelled'], default: 'pending' },
+    createdAt: { type: Date, default: Date.now },
+    respondedAt: Date
+  }],
   status: {
     type: String,
-    enum: ['proposed', 'active', 'completed', 'on_hold'],
+    enum: ['draft', 'awaiting_supervisor', 'awaiting_approval', 'proposed', 'active', 'completed', 'on_hold', 'archived'],
     default: 'active'
   },
   proposalState: {
@@ -63,5 +84,8 @@ const projectSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+projectSchema.index({ 'memberInvitations.email': 1, 'memberInvitations.state': 1 });
+projectSchema.index({ 'supervisorInvitations.supervisor': 1, 'supervisorInvitations.state': 1 });
 
 module.exports = mongoose.model('Project', projectSchema);

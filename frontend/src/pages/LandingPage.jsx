@@ -213,7 +213,7 @@ const LandingPage = () => {
         >
           <a href="#features" className="font-label-md text-[14px] font-semibold text-on-surface-variant hover:text-primary transition-colors">Features</a>
           <a href="#audience" className="font-label-md text-[14px] font-semibold text-on-surface-variant hover:text-primary transition-colors">Audience</a>
-          <a href="#pricing" className="font-label-md text-[14px] font-semibold text-on-surface-variant hover:text-primary transition-colors">Pricing</a>
+          <Link to="/privacy" className="font-label-md text-[14px] font-semibold text-on-surface-variant hover:text-primary transition-colors">Privacy</Link>
         </motion.nav>
         
         <motion.div 
@@ -465,7 +465,7 @@ const LandingPage = () => {
                   <span aria-hidden="true" className="material-symbols-outlined text-error text-2xl">policy</span>
                 </div>
                 <h3 className="font-title-lg text-[22px] font-bold text-on-surface mb-3 tracking-tight">Integrity Check</h3>
-                <p className="font-body-sm text-[15px] text-on-surface-variant leading-relaxed">Deep semantic analysis against institutional databases for original thought.</p>
+                <p className="font-body-sm text-[15px] text-on-surface-variant leading-relaxed">Evidence-led similarity screening across project submissions, with source-discovery support and a required human review.</p>
               </SpotlightCard>
 
               {/* Feature 4: Square */}
@@ -485,7 +485,7 @@ const LandingPage = () => {
                   </div>
                   <h3 className="font-headline-md text-[28px] font-bold text-on-surface mb-4 tracking-tight">Structured Feedback Loop</h3>
                   <p className="font-body-md text-[16px] text-on-surface-variant leading-relaxed max-w-xl">
-                    Evaluation rubrics combined with AI-assisted drafting allow supervisors to provide comprehensive, actionable critiques up to 3x faster, without sacrificing quality.
+                    Evaluation rubrics, version-linked reviews, and optional AI drafting support help supervisors provide consistent, actionable critiques while keeping the academic decision human-owned.
                   </p>
                 </div>
                 
@@ -634,82 +634,6 @@ const LandingPage = () => {
             </div>
           </section>
 
-          {/* Pricing Section */}
-          <section id="pricing" className="py-24 relative z-20 mb-20">
-            <motion.div 
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-center mb-16"
-            >
-              <h2 className="font-display text-[40px] md:text-[56px] font-black text-on-surface mb-4 tracking-tight">
-                Simple, transparent <span className="text-primary">pricing.</span>
-              </h2>
-              <p className="font-body-lg text-[20px] text-on-surface-variant max-w-2xl mx-auto font-light">
-                Scale your supervision capabilities without breaking the institution's budget.
-              </p>
-            </motion.div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto items-center">
-              {/* Free Tier */}
-              <div className="bg-surface-container-lowest rounded-[32px] p-8 border border-outline-variant/20 shadow-lg">
-                <h3 className="font-title-lg font-bold text-on-surface mb-2">Basic</h3>
-                <div className="flex items-baseline gap-1 mb-6">
-                  <span className="font-display text-[48px] font-black tracking-tight text-on-surface">$0</span>
-                  <span className="text-on-surface-variant font-medium">/ forever</span>
-                </div>
-                <p className="font-body-sm text-on-surface-variant mb-8">For individual students managing their own capstone projects.</p>
-                <Link to="/register" className="block w-full py-3 rounded-full border border-outline-variant/40 text-center font-label-md font-bold text-on-surface hover:bg-surface-variant/30 transition-colors mb-8">Get Started</Link>
-                <ul className="space-y-4">
-                  {['1 Active Project', 'Basic Template Library', 'Manual Milestone Tracking'].map((feature, i) => (
-                    <li key={i} className="flex items-center gap-3 text-[14px] text-on-surface">
-                      <span className="material-symbols-outlined text-on-surface-variant text-[18px]">check</span>
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Pro Tier (Highlighted) */}
-              <div className="bg-gradient-to-br from-primary to-primary-fixed-variant rounded-[32px] p-8 shadow-[0_20px_50px_rgba(53,37,205,0.2)] transform scale-105 relative border border-primary-fixed">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface text-primary font-bold text-[11px] uppercase tracking-wider px-3 py-1 rounded-full shadow-md">Most Popular</div>
-                <h3 className="font-title-lg font-bold text-on-primary mb-2">Pro Supervisor</h3>
-                <div className="flex items-baseline gap-1 mb-6">
-                  <span className="font-display text-[48px] font-black tracking-tight text-on-primary">$29</span>
-                  <span className="text-on-primary/70 font-medium">/ month</span>
-                </div>
-                <p className="font-body-sm text-on-primary/80 mb-8">For academic supervisors managing multiple teams and students.</p>
-                <Link to="/register" className="block w-full py-3 rounded-full bg-surface text-primary text-center font-label-md font-bold hover:scale-105 transition-transform mb-8 shadow-lg">Start Free Trial</Link>
-                <ul className="space-y-4">
-                  {['Unlimited Projects', 'AI-Powered Insights & Grading', 'Plagiarism Integrity Checks', 'Priority Email Support'].map((feature, i) => (
-                    <li key={i} className="flex items-center gap-3 text-[14px] text-on-primary">
-                      <span className="material-symbols-outlined text-surface text-[18px]">check_circle</span>
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Enterprise Tier */}
-              <div className="bg-surface-container-lowest rounded-[32px] p-8 border border-outline-variant/20 shadow-lg">
-                <h3 className="font-title-lg font-bold text-on-surface mb-2">Institution</h3>
-                <div className="flex items-baseline gap-1 mb-6">
-                  <span className="font-display text-[48px] font-black tracking-tight text-on-surface">Custom</span>
-                </div>
-                <p className="font-body-sm text-on-surface-variant mb-8">For universities and departments requiring full administrative control.</p>
-                <Link to="/register" className="block w-full py-3 rounded-full border border-outline-variant/40 text-center font-label-md font-bold text-on-surface hover:bg-surface-variant/30 transition-colors mb-8">Contact Sales</Link>
-                <ul className="space-y-4">
-                  {['SAML SSO Integration', 'Custom AI Model Training', 'Department-wide Analytics', 'Dedicated Success Manager'].map((feature, i) => (
-                    <li key={i} className="flex items-center gap-3 text-[14px] text-on-surface">
-                      <span className="material-symbols-outlined text-on-surface-variant text-[18px]">check</span>
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </section>
-
           {/* Final CTA Section */}
           <section className="py-32 mb-20 relative z-20">
             <div className="bg-gradient-to-br from-primary to-tertiary-container rounded-[40px] p-12 md:p-20 text-center relative overflow-hidden shadow-2xl">
@@ -722,7 +646,7 @@ const LandingPage = () => {
                   Ready to transform your academic workflow?
                 </h2>
                 <p className="font-body-lg text-[20px] text-white/80 mb-10 font-light">
-                  Join institutions using Supervisor Assistant to elevate their research output.
+                  Connect project work, student evidence, and supervisor decisions in one accountable workspace.
                 </p>
                 <Link to="/register" className="inline-flex font-label-lg text-[18px] font-bold bg-white text-primary px-10 py-5 rounded-full hover:scale-105 transition-all duration-300 shadow-xl shadow-black/20 hover:shadow-2xl hover:shadow-black/30 items-center justify-center gap-2">
                   Get Started for Free
@@ -743,46 +667,39 @@ const LandingPage = () => {
                 <BrandLogo className="h-auto w-full" />
               </div>
               <p className="font-body-md text-[16px] text-on-surface-variant max-w-sm leading-relaxed mb-8 font-light">
-                Elevating academic research and supervision through intelligent, institutional-grade technology.
+                Connecting academic research, evidence, feedback, and supervision in one accountable workspace.
               </p>
             </div>
             
             <div className="col-span-1 md:col-span-2 lg:col-span-2 md:col-start-7 lg:col-start-7">
               <h4 className="font-label-lg text-[14px] font-bold text-on-surface uppercase tracking-wider mb-6">Product</h4>
               <ul className="space-y-4 font-body-sm text-[15px] text-on-surface-variant">
-                <li><a className="hover:text-primary transition-colors block" href="#">Features</a></li>
-                <li><a className="hover:text-primary transition-colors block" href="#">Integrations</a></li>
-                <li><a className="hover:text-primary transition-colors block" href="#">Pricing</a></li>
-                <li><a className="hover:text-primary transition-colors block" href="#">Changelog</a></li>
+                <li><a className="hover:text-primary transition-colors block" href="#features">Features</a></li>
+                <li><a className="hover:text-primary transition-colors block" href="#audience">For students & supervisors</a></li>
               </ul>
             </div>
             
             <div className="col-span-1 md:col-span-2 lg:col-span-2">
               <h4 className="font-label-lg text-[14px] font-bold text-on-surface uppercase tracking-wider mb-6">Company</h4>
               <ul className="space-y-4 font-body-sm text-[15px] text-on-surface-variant">
-                <li><a className="hover:text-primary transition-colors block" href="#">About Us</a></li>
-                <li><a className="hover:text-primary transition-colors block" href="#">Careers</a></li>
-                <li><a className="hover:text-primary transition-colors block" href="#">Blog</a></li>
-                <li><a className="hover:text-primary transition-colors block" href="#">Contact</a></li>
+                <li><Link className="hover:text-primary transition-colors block" to="/register">Create account</Link></li>
+                <li><Link className="hover:text-primary transition-colors block" to="/login">Sign in</Link></li>
               </ul>
             </div>
 
             <div className="col-span-1 md:col-span-2 lg:col-span-2">
               <h4 className="font-label-lg text-[14px] font-bold text-on-surface uppercase tracking-wider mb-6">Legal</h4>
               <ul className="space-y-4 font-body-sm text-[15px] text-on-surface-variant">
-                <li><a className="hover:text-primary transition-colors block" href="#">Privacy Policy</a></li>
-                <li><a className="hover:text-primary transition-colors block" href="#">Terms of Service</a></li>
-                <li><a className="hover:text-primary transition-colors block" href="#">Data Processing</a></li>
+                <li><Link className="hover:text-primary transition-colors block" to="/privacy">Privacy Policy</Link></li>
+                <li><Link className="hover:text-primary transition-colors block" to="/terms">Terms of Service</Link></li>
+                <li><Link className="hover:text-primary transition-colors block" to="/data-processing">Data Processing</Link></li>
               </ul>
             </div>
           </div>
           
           <div className="border-t border-outline-variant/20 pt-8 flex flex-col md:flex-row justify-between items-center font-body-sm text-[14px] text-on-surface-variant">
             <p>© 2026 Supervisor Assistant. All rights reserved.</p>
-            <div className="flex gap-6 mt-4 md:mt-0">
-              <a href="#" className="hover:text-primary transition-colors"><span className="material-symbols-outlined text-[20px]">public</span></a>
-              <a href="#" className="hover:text-primary transition-colors"><span className="material-symbols-outlined text-[20px]">mail</span></a>
-            </div>
+            <Link to="/privacy" className="mt-4 hover:text-primary md:mt-0">Privacy & data use</Link>
           </div>
         </div>
       </footer>

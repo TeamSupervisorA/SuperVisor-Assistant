@@ -30,6 +30,10 @@ const taskSchema = new mongoose.Schema({
   acceptanceCriteria: { type: String, default: '' },
   blockedReason: { type: String, default: '' },
   completedAt: Date,
+  reviewSubmission: { type: mongoose.Schema.ObjectId, ref: 'Submission', default: null },
+  reviewRequestedAt: Date,
+  reviewedAt: Date,
+  reviewedBy: { type: mongoose.Schema.ObjectId, ref: 'User', default: null },
   evidence: [{ name: String, fileUrl: String }],
   history: [{
     actor: { type: mongoose.Schema.ObjectId, ref: 'User' },
@@ -37,6 +41,7 @@ const taskSchema = new mongoose.Schema({
     fromStatus: String,
     toStatus: String,
     note: String,
+    submission: { type: mongoose.Schema.ObjectId, ref: 'Submission', default: null },
     occurredAt: { type: Date, default: Date.now }
   }],
   createdAt: {

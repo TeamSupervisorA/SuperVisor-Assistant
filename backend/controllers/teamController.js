@@ -106,6 +106,14 @@ exports.getTeam = async (req, res) => {
 };
 
 exports.createTeam = async (req, res) => {
+  // Projects are the canonical team boundary. Retaining this read-only legacy
+  // controller lets old records remain visible without creating a second,
+  // conflicting roster or supervisor assignment.
+  return res.status(410).json({
+    success: false,
+    error: 'Separate teams are no longer created. Use the project People & Supervision workspace to invite members and a primary supervisor.'
+  });
+  /* c8 ignore start -- legacy migration reference
   try {
     const body = {
       name: req.body?.name,
@@ -144,6 +152,7 @@ exports.createTeam = async (req, res) => {
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
   }
+  c8 ignore stop */
 };
 
 // Active supervisors are visible as a limited academic directory. Workload is

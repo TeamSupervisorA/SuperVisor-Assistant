@@ -30,6 +30,9 @@ exports.createResource = async (req, res) => {
     if (!canAccessProject(project, req.user)) {
       return res.status(403).json({ success: false, error: 'Not authorized to add resources to this project' });
     }
+    if (project.status !== 'active') {
+      return res.status(409).json({ success: false, error: 'Shared project resources open when the project becomes active' });
+    }
     const resource = await Resource.create({ ...req.body, uploadedBy: req.user.id });
     res.status(201).json({ success: true, data: resource });
   } catch (error) {

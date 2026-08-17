@@ -1,53 +1,110 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { apiFetch } from '../lib/api';
-import { useAuth } from '../hooks/useAuth';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { apiFetch } from "../lib/api";
+import { useAuth } from "../hooks/useAuth";
 
 const statusMeta = {
-  todo: { label: 'Planned', icon: 'list_alt', tone: 'bg-slate-100 text-slate-700 dark:bg-surface-container dark:text-on-surface' },
-  in_progress: { label: 'In progress', icon: 'play_circle', tone: 'bg-indigo-50 text-indigo-700 dark:bg-primary/15 dark:text-primary' },
-  blocked: { label: 'Blocked', icon: 'block', tone: 'bg-red-50 text-red-700 dark:bg-error/15 dark:text-error' },
-  review: { label: 'Awaiting review', icon: 'rate_review', tone: 'bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200' },
-  done: { label: 'Complete', icon: 'task_alt', tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' },
-  cancelled: { label: 'Cancelled', icon: 'cancel', tone: 'bg-slate-100 text-slate-500 dark:bg-surface-container dark:text-secondary' }
+  todo: {
+    label: "Planned",
+    icon: "list_alt",
+    tone: "bg-slate-100 text-slate-700 dark:bg-surface-container dark:text-on-surface",
+  },
+  in_progress: {
+    label: "In progress",
+    icon: "play_circle",
+    tone: "bg-indigo-50 text-indigo-700 dark:bg-primary/15 dark:text-primary",
+  },
+  blocked: {
+    label: "Blocked",
+    icon: "block",
+    tone: "bg-red-50 text-red-700 dark:bg-error/15 dark:text-error",
+  },
+  review: {
+    label: "Awaiting review",
+    icon: "rate_review",
+    tone: "bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200",
+  },
+  done: {
+    label: "Complete",
+    icon: "task_alt",
+    tone: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  },
+  cancelled: {
+    label: "Cancelled",
+    icon: "cancel",
+    tone: "bg-slate-100 text-slate-500 dark:bg-surface-container dark:text-secondary",
+  },
 };
 
 const priorityMeta = {
-  critical: 'bg-red-100 text-red-700 dark:bg-error/20 dark:text-error',
-  high: 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-200',
-  medium: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200',
-  low: 'bg-slate-100 text-slate-600 dark:bg-surface-container dark:text-secondary'
+  critical: "bg-red-100 text-red-700 dark:bg-error/20 dark:text-error",
+  high: "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-200",
+  medium: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200",
+  low: "bg-slate-100 text-slate-600 dark:bg-surface-container dark:text-secondary",
 };
 
-const normalizeStatus = (status) => status === 'completed' ? 'done' : status === 'delayed' ? 'todo' : status;
-const completed = (task) => ['done', 'completed'].includes(task.status);
-const dateOnly = (value) => value ? new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date';
-const overdue = (task) => Boolean(task.dueDate && new Date(task.dueDate) < new Date() && !completed(task) && task.status !== 'cancelled');
+const normalizeStatus = (status) =>
+  status === "completed" ? "done" : status === "delayed" ? "todo" : status;
+const completed = (task) => ["done", "completed"].includes(task.status);
+const dateOnly = (value) =>
+  value
+    ? new Date(value).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "No date";
+const overdue = (task) =>
+  Boolean(
+    task.dueDate &&
+      new Date(task.dueDate) < new Date() &&
+      !completed(task) &&
+      task.status !== "cancelled",
+  );
 
-const emptyTask = { title: '', description: '', acceptanceCriteria: '', priority: 'medium', dueDate: '', dependencies: [], assignedTo: '' };
-const primaryActionClass = 'inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-xs font-bold text-on-primary hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50';
-const secondaryActionClass = 'inline-flex items-center justify-center rounded-lg border border-outline-variant/50 px-3 py-2 text-xs font-bold text-on-surface hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50';
-const fieldLabelClass = 'mb-2 block text-xs font-bold uppercase tracking-wide text-secondary';
-const fieldInputClass = 'w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest px-3 py-2.5 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15';
+const emptyTask = {
+  title: "",
+  description: "",
+  acceptanceCriteria: "",
+  priority: "medium",
+  dueDate: "",
+  dependencies: [],
+  assignedTo: "",
+};
+const primaryActionClass =
+  "inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-xs font-bold text-on-primary hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50";
+const secondaryActionClass =
+  "inline-flex items-center justify-center rounded-lg border border-outline-variant/50 px-3 py-2 text-xs font-bold text-on-surface hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-50";
+const fieldLabelClass =
+  "mb-2 block text-xs font-bold uppercase tracking-wide text-secondary";
+const fieldInputClass =
+  "w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest px-3 py-2.5 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15";
 
 const TasksMilestones = () => {
   const { activeProject, user } = useAuth();
   const [tasks, setTasks] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [draft, setDraft] = useState(emptyTask);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [updatingId, setUpdatingId] = useState('');
+  const [updatingId, setUpdatingId] = useState("");
 
   const projectId = activeProject?._id;
   const loadTasks = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
     try {
-      const response = await apiFetch(`/api/tasks?project=${projectId}`);
+      const [response, submissionResponse] = await Promise.all([
+        apiFetch(`/api/tasks?project=${projectId}`),
+        apiFetch(`/api/submissions?project=${projectId}`).catch(() => ({
+          data: [],
+        })),
+      ]);
       setTasks(response.data || []);
+      setSubmissions(submissionResponse.data || []);
     } catch (requestError) {
-      setError(requestError.message || 'Unable to load project tasks.');
+      setError(requestError.message || "Unable to load project tasks.");
       setTasks([]);
     } finally {
       setLoading(false);
@@ -55,99 +112,742 @@ const TasksMilestones = () => {
   }, [projectId]);
 
   useEffect(() => {
-    setError('');
+    setError("");
     if (projectId) loadTasks();
-    else { setTasks([]); setLoading(false); }
+    else {
+      setTasks([]);
+      setLoading(false);
+    }
   }, [projectId, loadTasks]);
 
-  const taskById = useMemo(() => new Map(tasks.map((task) => [String(task._id), task])), [tasks]);
-  const dependencyNames = (task) => (task.dependencies || []).map((dependency) => taskById.get(String(dependency))?.title || 'Unavailable task');
-  const waitingOnDependencies = (task) => (task.dependencies || []).some((dependency) => !completed(taskById.get(String(dependency)) || {}));
-  const actionableTasks = tasks.filter((task) => !completed(task) && task.status !== 'cancelled');
+  const taskById = useMemo(
+    () => new Map(tasks.map((task) => [String(task._id), task])),
+    [tasks],
+  );
+  const dependencyNames = (task) =>
+    (task.dependencies || []).map(
+      (dependency) =>
+        taskById.get(String(dependency))?.title || "Unavailable task",
+    );
+  const waitingOnDependencies = (task) =>
+    (task.dependencies || []).some(
+      (dependency) => !completed(taskById.get(String(dependency)) || {}),
+    );
+  const actionableTasks = tasks.filter(
+    (task) => !completed(task) && task.status !== "cancelled",
+  );
   const doneTasks = tasks.filter(completed);
-  const blockedTasks = tasks.filter((task) => task.status === 'blocked');
-  const reviewTasks = tasks.filter((task) => task.status === 'review');
+  const blockedTasks = tasks.filter((task) => task.status === "blocked");
+  const reviewTasks = tasks.filter((task) => task.status === "review");
   const overdueTasks = tasks.filter(overdue);
-  const progress = tasks.length ? Math.round((doneTasks.length / tasks.filter((task) => task.status !== 'cancelled').length || 1) * 100) : 0;
+  const eligibleTasks = tasks.filter((task) => task.status !== "cancelled");
+  const progress = eligibleTasks.length
+    ? Math.round((doneTasks.length / eligibleTasks.length) * 100)
+    : 0;
 
   const nextTask = [...actionableTasks].sort((a, b) => {
-    const score = (task) => (task.status === 'blocked' ? 0 : overdue(task) ? 1 : waitingOnDependencies(task) ? 4 : task.status === 'review' ? 2 : task.priority === 'critical' ? 1.5 : task.priority === 'high' ? 2 : 3);
+    const score = (task) =>
+      task.status === "blocked"
+        ? 0
+        : overdue(task)
+          ? 1
+          : waitingOnDependencies(task)
+            ? 4
+            : task.status === "review"
+              ? 2
+              : task.priority === "critical"
+                ? 1.5
+                : task.priority === "high"
+                  ? 2
+                  : 3;
     const difference = score(a) - score(b);
     if (difference) return difference;
-    return new Date(a.dueDate || '9999-12-31') - new Date(b.dueDate || '9999-12-31');
+    return (
+      new Date(a.dueDate || "9999-12-31") - new Date(b.dueDate || "9999-12-31")
+    );
   })[0];
 
   const createTask = async (event) => {
     event.preventDefault();
     if (!activeProject?._id || saving) return;
-    setError('');
+    setError("");
     const title = draft.title.trim();
     const acceptanceCriteria = draft.acceptanceCriteria.trim();
-    if (!title || !acceptanceCriteria) { setError('A task needs both a clear title and an expected outcome.'); return; }
+    if (!title || !acceptanceCriteria) {
+      setError("A task needs both a clear title and an expected outcome.");
+      return;
+    }
     setSaving(true);
     try {
-      const payload = { ...draft, title, acceptanceCriteria, description: draft.description.trim(), project: activeProject._id };
+      const payload = {
+        ...draft,
+        title,
+        acceptanceCriteria,
+        description: draft.description.trim(),
+        project: activeProject._id,
+      };
       if (!payload.dueDate) delete payload.dueDate;
       if (!payload.assignedTo) delete payload.assignedTo;
-      const response = await apiFetch('/api/tasks', { method: 'POST', body: JSON.stringify(payload) });
+      const response = await apiFetch("/api/tasks", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
       setTasks((current) => [...current, response.data]);
       setDraft(emptyTask);
       setShowCreate(false);
     } catch (requestError) {
-      setError(requestError.message || 'Unable to create the task.');
-    } finally { setSaving(false); }
+      setError(requestError.message || "Unable to create the task.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const transition = async (task, status) => {
     if (updatingId) return;
-    let blockedReason = '';
-    if (status === 'blocked') {
-      blockedReason = window.prompt('What is blocking this work? This is required so the next person knows how to help.')?.trim() || '';
+    let blockedReason = "";
+    if (status === "blocked") {
+      blockedReason =
+        window
+          .prompt(
+            "What is blocking this work? This is required so the next person knows how to help.",
+          )
+          ?.trim() || "";
       if (!blockedReason) return;
     }
-    setError('');
+    setError("");
     setUpdatingId(task._id);
     try {
-      const response = await apiFetch(`/api/tasks/${task._id}/transition`, { method: 'POST', body: JSON.stringify({ status, blockedReason }) });
-      setTasks((current) => current.map((item) => item._id === task._id ? response.data : item));
+      const response = await apiFetch(`/api/tasks/${task._id}/transition`, {
+        method: "POST",
+        body: JSON.stringify({ status, blockedReason }),
+      });
+      setTasks((current) =>
+        current.map((item) => (item._id === task._id ? response.data : item)),
+      );
     } catch (requestError) {
-      setError(requestError.message || 'Unable to update this task.');
-    } finally { setUpdatingId(''); }
+      setError(requestError.message || "Unable to update this task.");
+    } finally {
+      setUpdatingId("");
+    }
+  };
+
+  const requestReview = async (task) => {
+    if (!activeProject?.supervisor) {
+      setError(
+        "Connect an active supervisor before requesting review. Your work remains safe.",
+      );
+      return;
+    }
+    const linked = submissions.filter(
+      (submission) =>
+        String(submission.task?._id || submission.task || "") ===
+          String(task._id) && !["Graded"].includes(submission.status),
+    );
+    if (!linked.length) {
+      setError(
+        "Create a deliverable linked to this task first, then return here to request review.",
+      );
+      return;
+    }
+    setUpdatingId(task._id);
+    setError("");
+    try {
+      const response = await apiFetch(`/api/tasks/${task._id}/request-review`, {
+        method: "POST",
+        body: JSON.stringify({ submissionId: linked[0]._id }),
+      });
+      setTasks((current) =>
+        current.map((item) => (item._id === task._id ? response.data : item)),
+      );
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setUpdatingId("");
+    }
+  };
+
+  const decideReview = async (task, decision) => {
+    const feedback =
+      window
+        .prompt(
+          decision === "approve"
+            ? "Optional feedback for the student:"
+            : "What must the student revise?",
+        )
+        ?.trim() || "";
+    if (decision === "revision" && !feedback) return;
+    setUpdatingId(task._id);
+    setError("");
+    try {
+      const response = await apiFetch(
+        `/api/tasks/${task._id}/review-decision`,
+        { method: "POST", body: JSON.stringify({ decision, feedback }) },
+      );
+      setTasks((current) =>
+        current.map((item) => (item._id === task._id ? response.data : item)),
+      );
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setUpdatingId("");
+    }
+  };
+
+  const withdrawReview = async (task) => {
+    if (updatingId) return;
+    setUpdatingId(task._id);
+    setError("");
+    try {
+      const response = await apiFetch(
+        `/api/tasks/${task._id}/withdraw-review`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            note: "Review withdrawn to update the linked deliverable.",
+          }),
+        },
+      );
+      setTasks((current) =>
+        current.map((item) => (item._id === task._id ? response.data : item)),
+      );
+    } catch (requestError) {
+      setError(requestError.message || "Unable to withdraw this review.");
+    } finally {
+      setUpdatingId("");
+    }
   };
 
   const members = activeProject?.students || [];
+  const currentUserId = String(user?._id || user?.id || "");
+  const leaderId = String(
+    activeProject?.leaderUserId?._id ||
+      activeProject?.leaderUserId ||
+      activeProject?.students?.[0]?._id ||
+      activeProject?.students?.[0] ||
+      "",
+  );
+  const canCreateTask =
+    user?.role === "admin" ||
+    user?.role === "supervisor" ||
+    currentUserId === leaderId;
   const columns = [
-    { id: 'todo', label: 'Planned', helper: 'Ready work and prerequisites', tasks: tasks.filter((task) => normalizeStatus(task.status) === 'todo') },
-    { id: 'in_progress', label: 'In progress', helper: 'Active work with a defined outcome', tasks: tasks.filter((task) => normalizeStatus(task.status) === 'in_progress') },
-    { id: 'review', label: 'Review & decisions', helper: 'Work awaiting feedback or resolution', tasks: tasks.filter((task) => ['review', 'blocked'].includes(normalizeStatus(task.status))) },
-    { id: 'done', label: 'Completed', helper: 'Accepted outcomes', tasks: tasks.filter((task) => completed(task)) }
+    {
+      id: "todo",
+      label: "Planned",
+      helper: "Ready work and prerequisites",
+      tasks: tasks.filter((task) => normalizeStatus(task.status) === "todo"),
+    },
+    {
+      id: "in_progress",
+      label: "In progress",
+      helper: "Active work with a defined outcome",
+      tasks: tasks.filter(
+        (task) => normalizeStatus(task.status) === "in_progress",
+      ),
+    },
+    {
+      id: "review",
+      label: "Review & decisions",
+      helper: "Work awaiting feedback or resolution",
+      tasks: tasks.filter((task) =>
+        ["review", "blocked"].includes(normalizeStatus(task.status)),
+      ),
+    },
+    {
+      id: "done",
+      label: "Completed",
+      helper: "Accepted outcomes",
+      tasks: tasks.filter((task) => completed(task)),
+    },
   ];
 
-  if (!activeProject) return <div className="grid min-h-[70vh] place-items-center bg-background p-6"><div className="max-w-md rounded-3xl border border-outline-variant/30 bg-surface p-8 text-center shadow-sm"><span className="material-symbols-outlined text-5xl text-secondary">folder_off</span><h1 className="mt-4 text-2xl font-extrabold text-on-surface">Choose a project first</h1><p className="mt-2 text-sm leading-relaxed text-secondary">Tasks are always connected to a project, its people, and its deliverables. Select a project from the top navigation to continue.</p></div></div>;
+  if (!activeProject)
+    return (
+      <div className="grid min-h-[70vh] place-items-center bg-background p-6">
+        <div className="max-w-md rounded-3xl border border-outline-variant/30 bg-surface p-8 text-center shadow-sm">
+          <span className="material-symbols-outlined text-5xl text-secondary">
+            folder_off
+          </span>
+          <h1 className="mt-4 text-2xl font-extrabold text-on-surface">
+            Choose a project first
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-secondary">
+            Tasks are always connected to a project, its people, and its
+            deliverables. Select a project from the top navigation to continue.
+          </p>
+        </div>
+      </div>
+    );
 
   const taskActions = (task) => {
     const status = normalizeStatus(task.status);
     const waiting = waitingOnDependencies(task);
-    const isSupervisor = ['supervisor', 'admin'].includes(user?.role);
-    if (status === 'todo') return <button disabled={waiting || Boolean(updatingId)} onClick={() => transition(task, 'in_progress')} className={primaryActionClass}>{waiting ? 'Waiting for prerequisite' : 'Start task'}</button>;
-    if (status === 'in_progress') return <div className="flex gap-2"><button disabled={Boolean(updatingId)} onClick={() => transition(task, 'review')} className={primaryActionClass}>Submit for review</button><button disabled={Boolean(updatingId)} onClick={() => transition(task, 'blocked')} className={secondaryActionClass}>Block</button></div>;
-    if (status === 'blocked') return <button disabled={Boolean(updatingId)} onClick={() => transition(task, 'in_progress')} className={primaryActionClass}>Resume task</button>;
-    if (status === 'review') return isSupervisor ? <div className="flex gap-2"><button disabled={Boolean(updatingId) || waiting} onClick={() => transition(task, 'done')} className={primaryActionClass}>Accept outcome</button><button disabled={Boolean(updatingId)} onClick={() => transition(task, 'in_progress')} className={secondaryActionClass}>Return for changes</button></div> : <span className="text-xs font-semibold text-amber-700 dark:text-amber-200">Awaiting supervisor decision</span>;
-    return <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">Outcome accepted</span>;
+    const isSupervisor = ["supervisor", "admin"].includes(user?.role);
+    if (status === "todo")
+      return (
+        <button
+          disabled={waiting || Boolean(updatingId)}
+          onClick={() => transition(task, "in_progress")}
+          className={primaryActionClass}
+        >
+          {waiting ? "Waiting for prerequisite" : "Start task"}
+        </button>
+      );
+    if (status === "in_progress")
+      return (
+        <div className="flex gap-2">
+          <button
+            disabled={Boolean(updatingId)}
+            onClick={() => requestReview(task)}
+            className={primaryActionClass}
+          >
+            Request review
+          </button>
+          <button
+            disabled={Boolean(updatingId)}
+            onClick={() => transition(task, "blocked")}
+            className={secondaryActionClass}
+          >
+            Block
+          </button>
+        </div>
+      );
+    if (status === "blocked")
+      return (
+        <button
+          disabled={Boolean(updatingId)}
+          onClick={() => transition(task, "in_progress")}
+          className={primaryActionClass}
+        >
+          Resume task
+        </button>
+      );
+    if (status === "review")
+      return isSupervisor ? (
+        <div className="flex gap-2">
+          <button
+            disabled={Boolean(updatingId) || waiting}
+            onClick={() => decideReview(task, "approve")}
+            className={primaryActionClass}
+          >
+            Approve deliverable
+          </button>
+          <button
+            disabled={Boolean(updatingId)}
+            onClick={() => decideReview(task, "revision")}
+            className={secondaryActionClass}
+          >
+            Request revision
+          </button>
+        </div>
+      ) : String(task.assignedTo?._id || task.assignedTo || "") ===
+        currentUserId ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold text-amber-700 dark:text-amber-200">
+            Awaiting supervisor decision
+          </span>
+          <button
+            disabled={Boolean(updatingId)}
+            onClick={() => withdrawReview(task)}
+            className={secondaryActionClass}
+          >
+            Withdraw review
+          </button>
+        </div>
+      ) : (
+        <span className="text-xs font-semibold text-secondary">
+          Supervisor review in progress
+        </span>
+      );
+    return (
+      <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+        Outcome accepted
+      </span>
+    );
   };
 
-  return <div className="min-h-screen bg-background px-4 py-6 sm:px-6 lg:px-8"><main className="mx-auto max-w-[1700px]">
-    <header className="flex flex-col justify-between gap-4 border-b border-outline-variant/30 pb-6 md:flex-row md:items-end"><div><p className="text-xs font-bold uppercase tracking-[.16em] text-primary">Project execution</p><h1 className="mt-2 text-3xl font-extrabold tracking-tight text-on-surface">Tasks & milestones</h1><p className="mt-2 text-sm text-secondary"><span className="font-bold text-on-surface">{activeProject.title}</span> · every task should produce a verifiable project outcome.</p></div><button onClick={() => { setError(''); setShowCreate(true); }} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary shadow-sm hover:brightness-95"><span className="material-symbols-outlined text-[18px]">add_task</span>New task</button></header>
+  return (
+    <div className="min-h-screen bg-background px-4 py-6 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-[1700px]">
+        <header className="flex flex-col justify-between gap-4 border-b border-outline-variant/30 pb-6 md:flex-row md:items-end">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[.16em] text-primary">
+              Project execution
+            </p>
+            <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-on-surface">
+              Tasks & milestones
+            </h1>
+            <p className="mt-2 text-sm text-secondary">
+              <span className="font-bold text-on-surface">
+                {activeProject.title}
+              </span>{" "}
+              · every task should produce a verifiable project outcome.
+            </p>
+          </div>
+          {canCreateTask && (
+            <button
+              onClick={() => {
+                setError("");
+                setShowCreate(true);
+              }}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary shadow-sm hover:brightness-95"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                add_task
+              </span>
+              New task
+            </button>
+          )}
+        </header>
 
-    {error && <div role="alert" className="mt-5 flex items-start gap-3 rounded-xl border border-error/30 bg-error/10 p-4 text-sm text-error"><span className="material-symbols-outlined text-[19px]">error</span><span>{error}</span></div>}
+        {error && (
+          <div
+            role="alert"
+            className="mt-5 flex items-start gap-3 rounded-xl border border-error/30 bg-error/10 p-4 text-sm text-error"
+          >
+            <span className="material-symbols-outlined text-[19px]">error</span>
+            <span>{error}</span>
+          </div>
+        )}
 
-    <section className="mt-6 grid gap-4 lg:grid-cols-[1.5fr_repeat(3,minmax(0,.65fr))]"><article className="rounded-2xl border border-primary/20 bg-primary/5 p-5"><p className="text-xs font-bold uppercase tracking-wider text-primary">Next logical action</p>{nextTask ? <><h2 className="mt-2 text-lg font-extrabold text-on-surface">{nextTask.title}</h2><p className="mt-1 text-sm text-secondary">{nextTask.status === 'blocked' ? `Blocked: ${nextTask.blockedReason || 'needs clarification'}` : overdue(nextTask) ? `Overdue since ${dateOnly(nextTask.dueDate)}` : waitingOnDependencies(nextTask) ? `Waiting for: ${dependencyNames(nextTask).join(', ')}` : `Expected outcome: ${nextTask.acceptanceCriteria || 'Define the outcome before starting.'}`}</p><div className="mt-4">{taskActions(nextTask)}</div></> : <><h2 className="mt-2 text-lg font-extrabold text-on-surface">No open work</h2><p className="mt-1 text-sm text-secondary">Create the next deliverable when the project is ready to move forward.</p></>}</article>
-      {[['task_alt', `${progress}%`, 'Accepted progress'], ['priority_high', `${overdueTasks.length + blockedTasks.length}`, 'Needs attention'], ['rate_review', reviewTasks.length, 'Awaiting review']].map(([icon, value, label]) => <article key={label} className="rounded-2xl border border-outline-variant/30 bg-surface p-5 shadow-sm"><span className="material-symbols-outlined text-primary">{icon}</span><p className="mt-3 text-2xl font-extrabold text-on-surface">{loading ? '—' : value}</p><p className="mt-1 text-sm text-secondary">{label}</p></article>)}</section>
+        <section className="mt-6 grid gap-4 lg:grid-cols-[1.5fr_repeat(3,minmax(0,.65fr))]">
+          <article className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
+            <p className="text-xs font-bold uppercase tracking-wider text-primary">
+              Next logical action
+            </p>
+            {nextTask ? (
+              <>
+                <h2 className="mt-2 text-lg font-extrabold text-on-surface">
+                  {nextTask.title}
+                </h2>
+                <p className="mt-1 text-sm text-secondary">
+                  {nextTask.status === "blocked"
+                    ? `Blocked: ${nextTask.blockedReason || "needs clarification"}`
+                    : overdue(nextTask)
+                      ? `Overdue since ${dateOnly(nextTask.dueDate)}`
+                      : waitingOnDependencies(nextTask)
+                        ? `Waiting for: ${dependencyNames(nextTask).join(", ")}`
+                        : `Expected outcome: ${nextTask.acceptanceCriteria || "Define the outcome before starting."}`}
+                </p>
+                <div className="mt-4">{taskActions(nextTask)}</div>
+              </>
+            ) : (
+              <>
+                <h2 className="mt-2 text-lg font-extrabold text-on-surface">
+                  No open work
+                </h2>
+                <p className="mt-1 text-sm text-secondary">
+                  Create the next deliverable when the project is ready to move
+                  forward.
+                </p>
+              </>
+            )}
+          </article>
+          {[
+            ["task_alt", `${progress}%`, "Accepted progress"],
+            [
+              "priority_high",
+              `${overdueTasks.length + blockedTasks.length}`,
+              "Needs attention",
+            ],
+            ["rate_review", reviewTasks.length, "Awaiting review"],
+          ].map(([icon, value, label]) => (
+            <article
+              key={label}
+              className="rounded-2xl border border-outline-variant/30 bg-surface p-5 shadow-sm"
+            >
+              <span className="material-symbols-outlined text-primary">
+                {icon}
+              </span>
+              <p className="mt-3 text-2xl font-extrabold text-on-surface">
+                {loading ? "—" : value}
+              </p>
+              <p className="mt-1 text-sm text-secondary">{label}</p>
+            </article>
+          ))}
+        </section>
 
-    <section className="mt-6 grid gap-4 xl:grid-cols-4">{columns.map((column) => <section key={column.id} className="min-h-[360px] rounded-2xl border border-outline-variant/30 bg-surface-container-low p-3"><header className="mb-3 flex items-start justify-between gap-3 px-2 pt-2"><div><h2 className="font-bold text-on-surface">{column.label}</h2><p className="mt-1 text-xs text-secondary">{column.helper}</p></div><span className="rounded-full bg-surface px-2 py-1 text-xs font-bold text-secondary">{column.tasks.length}</span></header><div className="space-y-3">{loading ? <div className="rounded-xl bg-surface p-4 text-sm text-secondary">Loading tasks…</div> : column.tasks.map((task) => { const status = normalizeStatus(task.status); const meta = statusMeta[status] || statusMeta.todo; const waiting = waitingOnDependencies(task); return <article key={task._id} className="rounded-xl border border-outline-variant/25 bg-surface p-4 shadow-sm"><div className="flex items-start justify-between gap-2"><span className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${meta.tone}`}>{meta.label}</span><span className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase ${priorityMeta[task.priority || 'medium']}`}>{task.priority || 'medium'}</span></div><h3 className="mt-3 text-sm font-extrabold leading-snug text-on-surface">{task.title}</h3>{task.description && <p className="mt-2 text-xs leading-relaxed text-secondary">{task.description}</p>}<div className="mt-3 rounded-lg bg-surface-container-low px-3 py-2"><p className="text-[10px] font-bold uppercase tracking-wide text-secondary">Expected outcome</p><p className="mt-1 text-xs leading-relaxed text-on-surface">{task.acceptanceCriteria || 'No outcome defined yet.'}</p></div>{(task.dependencies || []).length > 0 && <p className={`mt-3 text-xs ${waiting ? 'text-amber-700 dark:text-amber-200' : 'text-secondary'}`}><span className="material-symbols-outlined mr-1 align-[-3px] text-[15px]">account_tree</span>{waiting ? 'Waiting for: ' : 'Prerequisite complete: '}{dependencyNames(task).join(', ')}</p>}{task.dueDate && <p className={`mt-3 text-xs font-semibold ${overdue(task) ? 'text-error' : 'text-secondary'}`}><span className="material-symbols-outlined mr-1 align-[-3px] text-[15px]">event</span>{overdue(task) ? 'Overdue · ' : 'Due · '}{dateOnly(task.dueDate)}</p>}{task.status === 'blocked' && <p className="mt-3 rounded-lg bg-error/10 px-3 py-2 text-xs text-error">Blocker: {task.blockedReason}</p>}<div className="mt-4">{updatingId === task._id ? <span className="text-xs font-semibold text-secondary">Updating…</span> : taskActions(task)}</div></article>; })}{!loading && column.tasks.length === 0 && <div className="rounded-xl border border-dashed border-outline-variant/40 p-5 text-center text-xs leading-relaxed text-secondary">No {column.label.toLowerCase()} tasks.</div>}</div></section>)}</section>
+        <section className="mt-6 grid gap-4 xl:grid-cols-4">
+          {columns.map((column) => (
+            <section
+              key={column.id}
+              className="min-h-[360px] rounded-2xl border border-outline-variant/30 bg-surface-container-low p-3"
+            >
+              <header className="mb-3 flex items-start justify-between gap-3 px-2 pt-2">
+                <div>
+                  <h2 className="font-bold text-on-surface">{column.label}</h2>
+                  <p className="mt-1 text-xs text-secondary">{column.helper}</p>
+                </div>
+                <span className="rounded-full bg-surface px-2 py-1 text-xs font-bold text-secondary">
+                  {column.tasks.length}
+                </span>
+              </header>
+              <div className="space-y-3">
+                {loading ? (
+                  <div className="rounded-xl bg-surface p-4 text-sm text-secondary">
+                    Loading tasks…
+                  </div>
+                ) : (
+                  column.tasks.map((task) => {
+                    const status = normalizeStatus(task.status);
+                    const meta = statusMeta[status] || statusMeta.todo;
+                    const waiting = waitingOnDependencies(task);
+                    return (
+                      <article
+                        key={task._id}
+                        className="rounded-xl border border-outline-variant/25 bg-surface p-4 shadow-sm"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span
+                            className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${meta.tone}`}
+                          >
+                            {meta.label}
+                          </span>
+                          <span
+                            className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase ${priorityMeta[task.priority || "medium"]}`}
+                          >
+                            {task.priority || "medium"}
+                          </span>
+                        </div>
+                        <h3 className="mt-3 text-sm font-extrabold leading-snug text-on-surface">
+                          {task.title}
+                        </h3>
+                        {task.description && (
+                          <p className="mt-2 text-xs leading-relaxed text-secondary">
+                            {task.description}
+                          </p>
+                        )}
+                        <div className="mt-3 rounded-lg bg-surface-container-low px-3 py-2">
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-secondary">
+                            Expected outcome
+                          </p>
+                          <p className="mt-1 text-xs leading-relaxed text-on-surface">
+                            {task.acceptanceCriteria ||
+                              "No outcome defined yet."}
+                          </p>
+                        </div>
+                        {(task.dependencies || []).length > 0 && (
+                          <p
+                            className={`mt-3 text-xs ${waiting ? "text-amber-700 dark:text-amber-200" : "text-secondary"}`}
+                          >
+                            <span className="material-symbols-outlined mr-1 align-[-3px] text-[15px]">
+                              account_tree
+                            </span>
+                            {waiting
+                              ? "Waiting for: "
+                              : "Prerequisite complete: "}
+                            {dependencyNames(task).join(", ")}
+                          </p>
+                        )}
+                        {task.dueDate && (
+                          <p
+                            className={`mt-3 text-xs font-semibold ${overdue(task) ? "text-error" : "text-secondary"}`}
+                          >
+                            <span className="material-symbols-outlined mr-1 align-[-3px] text-[15px]">
+                              event
+                            </span>
+                            {overdue(task) ? "Overdue · " : "Due · "}
+                            {dateOnly(task.dueDate)}
+                          </p>
+                        )}
+                        {task.status === "blocked" && (
+                          <p className="mt-3 rounded-lg bg-error/10 px-3 py-2 text-xs text-error">
+                            Blocker: {task.blockedReason}
+                          </p>
+                        )}
+                        <div className="mt-4">
+                          {updatingId === task._id ? (
+                            <span className="text-xs font-semibold text-secondary">
+                              Updating…
+                            </span>
+                          ) : (
+                            taskActions(task)
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })
+                )}
+                {!loading && column.tasks.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-outline-variant/40 p-5 text-center text-xs leading-relaxed text-secondary">
+                    No {column.label.toLowerCase()} tasks.
+                  </div>
+                )}
+              </div>
+            </section>
+          ))}
+        </section>
 
-    {showCreate && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 p-4 backdrop-blur-sm"><form onSubmit={createTask} className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-outline-variant/30 bg-surface shadow-2xl"><header className="flex items-start justify-between gap-4 border-b border-outline-variant/30 p-6"><div><h2 className="text-xl font-extrabold text-on-surface">Create a connected task</h2><p className="mt-1 text-sm text-secondary">Define the outcome, priority, timing, owner, and any prerequisite work.</p></div><button type="button" onClick={() => setShowCreate(false)} className="rounded-lg p-2 text-secondary hover:bg-surface-container"><span className="material-symbols-outlined">close</span></button></header><div className="grid gap-5 p-6 sm:grid-cols-2"><label className="sm:col-span-2"><span className={fieldLabelClass}>Task title</span><input required value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder="e.g. Validate the survey instrument" className={fieldInputClass} /></label><label className="sm:col-span-2"><span className={fieldLabelClass}>Expected outcome</span><textarea required rows="3" value={draft.acceptanceCriteria} onChange={(event) => setDraft({ ...draft, acceptanceCriteria: event.target.value })} placeholder="What evidence proves this task is complete?" className={`${fieldInputClass} resize-y`} /></label><label className="sm:col-span-2"><span className={fieldLabelClass}>Context (optional)</span><textarea rows="2" value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} placeholder="Relevant method, source, or decision context" className={`${fieldInputClass} resize-y`} /></label><label><span className={fieldLabelClass}>Priority</span><select value={draft.priority} onChange={(event) => setDraft({ ...draft, priority: event.target.value })} className={fieldInputClass}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label><label><span className={fieldLabelClass}>Due date</span><input type="date" value={draft.dueDate} onChange={(event) => setDraft({ ...draft, dueDate: event.target.value })} className={fieldInputClass} /></label>{user?.role !== 'student' && members.length > 0 && <label><span className={fieldLabelClass}>Owner</span><select value={draft.assignedTo} onChange={(event) => setDraft({ ...draft, assignedTo: event.target.value })} className={fieldInputClass}><option value="">Unassigned</option>{members.map((member) => <option key={member._id || member.id || member} value={member._id || member.id || member}>{member.name || member.email || 'Student'}</option>)}</select></label>}<label className={user?.role !== 'student' && members.length > 0 ? '' : 'sm:col-span-2'}><span className={fieldLabelClass}>Prerequisite tasks</span><select multiple value={draft.dependencies} onChange={(event) => setDraft({ ...draft, dependencies: Array.from(event.target.selectedOptions, (option) => option.value) })} className={`${fieldInputClass} min-h-28`}>{tasks.filter((task) => !completed(task) && task.status !== 'cancelled').map((task) => <option key={task._id} value={task._id}>{task.title}</option>)}</select><span className="mt-1 block text-[11px] text-secondary">Hold Ctrl/Cmd to choose multiple prerequisites.</span></label></div><footer className="flex justify-end gap-3 border-t border-outline-variant/30 p-5"><button type="button" onClick={() => setShowCreate(false)} className="rounded-xl px-4 py-2.5 text-sm font-bold text-on-surface hover:bg-surface-container">Cancel</button><button disabled={saving} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary disabled:opacity-60">{saving ? 'Creating…' : 'Create task'}</button></footer></form></div>}
-  </main></div>;
+        {showCreate && (
+          <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 p-4 backdrop-blur-sm">
+            <form
+              onSubmit={createTask}
+              className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-outline-variant/30 bg-surface shadow-2xl"
+            >
+              <header className="flex items-start justify-between gap-4 border-b border-outline-variant/30 p-6">
+                <div>
+                  <h2 className="text-xl font-extrabold text-on-surface">
+                    Create a connected task
+                  </h2>
+                  <p className="mt-1 text-sm text-secondary">
+                    Define the outcome, priority, timing, owner, and any
+                    prerequisite work.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCreate(false)}
+                  className="rounded-lg p-2 text-secondary hover:bg-surface-container"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </header>
+              <div className="grid gap-5 p-6 sm:grid-cols-2">
+                <label className="sm:col-span-2">
+                  <span className={fieldLabelClass}>Task title</span>
+                  <input
+                    required
+                    value={draft.title}
+                    onChange={(event) =>
+                      setDraft({ ...draft, title: event.target.value })
+                    }
+                    placeholder="e.g. Validate the survey instrument"
+                    className={fieldInputClass}
+                  />
+                </label>
+                <label className="sm:col-span-2">
+                  <span className={fieldLabelClass}>Expected outcome</span>
+                  <textarea
+                    required
+                    rows="3"
+                    value={draft.acceptanceCriteria}
+                    onChange={(event) =>
+                      setDraft({
+                        ...draft,
+                        acceptanceCriteria: event.target.value,
+                      })
+                    }
+                    placeholder="What evidence proves this task is complete?"
+                    className={`${fieldInputClass} resize-y`}
+                  />
+                </label>
+                <label className="sm:col-span-2">
+                  <span className={fieldLabelClass}>Context (optional)</span>
+                  <textarea
+                    rows="2"
+                    value={draft.description}
+                    onChange={(event) =>
+                      setDraft({ ...draft, description: event.target.value })
+                    }
+                    placeholder="Relevant method, source, or decision context"
+                    className={`${fieldInputClass} resize-y`}
+                  />
+                </label>
+                <label>
+                  <span className={fieldLabelClass}>Priority</span>
+                  <select
+                    value={draft.priority}
+                    onChange={(event) =>
+                      setDraft({ ...draft, priority: event.target.value })
+                    }
+                    className={fieldInputClass}
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </label>
+                <label>
+                  <span className={fieldLabelClass}>Due date</span>
+                  <input
+                    type="date"
+                    value={draft.dueDate}
+                    onChange={(event) =>
+                      setDraft({ ...draft, dueDate: event.target.value })
+                    }
+                    className={fieldInputClass}
+                  />
+                </label>
+                {canCreateTask && members.length > 0 && (
+                  <label>
+                    <span className={fieldLabelClass}>Owner</span>
+                    <select
+                      value={draft.assignedTo}
+                      onChange={(event) =>
+                        setDraft({ ...draft, assignedTo: event.target.value })
+                      }
+                      className={fieldInputClass}
+                    >
+                      <option value="">Unassigned</option>
+                      {members.map((member) => (
+                        <option
+                          key={member._id || member.id || member}
+                          value={member._id || member.id || member}
+                        >
+                          {member.name || member.email || "Student"}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <label
+                  className={
+                    canCreateTask && members.length > 0 ? "" : "sm:col-span-2"
+                  }
+                >
+                  <span className={fieldLabelClass}>Prerequisite tasks</span>
+                  <select
+                    multiple
+                    value={draft.dependencies}
+                    onChange={(event) =>
+                      setDraft({
+                        ...draft,
+                        dependencies: Array.from(
+                          event.target.selectedOptions,
+                          (option) => option.value,
+                        ),
+                      })
+                    }
+                    className={`${fieldInputClass} min-h-28`}
+                  >
+                    {tasks
+                      .filter(
+                        (task) =>
+                          !completed(task) && task.status !== "cancelled",
+                      )
+                      .map((task) => (
+                        <option key={task._id} value={task._id}>
+                          {task.title}
+                        </option>
+                      ))}
+                  </select>
+                  <span className="mt-1 block text-[11px] text-secondary">
+                    Hold Ctrl/Cmd to choose multiple prerequisites.
+                  </span>
+                </label>
+              </div>
+              <footer className="flex justify-end gap-3 border-t border-outline-variant/30 p-5">
+                <button
+                  type="button"
+                  onClick={() => setShowCreate(false)}
+                  className="rounded-xl px-4 py-2.5 text-sm font-bold text-on-surface hover:bg-surface-container"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={saving}
+                  className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary disabled:opacity-60"
+                >
+                  {saving ? "Creating…" : "Create task"}
+                </button>
+              </footer>
+            </form>
+          </div>
+        )}
+      </main>
+    </div>
+  );
 };
 
 export default TasksMilestones;

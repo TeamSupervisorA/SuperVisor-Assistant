@@ -34,6 +34,7 @@ import ProgressLogs from './pages/ProgressLogs';
 import ReviewWorkspace from './pages/ReviewWorkspace';
 import AdminManagement from './pages/AdminManagement';
 import NotFound from './pages/NotFound';
+import LegalPage from './pages/LegalPage';
 
 const ResearchStudio = lazy(() => import('./pages/ResearchStudio'));
 const PaperEditor = lazy(() => import('./pages/PaperEditor'));
@@ -55,6 +56,9 @@ function App() {
           <Route path="/verify-email" element={<Navigate to="/register" replace />} />
           <Route path="/complete-profile" element={<CompleteGoogleProfile />} />
           <Route path="/admin-login" element={<AdminLogin />} />
+          <Route path="/privacy" element={<LegalPage />} />
+          <Route path="/terms" element={<LegalPage />} />
+          <Route path="/data-processing" element={<LegalPage />} />
           
           {/* Protected Dashboard Routes */}
           <Route element={<ProtectedRoute />}>

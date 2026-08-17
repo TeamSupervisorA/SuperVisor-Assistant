@@ -10,58 +10,31 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
   const role = user?.role || 'student';
 
   // Role-based nav items
-  const commonItems = [
-    { name: 'Chat', icon: 'chat', path: '/chat' },
-  ];
-
   const studentItems = [
-    { name: 'Dashboard', icon: 'dashboard', path: '/dashboard' },
-    { name: 'My Projects', icon: 'folder_open', path: '/explore' },
-    { name: 'Tasks & Milestones', icon: 'checklist', path: '/tasks-milestones' },
-    { name: 'Progress Logs', icon: 'timeline', path: '/progress-logs' },
-    { name: 'Submissions', icon: 'upload_file', path: '/student-submissions' },
-    { name: 'Plagiarism Check', icon: 'policy', path: '/plagiarism-checker' },
-    { name: 'Team', icon: 'groups', path: '/team-management' },
-    { name: 'Meetings', icon: 'event', path: '/meeting-management' },
-    { name: 'Resources', icon: 'library_books', path: '/project-resource-library' },
-    { name: 'Paper Editor', icon: 'article', path: '/paper-editor', dividerBefore: true },
-    { name: 'Code IDE', icon: 'terminal', path: '/code-ide' },
-    { name: 'Report', icon: 'summarize', path: '/project-report' },
-    { name: 'Proposals', icon: 'article', path: '/proposals' },
-    { name: 'Reviews', icon: 'rate_review', path: '/reviews' },
-    ...commonItems.map((item) => ({ ...item, dividerBefore: true })),
-    { name: 'Settings', icon: 'settings', path: '/settings', dividerBefore: true },
+    { name: 'Overview', icon: 'dashboard', path: '/dashboard' },
+    { name: 'Projects', icon: 'folder_open', path: '/explore' },
+    { name: 'Work', icon: 'checklist', path: '/tasks-milestones' },
+    { name: 'Deliverables', icon: 'upload_file', path: '/student-submissions' },
+    { name: 'Supervision', icon: 'groups', path: '/team-management' },
+    { name: 'Workspace', icon: 'developer_mode', path: '/research-studio' },
   ];
 
   const supervisorItems = [
-    { name: 'Dashboard', icon: 'dashboard', path: '/supervisor-dashboard' },
-    { name: 'Project Directory', icon: 'folder_open', path: '/explore' },
-    { name: 'New Project', icon: 'add_circle', path: '/create-new-work' },
-    { name: 'Tasks & Milestones', icon: 'checklist', path: '/tasks-milestones' },
-    { name: 'Deliverables', icon: 'upload_file', path: '/student-submissions' },
-    { name: 'Progress Logs', icon: 'timeline', path: '/progress-logs' },
-    { name: 'Evaluations', icon: 'grading', path: '/evaluations' },
-    { name: 'Plagiarism Check', icon: 'policy', path: '/plagiarism-checker' },
-    { name: 'Team', icon: 'groups', path: '/team-management' },
-    { name: 'Meetings', icon: 'event', path: '/meeting-management' },
-    { name: 'Resources', icon: 'library_books', path: '/project-resource-library' },
-    { name: 'Paper Editor', icon: 'article', path: '/paper-editor', dividerBefore: true },
-    { name: 'Code IDE', icon: 'terminal', path: '/code-ide' },
-    { name: 'Report', icon: 'summarize', path: '/project-report' },
-    { name: 'Proposals', icon: 'article', path: '/proposals' },
+    { name: 'Overview', icon: 'dashboard', path: '/supervisor-dashboard' },
+    { name: 'Supervised Projects', icon: 'folder_open', path: '/explore' },
     { name: 'Reviews', icon: 'rate_review', path: '/reviews' },
-    ...commonItems.map((item) => ({ ...item, dividerBefore: true })),
-    { name: 'Settings', icon: 'settings', path: '/settings', dividerBefore: true },
+    { name: 'Students & Workload', icon: 'groups', path: '/team-management' },
+    { name: 'Meetings & Messages', icon: 'forum', path: '/meeting-management' },
+    { name: 'Workspace', icon: 'developer_mode', path: '/research-studio' },
   ];
 
   const adminItems = [
-    { name: 'Dashboard', icon: 'dashboard', path: '/admin-dashboard' },
-    { name: 'Project Directory', icon: 'folder_open', path: '/explore' },
-    { name: 'Course Management', icon: 'school', path: '/course-management' },
-    { name: 'Users & Departments', icon: 'manage_accounts', path: '/admin-management' },
-    { name: 'Plagiarism Check', icon: 'policy', path: '/plagiarism-checker' },
-    ...commonItems.map((item) => ({ ...item, dividerBefore: true })),
-    { name: 'Settings', icon: 'settings', path: '/settings', dividerBefore: true },
+    { name: 'Overview', icon: 'dashboard', path: '/admin-dashboard' },
+    { name: 'People', icon: 'manage_accounts', path: '/admin-management' },
+    { name: 'Courses & Departments', icon: 'school', path: '/course-management' },
+    { name: 'Projects & Supervision', icon: 'folder_open', path: '/explore' },
+    { name: 'Policies & Reporting', icon: 'policy', path: '/plagiarism-checker' },
+    { name: 'Settings', icon: 'settings', path: '/settings' },
   ];
 
   const navItems = role === 'admin' ? adminItems : role === 'supervisor' ? supervisorItems : studentItems;
@@ -99,6 +72,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
           
           <button 
             onClick={closeMobile} 
+            aria-label="Close navigation"
             className="md:hidden flex p-1.5 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors shrink-0"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
@@ -111,6 +85,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
             <Link 
               to="/create-new-work" 
               onClick={closeMobile}
+              aria-label={isCollapsed ? 'Create new work' : undefined}
               className={`flex w-full items-center bg-primary font-label-md text-[13px] font-semibold text-on-primary shadow-sm transition-all hover:bg-surface-tint hover:shadow-md hover:shadow-primary/20 active:scale-95 ${isCollapsed ? 'h-12 justify-center rounded-2xl' : 'h-11 justify-center gap-2 rounded-xl'}`}
             >
               <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>add</span>
@@ -130,6 +105,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
                   to={item.path}
                   onClick={closeMobile}
                   title={isCollapsed ? item.name : ''}
+                  aria-label={isCollapsed ? item.name : undefined}
                   aria-current={isActive ? 'page' : undefined}
                   className={`group flex shrink-0 items-center rounded-xl font-medium transition-all duration-200 active:scale-[0.97] ${isCollapsed ? 'h-10 justify-center px-0' : 'gap-3 px-3 py-2.5'}
                     ${isActive
