@@ -69,8 +69,8 @@ router.post('/', protect, async (req, res) => {
     if (!accessibleProject) {
       return res.status(403).json({ success: false, error: 'Not authorized to post in this project chat' });
     }
-    if (accessibleProject.status !== 'active') {
-      return res.status(409).json({ success: false, error: 'Project chat opens when the approved project becomes active' });
+    if (accessibleProject.status === 'archived') {
+      return res.status(409).json({ success: false, error: 'Cannot post messages in an archived project' });
     }
 
     const references = await validateReferences(req.body.references, project);
