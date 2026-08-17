@@ -17,6 +17,12 @@ const messageSchema = new mongoose.Schema({
     trim: true,
     maxlength: [5000, 'A chat message cannot exceed 5,000 characters']
   },
+  references: [{
+    kind: { type: String, enum: ['resource', 'submission', 'task', 'proposal', 'meeting'], required: true },
+    entityId: { type: mongoose.Schema.ObjectId, required: true },
+    label: { type: String, trim: true, maxlength: 180, default: '' }
+  }],
+  eventType: { type: String, enum: ['message', 'project_event'], default: 'message' },
   readBy: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

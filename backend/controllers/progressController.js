@@ -69,6 +69,7 @@ exports.submitProgressLog = async (req, res) => {
     if (log.author.toString() !== req.user.id) return res.status(403).json({ success: false, error: 'Only the author may submit this progress log' });
     if (log.state !== 'draft') return res.status(409).json({ success: false, error: 'Only draft progress logs can be submitted' });
     log.state = 'submitted';
+    log.reviewState = 'pending';
     log.submittedAt = new Date();
     await log.save();
     if (project?.supervisor && project.supervisor.toString() !== req.user.id) {
@@ -93,6 +94,7 @@ exports.respondToProgressLog = async (req, res) => {
     if (!log) return res.status(404).json({ success: false, error: 'Progress log not found' });
     const project = await Project.findById(log.project);
     if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
+    if (!canAccessProject(project, req.user)) return res.status(403).json({ success: false, error: 'Not authorized to respond to this progress log' });
     const isAssignedSupervisor = req.user.role === 'supervisor' && project.supervisor?.toString() === req.user.id;
     if (req.user.role !== 'admin' && !isAssignedSupervisor) return res.status(403).json({ success: false, error: 'Only the assigned supervisor can respond to this progress log' });
     if (log.state !== 'submitted') return res.status(409).json({ success: false, error: 'Only submitted progress logs can receive a supervisor response' });
@@ -100,11 +102,14 @@ exports.respondToProgressLog = async (req, res) => {
     if (!message) return res.status(422).json({ success: false, error: 'A useful supervisor response is required' });
     if (message.length > 3000) return res.status(422).json({ success: false, error: 'The response must be 3000 characters or fewer' });
 
+    const decision = req.body?.decision || 'acknowledged';
+    if (!['acknowledged', 'approved', 'changes_requested'].includes(decision)) return res.status(422).json({ success: false, error: 'Decision must acknowledge, approve, or request changes' });
     log.supervisorResponse = { message, respondedBy: req.user.id, respondedAt: new Date() };
+    log.reviewState = decision;
     await log.save();
     await Promise.all([
       notify({ user: log.author, title: 'Progress update response', message: `${req.user.name} responded to your weekly progress update.`, type: 'info', link: '/progress-logs' }),
-      recordAudit({ actor: req.user.id, action: 'progress_log.responded', entityType: 'progressLog', entityId: log._id, metadata: { project: project._id } })
+      recordAudit({ actor: req.user.id, action: 'progress_log.responded', entityType: 'progressLog', entityId: log._id, metadata: { project: project._id, decision } })
     ]);
     await log.populate('author', 'name email');
     await log.populate('supervisorResponse.respondedBy', 'name role');

@@ -15,6 +15,8 @@ process.env.CODE_RUNNER_SHARED_SECRET = 'smoke-code-runner-secret-do-not-expose'
 require('./server');
 const User = require('./models/User');
 const ProposalVersion = require('./models/ProposalVersion');
+const Institution = require('./models/Institution');
+const Project = require('./models/Project');
 const jwt = require('jsonwebtoken');
 
 const BASE = 'http://localhost:5099';
@@ -171,6 +173,23 @@ const run = async () => {
   const memberInvitationId = studentAdd.data.data.memberInvitations.find((item) => item.email === emails.bob && item.state === 'pending')._id;
   const add = await api(`/api/projects/${pid}/members/${memberInvitationId}/respond`, { method: 'POST', token: bob.token, body: { decision: 'accept' } });
   check('invited student accepts and joins the canonical project roster', add.status === 200 && add.data.data.students.length === 2);
+
+  const milestone = await api(`/api/projects/${pid}/milestones`, { method: 'POST', token: alice.token, body: { title: 'Evidence complete', phase: 'Research design', dueDate: '2026-11-30' } });
+  check('project leader creates an audited project milestone', milestone.status === 201 && milestone.data.data.title === 'Evidence complete');
+  const taskSuggestion = await api('/api/tasks', { method: 'POST', token: bob.token, body: { title: 'Propose validation interview', project: pid, acceptanceCriteria: 'Interview notes are attached.', milestone: milestone.data.data._id, phase: 'Research design' } });
+  check('ordinary project member proposes work without creating an official assignment', taskSuggestion.status === 201 && taskSuggestion.data.data.kind === 'suggestion' && taskSuggestion.data.data.suggestionState === 'pending' && !taskSuggestion.data.data.assignedTo);
+  const prematureSuggestedStart = await api(`/api/tasks/${taskSuggestion.data.data._id}/transition`, { method: 'POST', token: bob.token, body: { status: 'in_progress' } });
+  check('pending task suggestions cannot start work', prematureSuggestedStart.status === 409);
+  const acceptedSuggestion = await api(`/api/tasks/${taskSuggestion.data.data._id}/suggestion-decision`, { method: 'POST', token: alice.token, body: { decision: 'accept', assignedTo: bob.user.id } });
+  check('project leader accepts and assigns a suggested task', acceptedSuggestion.status === 200 && acceptedSuggestion.data.data.kind === 'official' && acceptedSuggestion.data.data.assignedTo === bob.user.id);
+  const taskComment = await api(`/api/tasks/${taskSuggestion.data.data._id}/comments`, { method: 'POST', token: bob.token, body: { body: 'I will attach the interview guide before starting.' } });
+  const taskInstruction = await api(`/api/tasks/${taskSuggestion.data.data._id}/comments`, { method: 'POST', token: sup.token, body: { body: 'Use the approved consent language.', kind: 'supervisor_instruction' } });
+  check('task comments and supervisor instructions do not alter lifecycle status', taskComment.status === 201 && taskInstruction.status === 201 && taskInstruction.data.data.status === 'todo' && taskInstruction.data.data.comments.length === 2);
+  const staleTaskUpdate = await api(`/api/tasks/${taskSuggestion.data.data._id}`, { method: 'PUT', token: alice.token, body: { title: 'Stale write', revisionNumber: 0 } });
+  check('task optimistic version rejects stale writes with a machine-readable conflict', staleTaskUpdate.status === 409 && staleTaskUpdate.data.code === 'STALE_TASK_VERSION');
+  const datedPrerequisite = await api('/api/tasks', { method: 'POST', token: alice.token, body: { title: 'Late prerequisite', project: pid, acceptanceCriteria: 'Prerequisite evidence.', dueDate: '2026-12-01' } });
+  const invalidDependentDate = await api('/api/tasks', { method: 'POST', token: alice.token, body: { title: 'Impossible dependent deadline', project: pid, acceptanceCriteria: 'Must follow its prerequisite.', dueDate: '2026-11-01', dependencies: [datedPrerequisite.data.data._id] } });
+  check('dependent task deadline cannot precede its prerequisite', invalidDependentDate.status === 422);
 
   const inactiveAdd = await api(`/api/projects/${pid}/members`, { method: 'POST', token: alice.token, body: { email: emails.inactive } });
   check('inactive students cannot be added to an active project team', inactiveAdd.status === 400 && /active student/i.test(inactiveAdd.data.error));
@@ -410,6 +429,16 @@ const run = async () => {
 
   const protectedDeletion = await api(`/api/projects/${pid}`, { method: 'DELETE', token: sup.token });
   check('project with academic records cannot be deleted and orphan data', protectedDeletion.status === 409);
+
+  // ---- institution boundary regression
+  const foreignInstitution = await Institution.create({ name: 'Boundary Test University', slug: `boundary-${runId}`, createdBy: adminUser._id });
+  const foreignStudent = await User.create({ name: 'Foreign Student', email: `foreign-${runId}@test.com`, password: 'pass1234', role: 'student', institution: foreignInstitution._id, emailVerified: true, onboardingStatus: 'complete' });
+  const foreignProject = await Project.create({ title: 'Foreign institution project', institution: foreignInstitution._id, students: [foreignStudent._id], leaderUserId: foreignStudent._id, status: 'active' });
+  const crossTenantProject = await api(`/api/projects/${foreignProject._id}`, { token: admin.token });
+  const tenantProjectList = await api('/api/projects', { token: admin.token });
+  const tenantUserList = await api('/api/admin/users', { token: admin.token });
+  check('institution administrators cannot read another institution project', crossTenantProject.status === 403);
+  check('institution project and account directories exclude other tenants', tenantProjectList.status === 200 && !tenantProjectList.data.data.some((item) => item._id === String(foreignProject._id)) && tenantUserList.status === 200 && !tenantUserList.data.data.some((item) => item._id === String(foreignStudent._id)));
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);

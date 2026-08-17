@@ -11,11 +11,18 @@ const evaluationSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  scores: {
-    problemUnderstanding: { type: Number, min: 0, max: 10 },
-    methodology: { type: Number, min: 0, max: 20 },
-    implementation: { type: Number, min: 0, max: 30 },
-    documentation: { type: Number, min: 0, max: 40 }
+  submission: { type: mongoose.Schema.ObjectId, ref: 'Submission', default: null },
+  scores: { type: mongoose.Schema.Types.Mixed, required: true },
+  rubricVersion: { type: Number, default: 1 },
+  rubricSnapshot: {
+    type: [{
+      _id: false,
+      key: String,
+      label: String,
+      maxScore: Number,
+      description: String
+    }],
+    default: []
   },
   feedback: {
     type: String
@@ -24,10 +31,6 @@ const evaluationSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('Evaluation', evaluationSchema);

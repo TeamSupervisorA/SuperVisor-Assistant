@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
@@ -25,12 +25,25 @@ const CompleteGoogleProfile = () => {
   const onboarding = useMemo(readOnboarding, []);
   const [form, setForm] = useState({
     name: onboarding?.name || '',
+    institutionSlug: '',
+    departmentId: '',
     studentId: '',
     department: '',
     batch: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [institutions, setInstitutions] = useState([]);
+  const selectedInstitution = institutions.find((item) => item.slug === form.institutionSlug) || (institutions.length === 1 ? institutions[0] : null);
+  const registrationUnavailable = Boolean(selectedInstitution && !selectedInstitution.departments?.length);
+
+  useEffect(() => {
+    apiFetch('/api/auth/registration-options').then((response) => {
+      const options = response.data || [];
+      setInstitutions(options);
+      if (options.length === 1) setForm((current) => ({ ...current, institutionSlug: options[0].slug }));
+    }).catch(() => setInstitutions([]));
+  }, []);
 
   const update = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
 
@@ -48,6 +61,8 @@ const CompleteGoogleProfile = () => {
         body: JSON.stringify({
           registrationToken: onboarding.token,
           name: form.name.trim(),
+          institutionSlug: form.institutionSlug || undefined,
+          departmentId: form.departmentId || undefined,
           studentId: form.studentId.trim() || undefined,
           department: form.department.trim() || undefined,
           batch: form.batch.trim() || undefined
@@ -80,6 +95,15 @@ const CompleteGoogleProfile = () => {
         {error && <p role="alert" className="mt-5 rounded-2xl border border-error/20 bg-error/10 p-3 text-sm leading-relaxed text-error">{error}</p>}
 
         <form className="mt-6 grid gap-5 sm:grid-cols-2" onSubmit={submit}>
+          {institutions.length > 0 && (
+            <label className="block text-sm font-bold text-on-surface sm:col-span-2">
+              Institution
+              <select required name="institutionSlug" value={form.institutionSlug} onChange={update} className="mt-2 w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest px-3 py-3 font-normal outline-none transition focus:border-primary">
+                <option value="">Choose your institution</option>
+                {institutions.map((institution) => <option key={institution._id} value={institution.slug}>{institution.name}</option>)}
+              </select>
+            </label>
+          )}
           <label className="block text-sm font-bold text-on-surface sm:col-span-2">
             Full name
             <input required name="name" autoComplete="name" value={form.name} onChange={update} className="mt-2 w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest px-3 py-3 font-normal outline-none transition focus:border-primary" placeholder="Your name" />
@@ -89,14 +113,23 @@ const CompleteGoogleProfile = () => {
             <input name="studentId" value={form.studentId} onChange={update} className="mt-2 w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest px-3 py-3 font-normal outline-none transition focus:border-primary" placeholder="e.g. 19-39123-1" />
           </label>
           <label className="block text-sm font-bold text-on-surface">
-            Department <span className="font-normal text-secondary">(optional)</span>
-            <input name="department" value={form.department} onChange={update} className="mt-2 w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest px-3 py-3 font-normal outline-none transition focus:border-primary" placeholder="e.g. Computer Science" />
+            Department {institutions.length === 0 && <span className="font-normal text-secondary">(optional)</span>}
+            {selectedInstitution?.departments?.length ? (
+              <select required name="departmentId" value={form.departmentId} onChange={update} className="mt-2 w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest px-3 py-3 font-normal outline-none transition focus:border-primary">
+                <option value="">Choose department</option>
+                {selectedInstitution.departments.map((department) => <option key={department._id} value={department._id}>{department.name} ({department.code})</option>)}
+              </select>
+            ) : selectedInstitution ? (
+              <span role="status" className="mt-2 block rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-3 font-normal">Registration opens after the institution adds its departments.</span>
+            ) : (
+              <input name="department" value={form.department} onChange={update} className="mt-2 w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest px-3 py-3 font-normal outline-none transition focus:border-primary" placeholder="e.g. Computer Science" />
+            )}
           </label>
           <label className="block text-sm font-bold text-on-surface sm:col-span-2">
             Batch / academic year <span className="font-normal text-secondary">(optional)</span>
             <input name="batch" value={form.batch} onChange={update} className="mt-2 w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest px-3 py-3 font-normal outline-none transition focus:border-primary" placeholder="e.g. Spring 2026" />
           </label>
-          <button disabled={loading || !onboarding?.token} className="sm:col-span-2 mt-2 w-full rounded-xl bg-primary px-4 py-3 font-bold text-on-primary transition hover:bg-primary-fixed-variant disabled:cursor-not-allowed disabled:opacity-60">
+          <button disabled={loading || !onboarding?.token || registrationUnavailable} className="sm:col-span-2 mt-2 w-full rounded-xl bg-primary px-4 py-3 font-bold text-on-primary transition hover:bg-primary-fixed-variant disabled:cursor-not-allowed disabled:opacity-60">
             {loading ? 'Creating your workspace…' : 'Finish account setup'}
           </button>
         </form>

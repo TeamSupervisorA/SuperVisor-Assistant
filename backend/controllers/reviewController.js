@@ -23,7 +23,7 @@ exports.createReview = async (req, res) => {
     const proposal = await ProposalVersion.findById(req.body.proposalVersion);
     if (!proposal) return res.status(404).json({ success: false, error: 'Proposal version not found' });
     const project = await Project.findById(proposal.project);
-    if (req.user.role !== 'admin' && project.supervisor?.toString() !== req.user.id) return res.status(403).json({ success: false, error: 'Only the assigned supervisor may create a review' });
+    if (!canAccessProject(project, req.user) || (req.user.role !== 'admin' && project.supervisor?.toString() !== req.user.id)) return res.status(403).json({ success: false, error: 'Only the assigned supervisor may create a review' });
     if (!['submitted', 'resubmitted', 'under_review'].includes(proposal.state)) {
       return res.status(409).json({ success: false, error: 'Only a submitted proposal version can be reviewed' });
     }
@@ -54,16 +54,18 @@ exports.submitReview = async (req, res) => {
   try {
     const review = await Review.findById(req.params.id);
     if (!review) return res.status(404).json({ success: false, error: 'Review not found' });
+    const project = await Project.findById(review.project);
+    if (!canAccessProject(project, req.user)) return res.status(403).json({ success: false, error: 'Not authorized to submit this review' });
     if (review.reviewer.toString() !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ success: false, error: 'Not authorized to submit this review' });
     if (review.state !== 'draft') return res.status(409).json({ success: false, error: 'Only draft reviews can be submitted' });
     review.state = 'submitted';
     await review.save();
-    const project = await Project.findById(review.project).select('title students');
-    if (project) {
-      await Promise.all(project.students.map((student) => notify({
+    const projectRecord = await Project.findById(review.project).select('title students');
+    if (projectRecord) {
+      await Promise.all(projectRecord.students.map((student) => notify({
         user: student,
         title: 'Supervisor review is ready',
-        message: `A supervisor review for "${project.title}" is ready for you to read.`,
+        message: `A supervisor review for "${projectRecord.title}" is ready for you to read.`,
         type: 'info',
         link: '/reviews'
       })));

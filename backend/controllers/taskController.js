@@ -10,12 +10,13 @@ const completedStatuses = new Set(['done', 'completed']);
 const notify = async (fields) => {
   try { await Notification.create(fields); } catch { /* review records remain authoritative if notification storage is unavailable */ }
 };
-const lifecycleStatuses = new Set(['todo', 'in_progress', 'blocked', 'review', 'done', 'cancelled']);
+const lifecycleStatuses = new Set(['todo', 'in_progress', 'blocked', 'review', 'revision', 'done', 'cancelled']);
 const transitions = {
   todo: new Set(['in_progress', 'blocked', 'cancelled']),
   in_progress: new Set(['todo', 'blocked', 'review', 'cancelled']),
   blocked: new Set(['todo', 'in_progress', 'cancelled']),
   review: new Set(['in_progress', 'blocked', 'done']),
+  revision: new Set(['in_progress', 'blocked', 'cancelled']),
   done: new Set(['in_progress']),
   cancelled: new Set(['todo'])
 };
@@ -60,6 +61,46 @@ const hasDependencyCycle = async (taskId, dependencies) => {
   return false;
 };
 
+const validateMilestone = (project, milestone) => {
+  if (!milestone) return null;
+  const item = project.milestones?.id(milestone);
+  if (!item || item.status === 'cancelled') {
+    const error = new Error('Choose an active milestone from this project');
+    error.statusCode = 422;
+    throw error;
+  }
+  return item._id;
+};
+
+const validateDependencyDates = async ({ projectId, dependencies = [], dueDate, taskId = null }) => {
+  if (dueDate && dependencies.length) {
+    const invalid = await Task.findOne({ _id: { $in: dependencies }, project: projectId, dueDate: { $gt: new Date(dueDate) } }).select('title');
+    if (invalid) {
+      const error = new Error(`The deadline cannot precede prerequisite “${invalid.title}”`);
+      error.statusCode = 422;
+      throw error;
+    }
+  }
+  if (taskId && dueDate) {
+    const invalidDependent = await Task.findOne({ project: projectId, dependencies: taskId, dueDate: { $lt: new Date(dueDate) } }).select('title');
+    if (invalidDependent) {
+      const error = new Error(`This deadline would fall after dependent task “${invalidDependent.title}”`);
+      error.statusCode = 422;
+      throw error;
+    }
+  }
+};
+
+const assertRevision = (task, requested) => {
+  if (requested === undefined) return;
+  if (Number(requested) !== task.revisionNumber) {
+    const error = new Error('This task changed since you opened it. Refresh and try again.');
+    error.statusCode = 409;
+    error.code = 'STALE_TASK_VERSION';
+    throw error;
+  }
+};
+
 // @desc    Get tasks (optionally filtered by project)
 // @route   GET /api/tasks?project=<projectId>
 // @access  Private
@@ -76,18 +117,24 @@ exports.getTasks = async (req, res) => {
       query.project = req.query.project;
     }
 
+    if (req.query.scope === 'assigned') query.assignedTo = req.user.id;
+    if (req.query.scope === 'created') query.createdBy = req.user.id;
+
     // A project workspace is shared: members need to see each other's tasks
     // and prerequisite work in order to understand the timeline. The update
     // and transition endpoints still restrict a student to their own task.
     if (req.user.role === 'student' && !req.query.project) {
       query.assignedTo = req.user.id;
-    } else if (req.user.role === 'supervisor') {
+    } else if (['supervisor', 'admin'].includes(req.user.role)) {
       query.project = query.project || { $in: await projectIdsForUser(req.user) };
     }
 
     const tasks = await Task.find(query)
       .populate('project', 'title')
-      .populate('assignedTo', 'name email');
+      .populate('assignedTo', 'name email')
+      .populate('createdBy', 'name role')
+      .populate('comments.author', 'name role')
+      .sort({ dueDate: 1, createdAt: -1 });
 
     res.status(200).json({ success: true, count: tasks.length, data: tasks });
   } catch (error) {
@@ -106,9 +153,8 @@ exports.createTask = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
-    if (!projectCapabilities(project, req.user).canAssignTasks) {
-      return res.status(403).json({ success: false, error: 'Only the project leader, assigned supervisor, or administrator can add tasks to an active project' });
-    }
+    if (!canAccessProject(project, req.user) || project.status !== 'active') return res.status(403).json({ success: false, error: 'Only active project members can add or propose tasks' });
+    const canCreateOfficial = projectCapabilities(project, req.user).canAssignTasks;
 
     // Tasks created by students default to being assigned to themselves,
     // otherwise the student list view (filtered by assignedTo) would never show them
@@ -119,14 +165,19 @@ exports.createTask = async (req, res) => {
     if (await hasDependencyCycle(null, req.body.dependencies)) {
       return res.status(422).json({ success: false, error: 'Task dependencies cannot contain a cycle' });
     }
+    await validateDependencyDates({ projectId: project._id, dependencies: req.body.dependencies || [], dueDate: req.body.dueDate });
     // New tasks always begin as planned. Lifecycle state, blockers, and
     // completion evidence are server-owned and move through /transition so a
     // client cannot create a pre-completed task and inflate project progress.
-    const allowed = ['title', 'description', 'project', 'assignedTo', 'priority', 'dueDate', 'dependencies', 'acceptanceCriteria'];
+    const allowed = ['title', 'description', 'project', 'assignedTo', 'priority', 'dueDate', 'dependencies', 'acceptanceCriteria', 'milestone', 'phase', 'requiredDeliverable'];
     const input = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowed.includes(key)));
-    if (req.user.role === 'student' && input.assignedTo === undefined) input.assignedTo = req.user.id;
+    input.milestone = validateMilestone(project, input.milestone);
+    if (!canCreateOfficial) input.assignedTo = null;
+    else if (req.user.role === 'student' && input.assignedTo === undefined) input.assignedTo = req.user.id;
     if (input.assignedTo !== undefined) input.assignedTo = await validateAssignee(project, input.assignedTo);
-    const task = await Task.create({ ...input, status: 'todo', history: [{ actor: req.user.id, action: 'created', toStatus: 'todo' }] });
+    const kind = canCreateOfficial ? 'official' : 'suggestion';
+    const task = await Task.create({ ...input, createdBy: req.user.id, kind, suggestionState: canCreateOfficial ? 'accepted' : 'pending', status: 'todo', history: [{ actor: req.user.id, action: kind === 'official' ? 'created' : 'suggested', toStatus: 'todo' }] });
+    await recordAudit({ actor: req.user.id, action: kind === 'official' ? 'task.created' : 'task.suggested', entityType: 'task', entityId: task._id, metadata: { project: project._id, milestone: task.milestone } });
 
     res.status(201).json({ success: true, data: task });
   } catch (error) {
@@ -152,34 +203,39 @@ exports.updateTask = async (req, res) => {
     if (req.body.status !== undefined || req.body.blockedReason !== undefined) {
       return res.status(422).json({ success: false, error: 'Use the task transition endpoint to change task status or blockers' });
     }
-    if (req.user.role === 'student' && !projectCapabilities(task.project, req.user).canAssignTasks) {
-      return res.status(403).json({ success: false, error: 'Only the project leader can edit and allocate official tasks' });
+    assertRevision(task, req.body?.revisionNumber);
+    if (req.user.role === 'student' && !projectCapabilities(task.project, req.user).canAssignTasks && !(task.kind === 'suggestion' && task.suggestionState === 'pending' && task.createdBy?.toString() === req.user.id)) {
+      return res.status(403).json({ success: false, error: 'Only the project leader can edit and allocate official tasks; students may edit their own pending suggestions' });
     }
 
-    const editableFields = ['title', 'description', 'priority', 'dueDate', 'dependencies', 'acceptanceCriteria', 'assignedTo', 'evidence'];
+    const editableFields = ['title', 'description', 'priority', 'dueDate', 'dependencies', 'acceptanceCriteria', 'assignedTo', 'evidence', 'milestone', 'phase', 'requiredDeliverable'];
     const updates = Object.fromEntries(Object.entries(req.body).filter(([key]) => editableFields.includes(key)));
     if (!Object.keys(updates).length) return res.status(422).json({ success: false, error: 'No editable task fields were provided' });
     if (Object.hasOwn(updates, 'assignedTo')) updates.assignedTo = await validateAssignee(task.project, updates.assignedTo);
+    if (Object.hasOwn(updates, 'milestone')) updates.milestone = validateMilestone(task.project, updates.milestone);
     if (updates.dependencies) {
       const dependencyCount = await Task.countDocuments({ _id: { $in: updates.dependencies }, project: task.project._id });
       if (dependencyCount !== updates.dependencies.length) return res.status(422).json({ success: false, error: 'Dependencies must be tasks in the same project' });
       if (await hasDependencyCycle(task._id, updates.dependencies)) return res.status(422).json({ success: false, error: 'Task dependencies cannot contain a cycle' });
     }
+    await validateDependencyDates({ projectId: task.project._id, dependencies: updates.dependencies || task.dependencies, dueDate: updates.dueDate || task.dueDate, taskId: task._id });
     updates.history = [...task.history, {
       actor: req.user.id,
       action: 'updated',
       fromStatus: task.status,
       toStatus: task.status
     }];
+    updates.revisionNumber = task.revisionNumber + 1;
 
     task = await Task.findByIdAndUpdate(req.params.id, updates, {
       returnDocument: 'after',
       runValidators: true
     });
 
+    await recordAudit({ actor: req.user.id, action: 'task.updated', entityType: 'task', entityId: task._id, metadata: { fields: Object.keys(updates).filter((field) => !['history', 'revisionNumber'].includes(field)) } });
     res.status(200).json({ success: true, data: task });
   } catch (error) {
-    res.status(error.statusCode || 400).json({ success: false, error: error.message });
+    res.status(error.statusCode || 400).json({ success: false, error: error.message, ...(error.code ? { code: error.code } : {}) });
   }
 };
 
@@ -194,7 +250,14 @@ exports.transitionTask = async (req, res) => {
     const task = await Task.findById(req.params.id).populate('project');
     if (!task) return res.status(404).json({ success: false, error: 'Task not found' });
     if (!canAccessProject(task.project, req.user)) return res.status(403).json({ success: false, error: 'Not authorized to transition this task' });
+    assertRevision(task, req.body?.revisionNumber);
+    if (task.kind === 'suggestion' && task.suggestionState !== 'accepted') return res.status(409).json({ success: false, error: 'A suggested task must be accepted before work can start' });
     if (req.user.role === 'student' && task.assignedTo?.toString() !== req.user.id) return res.status(403).json({ success: false, error: 'Only the assignee may transition this task' });
+    if (targetStatus === 'cancelled' && req.user.role === 'student') {
+      const capabilities = projectCapabilities(task.project, req.user);
+      const leaderCanCancel = capabilities.isLeader && ['todo', 'blocked'].includes(normalizedStatus(task.status)) && (!task.createdBy || task.createdBy.toString() === req.user.id);
+      if (!leaderCanCancel) return res.status(403).json({ success: false, error: 'Only the assigned supervisor or administrator can cancel this task' });
+    }
     const fromStatus = normalizedStatus(task.status);
     if (fromStatus !== targetStatus && !transitions[fromStatus]?.has(targetStatus)) return res.status(422).json({ success: false, error: `A ${fromStatus.replace('_', ' ')} task cannot move directly to ${targetStatus.replace('_', ' ')}` });
     if (targetStatus === 'blocked' && !blockedReason) return res.status(422).json({ success: false, error: 'Blocked tasks require a blockedReason' });
@@ -209,7 +272,9 @@ exports.transitionTask = async (req, res) => {
     if (!completedStatuses.has(targetStatus)) task.completedAt = undefined;
     if (evidence.length) task.evidence = evidence;
     task.history.push({ actor: req.user.id, action: 'transitioned', fromStatus, toStatus: targetStatus, note: note.trim() });
+    task.revisionNumber += 1;
     await task.save();
+    await recordAudit({ actor: req.user.id, action: 'task.status_changed', entityType: 'task', entityId: task._id, metadata: { fromStatus, toStatus: targetStatus, note: note.trim() } });
     res.json({ success: true, data: task });
   } catch (error) {
     res.status(error.statusCode || 400).json({ success: false, error: error.message });
@@ -222,11 +287,14 @@ exports.requestTaskReview = async (req, res) => {
     const task = await Task.findById(req.params.id).populate('project');
     if (!task) return res.status(404).json({ success: false, error: 'Task not found' });
     if (!canAccessProject(task.project, req.user)) return res.status(403).json({ success: false, error: 'Not authorized to request review for this task' });
-    if (req.user.role !== 'student' || task.assignedTo?.toString() !== req.user.id) return res.status(403).json({ success: false, error: 'Only the assigned student can request review' });
+    const supervisorSubmitting = req.user.role === 'admin' || (req.user.role === 'supervisor' && task.project.supervisor?.toString() === req.user.id);
+    if (!supervisorSubmitting && (req.user.role !== 'student' || task.assignedTo?.toString() !== req.user.id)) return res.status(403).json({ success: false, error: 'Only the assigned student or project supervisor can request review' });
     if (!task.project.supervisor) return res.status(409).json({ success: false, error: 'Assign an active supervisor before requesting task review' });
     if (normalizedStatus(task.status) !== 'in_progress') return res.status(422).json({ success: false, error: 'Only work in progress can be submitted for review' });
     if (await hasOpenDependencies(task.dependencies)) return res.status(422).json({ success: false, error: 'Complete all prerequisite tasks before requesting review' });
-    const submission = await Submission.findOne({ _id: req.body?.submissionId, task: task._id, project: task.project._id, student: req.user.id });
+    const submissionQuery = { _id: req.body?.submissionId, task: task._id, project: task.project._id };
+    if (!supervisorSubmitting) submissionQuery.student = req.user.id;
+    const submission = await Submission.findOne(submissionQuery);
     if (!submission) return res.status(422).json({ success: false, error: 'Choose a submission linked to this task' });
     if (submission.status === 'Graded') return res.status(409).json({ success: false, error: 'This submission has already been graded' });
 
@@ -237,6 +305,7 @@ exports.requestTaskReview = async (req, res) => {
     task.reviewedAt = undefined;
     task.reviewedBy = undefined;
     task.history.push({ actor: req.user.id, action: 'review_requested', fromStatus: previousStatus, toStatus: 'review', submission: submission._id, note: String(req.body?.note || '').trim() });
+    task.revisionNumber += 1;
     submission.status = 'Under Review';
     await submission.save();
     try {
@@ -274,6 +343,7 @@ exports.withdrawTaskReview = async (req, res) => {
     task.reviewSubmission = null;
     task.reviewRequestedAt = undefined;
     task.history.push({ actor: req.user.id, action: 'review_withdrawn', fromStatus: 'review', toStatus: 'in_progress', submission: submissionId, note });
+    task.revisionNumber += 1;
     submission.status = 'Submitted';
     await submission.save();
     try {
@@ -306,11 +376,12 @@ exports.decideTaskReview = async (req, res) => {
     const feedback = String(req.body?.feedback || '').trim();
     if (decision === 'revision' && !feedback) return res.status(422).json({ success: false, error: 'Revision requests require actionable feedback' });
 
-    task.status = decision === 'approve' ? 'done' : 'in_progress';
+    task.status = decision === 'approve' ? 'done' : 'revision';
     task.completedAt = decision === 'approve' ? new Date() : undefined;
     task.reviewedAt = new Date();
     task.reviewedBy = req.user.id;
     task.history.push({ actor: req.user.id, action: decision === 'approve' ? 'review_approved' : 'revision_requested', fromStatus: 'review', toStatus: task.status, submission: submission._id, note: feedback });
+    task.revisionNumber += 1;
     submission.status = decision === 'approve' ? 'Graded' : 'Needs Revision';
     submission.feedback = feedback;
     if (req.body?.grade !== undefined && decision === 'approve') submission.grade = String(req.body.grade);
@@ -339,6 +410,49 @@ exports.decideTaskReview = async (req, res) => {
   }
 };
 
+exports.decideTaskSuggestion = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id).populate('project');
+    if (!task) return res.status(404).json({ success: false, error: 'Task not found' });
+    const capabilities = projectCapabilities(task.project, req.user);
+    if (!(capabilities.isAdmin || capabilities.isSupervisor || capabilities.isLeader)) return res.status(403).json({ success: false, error: 'Only the project leader, assigned supervisor, or administrator can decide task suggestions' });
+    if (task.kind !== 'suggestion' || task.suggestionState !== 'pending') return res.status(409).json({ success: false, error: 'This task suggestion has already been decided' });
+    const decision = req.body?.decision;
+    if (!['accept', 'reject'].includes(decision)) return res.status(422).json({ success: false, error: 'Decision must be accept or reject' });
+    if (decision === 'accept') {
+      task.kind = 'official';
+      task.suggestionState = 'accepted';
+      task.assignedTo = await validateAssignee(task.project, req.body?.assignedTo || task.createdBy);
+    } else {
+      task.suggestionState = 'rejected';
+      task.status = 'cancelled';
+    }
+    task.history.push({ actor: req.user.id, action: `suggestion_${decision}ed`, fromStatus: 'todo', toStatus: task.status, note: String(req.body?.note || '').trim() });
+    task.revisionNumber += 1;
+    await task.save();
+    await recordAudit({ actor: req.user.id, action: `task.suggestion_${decision}ed`, entityType: 'task', entityId: task._id, metadata: { assignedTo: task.assignedTo || null } });
+    res.json({ success: true, data: task });
+  } catch (error) { res.status(error.statusCode || 400).json({ success: false, error: error.message }); }
+};
+
+exports.addTaskComment = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id).populate('project');
+    if (!task) return res.status(404).json({ success: false, error: 'Task not found' });
+    if (!canAccessProject(task.project, req.user)) return res.status(403).json({ success: false, error: 'Not authorized to comment on this task' });
+    const body = String(req.body?.body || '').trim();
+    if (!body) return res.status(422).json({ success: false, error: 'Comment text is required' });
+    const requestedKind = req.body?.kind === 'supervisor_instruction' ? 'supervisor_instruction' : 'comment';
+    if (requestedKind === 'supervisor_instruction' && req.user.role !== 'admin' && task.project.supervisor?.toString() !== req.user.id) return res.status(403).json({ success: false, error: 'Only the assigned supervisor can add supervisor instructions' });
+    task.comments.push({ author: req.user.id, body, kind: requestedKind });
+    task.revisionNumber += 1;
+    await task.save();
+    await recordAudit({ actor: req.user.id, action: requestedKind === 'supervisor_instruction' ? 'task.instruction_added' : 'task.comment_added', entityType: 'task', entityId: task._id });
+    await task.populate('comments.author', 'name role');
+    res.status(201).json({ success: true, data: task });
+  } catch (error) { res.status(error.statusCode || 400).json({ success: false, error: error.message }); }
+};
+
 // @desc    Delete task
 // @route   DELETE /api/tasks/:id
 // @access  Private (supervisor/admin)
@@ -353,8 +467,17 @@ exports.deleteTask = async (req, res) => {
     if (!canAccessProject(task.project, req.user)) {
       return res.status(403).json({ success: false, error: 'Not authorized to delete this task' });
     }
+    const capabilities = projectCapabilities(task.project, req.user);
+    const leaderCanDelete = capabilities.isLeader && normalizedStatus(task.status) === 'todo' && (!task.createdBy || task.createdBy.toString() === req.user.id);
+    if (!(capabilities.isAdmin || capabilities.isSupervisor || leaderCanDelete)) return res.status(403).json({ success: false, error: 'Only a supervisor, administrator, or the leader who created an untouched planned task can delete it' });
 
+    const [submissionCount, dependentCount] = await Promise.all([
+      Submission.countDocuments({ task: task._id }),
+      Task.countDocuments({ dependencies: task._id })
+    ]);
+    if (submissionCount || dependentCount || task.history.length > 1) return res.status(409).json({ success: false, error: 'This task has project history and cannot be deleted. Cancel it to preserve the audit trail.' });
     await task.deleteOne();
+    await recordAudit({ actor: req.user.id, action: 'task.deleted', entityType: 'task', entityId: task._id, metadata: { project: task.project._id } });
 
     res.status(200).json({ success: true, data: {} });
   } catch (error) {

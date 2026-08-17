@@ -61,6 +61,21 @@ For access from other devices and Google accounts, open **Google Auth Platform â
 
 The authenticated dashboards enforce role checks on both the client and server. A student cannot access supervisory review or administrative routes simply by changing a URL.
 
+### Canonical supervision workflow
+
+The application treats one project as one project team. The server enforces this sequence rather than relying on hidden UI buttons:
+
+1. The first administrator creates the institution and its controlled department list.
+2. Students register inside that institution; supervisors are provisioned by an administrator.
+3. A student creates a project and becomes its initial leader.
+4. The leader invites other students. Invitees receive no project access until they accept.
+5. The leader invites a supervisor, or an administrator assigns one by department/section. An invited supervisor receives no project access until accepting responsibility.
+6. The proposal is versioned, reviewed, and approved before active work opens.
+7. Official tasks are allocated to project members and connected to milestones and required deliverables. Members may propose tasks, but a leader or supervisor must accept and assign them.
+8. Students submit task-linked evidence; only the assigned supervisor accepts an outcome or returns it for revision.
+
+Only one active primary supervisor is stored on a project. Reassignment closes the previous supervision-history entry instead of deleting it. Membership responses, supervisor assignment, task transitions, submissions, reviews, settings mutations, and other authenticated changes write audit events. Administrators, supervisors, and students can access project data only inside both their institution boundary and their accepted project relationship.
+
 ### Bootstrap the first administrator
 
 Run this once from the `backend` folder on a trusted machine that has the correct `MONGODB_URI` in its local `.env`. It creates a new administrator only when the email is unused; it never changes an existing account and is not exposed over HTTP.
@@ -73,6 +88,8 @@ Remove-Item Env:ADMIN_INITIAL_PASSWORD
 ```
 
 Then visit `/admin-login`. From **Manage users**, promote a verified student to supervisor or restore/deactivate accounts. Do not turn on public supervisor registration merely to create institutional staff accounts.
+
+On the first login, open **Admin dashboard â†’ Academic operations** and create the institution before adding departments or courses. Existing legacy accounts and projects without an institution are attached during this one-time bootstrap. Department names used by registration and course setup then come from this controlled list rather than unrestricted free text. Course rubrics are configured from **Course Management** and are snapshotted into each evaluation so historic grades retain the rubric version that produced them.
 
 ## Gemini academic-assistance workflows
 

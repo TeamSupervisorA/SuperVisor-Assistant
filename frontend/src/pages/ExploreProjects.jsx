@@ -146,7 +146,7 @@ const ExploreProjects = () => {
         <motion.header variants={itemVariants} className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div>
             <span className="inline-block rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[12px] font-bold uppercase tracking-wide text-primary">Project directory</span>
-            <h1 className="mt-3 font-display text-[32px] font-black leading-none tracking-tight text-on-surface md:text-[42px]">{isStudent ? 'My projects' : isSupervisor ? 'Project discovery' : 'Project directory'}</h1>
+            <h1 className="mt-3 font-display text-[32px] font-black leading-none tracking-tight text-on-surface md:text-[42px]">{isStudent ? 'My projects' : isSupervisor ? 'Supervised projects' : 'All projects'}</h1>
             <p className="mt-2 max-w-2xl text-[16px] font-medium text-on-surface-variant">{searchQuery ? <>Search results for <span className="font-bold text-primary">“{searchQuery}”</span></> : pageIntro}</p>
           </div>
           <form onSubmit={submitSearch} className="relative w-full md:w-80">

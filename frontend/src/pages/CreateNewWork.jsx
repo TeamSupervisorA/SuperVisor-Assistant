@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
@@ -21,8 +21,15 @@ const CreateNewWork = () => {
     problemStatement: '',
     objectives: '',
     techStack: '',
-    expectedOutcome: ''
+    expectedOutcome: '',
+    academicYear: String(new Date().getFullYear()),
+    section: '',
+    expectedStartDate: '',
+    expectedEndDate: '',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Dhaka',
+    course: ''
   });
+  const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
@@ -32,6 +39,10 @@ const CreateNewWork = () => {
   
   const navigate = useNavigate();
   const { setActiveProject, getDashboardPath, user } = useAuth();
+
+  useEffect(() => {
+    apiFetch('/api/courses').then((response) => setCourses(response.data || [])).catch(() => setCourses([]));
+  }, []);
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -45,14 +56,21 @@ const CreateNewWork = () => {
     setLoading(true);
     try {
       const payload = {
-        title: `[${selectedType.toUpperCase()}] ${formData.title}`,
+        title: formData.title.trim(),
+        projectType: ({ sdp: 'software', assignment: 'course_project', research: 'research', thesis: 'thesis' })[selectedType] || 'other',
+        department: user?.department || undefined,
+        section: formData.section.trim() || undefined,
+        academicYear: formData.academicYear.trim() || undefined,
+        expectedStartDate: formData.expectedStartDate || undefined,
+        expectedEndDate: formData.expectedEndDate || undefined,
+        timezone: formData.timezone,
+        course: formData.course || undefined,
         description: `
           **Problem Statement:** ${formData.problemStatement}
           **Objectives:** ${formData.objectives}
           **Tech Stack:** ${formData.techStack}
           **Expected Outcome:** ${formData.expectedOutcome}
-        `,
-        status: 'proposed'
+        `
       };
       
       const res = await apiFetch('/api/projects', {
@@ -245,6 +263,23 @@ const CreateNewWork = () => {
                     className="w-full bg-surface-container-lowest border border-outline-variant/40 rounded-xl px-4 py-3.5 font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-secondary" 
                   />
                 </div>
+              </div>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {courses.length > 0 && <label className="text-[13px] font-bold uppercase tracking-wider text-on-surface md:col-span-2">Course
+                  <select name="course" value={formData.course} onChange={handleInputChange} className="mt-2 w-full rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-4 py-3 text-on-surface outline-none focus:border-primary"><option value="">Independent / not course-linked</option>{courses.map((course) => <option key={course._id} value={course._id}>{course.code} · {course.name}</option>)}</select>
+                </label>}
+                <label className="text-[13px] font-bold uppercase tracking-wider text-on-surface">Academic year
+                  <input required name="academicYear" value={formData.academicYear} onChange={handleInputChange} className="mt-2 w-full rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-4 py-3 text-on-surface outline-none focus:border-primary" placeholder="2026–2027" />
+                </label>
+                <label className="text-[13px] font-bold uppercase tracking-wider text-on-surface">Section / cohort
+                  <input name="section" value={formData.section} onChange={handleInputChange} className="mt-2 w-full rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-4 py-3 text-on-surface outline-none focus:border-primary" placeholder="Section A" />
+                </label>
+                <label className="text-[13px] font-bold uppercase tracking-wider text-on-surface">Expected start
+                  <input type="date" name="expectedStartDate" value={formData.expectedStartDate} onChange={handleInputChange} className="mt-2 w-full rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-4 py-3 text-on-surface outline-none focus:border-primary" />
+                </label>
+                <label className="text-[13px] font-bold uppercase tracking-wider text-on-surface">Expected completion
+                  <input type="date" name="expectedEndDate" min={formData.expectedStartDate || undefined} value={formData.expectedEndDate} onChange={handleInputChange} className="mt-2 w-full rounded-xl border border-outline-variant/40 bg-surface-container-lowest px-4 py-3 text-on-surface outline-none focus:border-primary" />
+                </label>
               </div>
             </div>
             

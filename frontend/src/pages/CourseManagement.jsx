@@ -12,11 +12,21 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } }
 };
 
+const defaultRubric = [
+  { key: 'problemUnderstanding', label: 'Problem understanding', maxScore: 10, description: '' },
+  { key: 'methodology', label: 'Methodology', maxScore: 20, description: '' },
+  { key: 'implementation', label: 'Implementation', maxScore: 30, description: '' },
+  { key: 'documentation', label: 'Documentation', maxScore: 40, description: '' }
+];
+
 const CourseManagement = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newCourse, setNewCourse] = useState({ code: '', name: '', department: 'Computer Science', sections: 1 });
+  const [newCourse, setNewCourse] = useState({ code: '', name: '', department: '', sections: 1 });
+  const [departments, setDepartments] = useState([]);
+  const [rubricCourse, setRubricCourse] = useState(null);
+  const [rubric, setRubric] = useState(defaultRubric);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
 
@@ -26,8 +36,14 @@ const CourseManagement = () => {
 
   const fetchCourses = async () => {
     try {
-      const res = await apiFetch('/api/courses');
+      const [res, departmentRes] = await Promise.all([
+        apiFetch('/api/courses'),
+        apiFetch('/api/admin/departments').catch(() => ({ data: [] }))
+      ]);
       setCourses(res.data || []);
+      const nextDepartments = departmentRes.data || [];
+      setDepartments(nextDepartments);
+      setNewCourse((current) => ({ ...current, department: current.department || nextDepartments[0]?.name || '' }));
     } catch (err) {
       console.error('Failed to fetch courses:', err);
       setCourses([]);
@@ -48,9 +64,24 @@ const CourseManagement = () => {
       
       setCourses([...courses, res.data]);
       setShowAddModal(false);
-      setNewCourse({ code: '', name: '', department: 'Computer Science', sections: 1 });
+      setNewCourse({ code: '', name: '', department: departments[0]?.name || '', sections: 1 });
     } catch (err) {
       setError(err.message || 'Unable to create the course.');
+    }
+  };
+
+  const saveRubric = async (event) => {
+    event.preventDefault();
+    try {
+      setError('');
+      const response = await apiFetch(`/api/courses/${rubricCourse._id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ rubric: { criteria: rubric } })
+      });
+      setCourses((items) => items.map((course) => course._id === response.data._id ? response.data : course));
+      setRubricCourse(null);
+    } catch (err) {
+      setError(err.message || 'Unable to save the course rubric.');
     }
   };
 
@@ -156,12 +187,13 @@ const CourseManagement = () => {
                   <th className="font-label-sm text-[11px] font-bold text-secondary py-5 px-6 uppercase tracking-widest">Course Name</th>
                   <th className="font-label-sm text-[11px] font-bold text-secondary py-5 px-6 uppercase tracking-widest">Department</th>
                   <th className="font-label-sm text-[11px] font-bold text-secondary py-5 px-6 uppercase tracking-widest">Sections</th>
+                  <th className="font-label-sm text-[11px] font-bold text-secondary py-5 px-6 uppercase tracking-widest">Assessment</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-container/50 bg-surface/30">
                 {filteredCourses.length === 0 ? (
                   <tr>
-                    <td colSpan="4" className="py-12 text-center text-secondary font-body-md">{courses.length ? 'No courses match your search.' : 'No courses found. Add a course to get started.'}</td>
+                    <td colSpan="5" className="py-12 text-center text-secondary font-body-md">{courses.length ? 'No courses match your search.' : 'No courses found. Add a course to get started.'}</td>
                   </tr>
                 ) : (
                   filteredCourses.map((course, idx) => (
@@ -174,6 +206,9 @@ const CourseManagement = () => {
                       </td>
                       <td className="py-5 px-6">
                         <span className="font-title-sm text-[15px] font-bold text-on-surface leading-tight">{course.name}</span>
+                      </td>
+                      <td className="py-5 px-6">
+                        <button type="button" onClick={() => { setRubricCourse(course); setRubric((course.rubric?.criteria?.length ? course.rubric.criteria : defaultRubric).map((item) => ({ ...item }))); }} className="rounded-xl border border-outline-variant px-3 py-2 text-sm font-bold text-primary hover:bg-primary/10">Configure rubric</button>
                       </td>
                       <td className="py-5 px-6 font-body-md text-[14px] text-secondary group-hover:text-primary transition-colors">{course.department}</td>
                       <td className="py-5 px-6">
@@ -229,10 +264,9 @@ const CourseManagement = () => {
                 
                 <div className="space-y-2">
                   <label className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">Department</label>
-                  <select value={newCourse.department} onChange={(e) => setNewCourse({...newCourse, department: e.target.value})} className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none cursor-pointer">
-                    <option value="Computer Science">Computer Science</option>
-                    <option value="Electrical Engineering">Electrical Engineering</option>
-                    <option value="Business Admin">Business Administration</option>
+                  <select required value={newCourse.department} onChange={(e) => setNewCourse({...newCourse, department: e.target.value})} className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none cursor-pointer">
+                    <option value="" disabled>{departments.length ? 'Select department' : 'Create a department first'}</option>
+                    {departments.map((department) => <option key={department._id} value={department.name}>{department.name} ({department.code})</option>)}
                   </select>
                 </div>
                 
@@ -251,6 +285,29 @@ const CourseManagement = () => {
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {rubricCourse && <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setRubricCourse(null)} />
+          <motion.form onSubmit={saveRubric} initial={{ opacity: 0, scale: .96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: .96 }} className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[28px] border border-outline-variant bg-surface p-7 shadow-2xl">
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div><h3 className="text-2xl font-black text-on-surface">Course rubric</h3><p className="mt-1 text-sm text-secondary">{rubricCourse.code} · Version {rubricCourse.rubric?.version || 1}. Criteria must total 100 points.</p></div>
+              <button type="button" onClick={() => setRubricCourse(null)} className="text-secondary"><span className="material-symbols-outlined">close</span></button>
+            </div>
+            <div className="space-y-4">
+              {rubric.map((criterion, index) => <div key={criterion.key} className="grid gap-3 rounded-2xl border border-outline-variant p-4 sm:grid-cols-[1fr_110px]">
+                <div className="space-y-2">
+                  <input required value={criterion.label} onChange={(event) => setRubric((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} className="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 font-bold text-on-surface" aria-label={`Criterion ${index + 1} label`} />
+                  <input value={criterion.description || ''} onChange={(event) => setRubric((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, description: event.target.value } : item))} className="w-full rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2 text-sm text-on-surface" placeholder="What should the evaluator assess?" />
+                </div>
+                <input type="number" min="1" max="100" required value={criterion.maxScore} onChange={(event) => setRubric((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, maxScore: Number(event.target.value) } : item))} className="h-11 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 text-on-surface" aria-label={`${criterion.label} maximum score`} />
+              </div>)}
+            </div>
+            <div className="mt-5 flex items-center justify-between rounded-xl bg-primary/10 px-4 py-3"><span className="font-bold text-on-surface">Maximum total</span><span className="text-xl font-black text-primary">{rubric.reduce((sum, item) => sum + Number(item.maxScore || 0), 0)} / 100</span></div>
+            <div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setRubricCourse(null)} className="rounded-xl border border-outline-variant px-5 py-3 font-bold text-on-surface">Cancel</button><button type="submit" className="rounded-xl bg-primary px-5 py-3 font-bold text-on-primary">Save rubric</button></div>
+          </motion.form>
+        </div>}
       </AnimatePresence>
 
     </div>

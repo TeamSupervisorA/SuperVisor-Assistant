@@ -7,6 +7,8 @@ const {
   requestTaskReview,
   withdrawTaskReview,
   decideTaskReview,
+  decideTaskSuggestion,
+  addTaskComment,
   deleteTask
 } = require('../controllers/taskController');
 const { protect, authorize } = require('../middleware/auth');
@@ -21,11 +23,13 @@ router.route('/')
 
 router.route('/:id')
   .put(updateTask) // students may update status of their own tasks
-  .delete(authorize('supervisor', 'admin'), deleteTask);
+  .delete(deleteTask);
 
 router.post('/:id/transition', transitionTask);
 router.post('/:id/request-review', requestTaskReview);
 router.post('/:id/withdraw-review', withdrawTaskReview);
 router.post('/:id/review-decision', authorize('supervisor', 'admin'), decideTaskReview);
+router.post('/:id/suggestion-decision', decideTaskSuggestion);
+router.post('/:id/comments', addTaskComment);
 
 module.exports = router;

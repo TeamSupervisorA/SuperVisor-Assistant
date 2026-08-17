@@ -138,7 +138,7 @@ const StudentSubmissions = () => {
   const currentUserId = String(user?._id || user?.id || "");
   const eligibleTasks = tasks.filter(
     (task) =>
-      task.status === "in_progress" &&
+      ["in_progress", "revision"].includes(task.status) &&
       (!task.assignedTo ||
         String(task.assignedTo?._id || task.assignedTo) === currentUserId),
   );

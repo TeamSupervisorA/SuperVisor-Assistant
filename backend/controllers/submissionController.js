@@ -96,7 +96,7 @@ exports.getAllSubmissions = async (req, res) => {
     }
     // Students only see their own submissions
     if (req.user.role === 'student') filter.student = req.user.id;
-    else if (req.user.role === 'supervisor') filter.project = filter.project || { $in: await projectIdsForUser(req.user) };
+    else if (['supervisor', 'admin'].includes(req.user.role)) filter.project = filter.project || { $in: await projectIdsForUser(req.user) };
 
     const submissions = await Submission.find(filter)
       .populate('student', 'name email')
@@ -135,7 +135,7 @@ exports.createSubmission = async (req, res) => {
     if (projectTask.assignedTo && projectTask.assignedTo.toString() !== req.user.id) {
       return res.status(403).json({ success: false, error: 'You can submit only work assigned to you' });
     }
-    if (projectTask.status !== 'in_progress') {
+    if (!['in_progress', 'revision'].includes(projectTask.status)) {
       return res.status(409).json({ success: false, error: 'Start the linked task before submitting its deliverable' });
     }
     // Submission metadata is owned by the server: a student must never be able
@@ -143,6 +143,7 @@ exports.createSubmission = async (req, res) => {
     const submission = await Submission.create({
       title,
       task,
+      milestone: projectTask.milestone || null,
       fileUrl: normalizedFileUrl,
       content,
       project: project._id,

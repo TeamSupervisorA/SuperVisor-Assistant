@@ -4,6 +4,8 @@ const cors = require('cors');
 const { connectDB, getDatabaseStatus } = require('./config/db');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const crypto = require('crypto');
+const { recordAudit } = require('./services/auditService');
 
 const isProduction = process.env.NODE_ENV === 'production';
 if (isProduction) {
@@ -131,6 +133,29 @@ app.use('/api', async (req, res, next) => {
       error: 'Database unavailable. The administrator must verify MongoDB Atlas network access and MONGODB_URI.'
     });
   }
+});
+
+// Every authenticated mutation receives a request-level audit entry in
+// addition to the richer domain event written by workflow controllers. This
+// closes gaps for settings and secondary modules without recording request
+// bodies, credentials, tokens, or uploaded content.
+app.use('/api', (req, res, next) => {
+  const mutation = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
+  const requestId = req.get('x-request-id') || crypto.randomUUID();
+  res.setHeader('X-Request-Id', requestId);
+  if (mutation) {
+    res.on('finish', () => {
+      if (!req.user?._id) return;
+      recordAudit({
+        actor: req.user._id,
+        action: `api.${req.method.toLowerCase()}`,
+        entityType: 'apiRequest',
+        entityId: req.user._id,
+        metadata: { requestId, path: req.originalUrl.split('?')[0], statusCode: res.statusCode, succeeded: res.statusCode < 400 }
+      });
+    });
+  }
+  next();
 });
 
 // Routes

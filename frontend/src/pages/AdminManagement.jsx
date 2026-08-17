@@ -4,6 +4,8 @@ import { apiFetch } from '../lib/api';
 const AdminManagement = () => {
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [institutions, setInstitutions] = useState([]);
+  const [institutionDraft, setInstitutionDraft] = useState({ name: '', slug: '', emailDomains: '' });
   const [supervision, setSupervision] = useState({ supervisors: [], projects: [] });
   const [department, setDepartment] = useState({ code: '', name: '' });
   const [allocations, setAllocations] = useState({});
@@ -13,14 +15,16 @@ const AdminManagement = () => {
 
   const load = async () => {
     try {
-      const [usersResponse, departmentsResponse, supervisionResponse] = await Promise.all([
+      const [usersResponse, departmentsResponse, supervisionResponse, institutionsResponse] = await Promise.all([
         apiFetch('/api/admin/users'),
         apiFetch('/api/admin/departments'),
-        apiFetch('/api/admin/supervision')
+        apiFetch('/api/admin/supervision'),
+        apiFetch('/api/admin/institutions')
       ]);
       setUsers(usersResponse.data || []);
       setDepartments(departmentsResponse.data || []);
       setSupervision(supervisionResponse.data || { supervisors: [], projects: [] });
+      setInstitutions(institutionsResponse.data || []);
       setMessage('');
     } catch (error) { setMessage(error.message); }
   };
@@ -48,6 +52,22 @@ const AdminManagement = () => {
       setDepartment({ code: '', name: '' }); setNotice('Department added.'); await load();
     } catch (error) { setMessage(error.message); }
   };
+  const createInstitution = async (event) => {
+    event.preventDefault();
+    try {
+      await apiFetch('/api/admin/institutions', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: institutionDraft.name,
+          slug: institutionDraft.slug,
+          emailDomains: institutionDraft.emailDomains.split(',').map((value) => value.trim()).filter(Boolean)
+        })
+      });
+      setInstitutionDraft({ name: '', slug: '', emailDomains: '' });
+      setNotice('Institution created. Existing legacy accounts, projects, and departments were attached to this institution.');
+      await load();
+    } catch (error) { setMessage(error.message); }
+  };
   const setAllocation = (projectId, patch) => setAllocations((current) => ({ ...current, [projectId]: { ...(current[projectId] || {}), ...patch } }));
   const assignSupervisor = async (project) => {
     const allocation = allocations[project._id] || {};
@@ -71,6 +91,16 @@ const AdminManagement = () => {
     <header><p className="text-sm font-semibold uppercase tracking-wider text-primary">Institutional controls</p><h1 className="mt-1 text-3xl font-black">Academic operations</h1><p className="mt-2 text-secondary">Provision roles, organize departments, and assign accountable supervision with a visible workload trail.</p></header>
     {message && <p role="alert" className="rounded-xl border border-error/30 bg-error/10 p-3 text-error">{message}</p>}
     {notice && <p role="status" className="rounded-xl border border-primary/30 bg-primary/10 p-3 text-primary">{notice}</p>}
+
+    <section className="rounded-3xl border border-outline-variant/30 bg-surface p-6">
+      <p className="text-xs font-black uppercase tracking-wider text-primary">Institution boundary</p>
+      {institutions.length ? <div className="mt-2"><h2 className="text-xl font-black">{institutions[0].name}</h2><p className="mt-1 text-sm text-secondary">Tenant slug: {institutions[0].slug}. Project data, departments, students, and supervisors are isolated inside this boundary.</p></div> : <form onSubmit={createInstitution} className="mt-4 grid gap-3 md:grid-cols-4">
+        <input required value={institutionDraft.name} onChange={(event) => setInstitutionDraft({ ...institutionDraft, name: event.target.value })} placeholder="Institution name" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3" />
+        <input required value={institutionDraft.slug} onChange={(event) => setInstitutionDraft({ ...institutionDraft, slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })} placeholder="institution-slug" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3" />
+        <input value={institutionDraft.emailDomains} onChange={(event) => setInstitutionDraft({ ...institutionDraft, emailDomains: event.target.value })} placeholder="university.edu, alumni.edu" className="rounded-xl border border-outline-variant bg-surface-container-lowest p-3" />
+        <button className="rounded-xl bg-primary px-4 py-3 font-bold text-on-primary">Create institution</button>
+      </form>}
+    </section>
 
     <section className="rounded-3xl border border-outline-variant/30 bg-surface p-6">
       <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-black uppercase tracking-wider text-tertiary">Supervision allocation</p><h2 className="mt-1 text-2xl font-black">Projects, sections, and supervisors</h2><p className="mt-1 text-sm text-secondary">A project is the single team boundary. Assigning a supervisor updates project access, cancels pending invitations, and notifies affected users.</p></div><div className="flex gap-2"><span className="rounded-full bg-error/10 px-3 py-1.5 text-xs font-bold text-error">{unassignedCount} unassigned</span><span className="rounded-full bg-tertiary-container px-3 py-1.5 text-xs font-bold text-tertiary">{overloadedCount} at capacity</span></div></div>

@@ -23,6 +23,11 @@ const statusMeta = {
     icon: "rate_review",
     tone: "bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200",
   },
+  revision: {
+    label: "Revision",
+    icon: "edit_note",
+    tone: "bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-500/15 dark:text-fuchsia-200",
+  },
   done: {
     label: "Complete",
     icon: "task_alt",
@@ -69,6 +74,9 @@ const emptyTask = {
   dueDate: "",
   dependencies: [],
   assignedTo: "",
+  milestone: "",
+  phase: "",
+  requiredDeliverable: "",
 };
 const primaryActionClass =
   "inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-xs font-bold text-on-primary hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50";
@@ -80,7 +88,7 @@ const fieldInputClass =
   "w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest px-3 py-2.5 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15";
 
 const TasksMilestones = () => {
-  const { activeProject, user } = useAuth();
+  const { activeProject, setActiveProject, user } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -89,6 +97,7 @@ const TasksMilestones = () => {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [updatingId, setUpdatingId] = useState("");
+  const [taskFilter, setTaskFilter] = useState("all");
 
   const projectId = activeProject?._id;
   const loadTasks = useCallback(async () => {
@@ -317,6 +326,53 @@ const TasksMilestones = () => {
     }
   };
 
+  const decideSuggestion = async (task, decision) => {
+    setUpdatingId(task._id);
+    setError("");
+    try {
+      const response = await apiFetch(`/api/tasks/${task._id}/suggestion-decision`, {
+        method: "POST",
+        body: JSON.stringify({ decision, assignedTo: task.createdBy?._id || task.createdBy }),
+      });
+      setTasks((current) => current.map((item) => item._id === task._id ? response.data : item));
+    } catch (requestError) {
+      setError(requestError.message || "Unable to decide this suggestion.");
+    } finally {
+      setUpdatingId("");
+    }
+  };
+
+  const addComment = async (task, instruction = false) => {
+    const body = window.prompt(instruction ? "Add a clear supervisor instruction:" : "Add a task comment:")?.trim();
+    if (!body) return;
+    setUpdatingId(task._id);
+    try {
+      const response = await apiFetch(`/api/tasks/${task._id}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ body, kind: instruction ? "supervisor_instruction" : "comment" }),
+      });
+      setTasks((current) => current.map((item) => item._id === task._id ? response.data : item));
+    } catch (requestError) {
+      setError(requestError.message || "Unable to add the comment.");
+    } finally {
+      setUpdatingId("");
+    }
+  };
+
+  const createMilestone = async () => {
+    const title = window.prompt("Milestone title")?.trim();
+    if (!title) return;
+    try {
+      const response = await apiFetch(`/api/projects/${projectId}/milestones`, {
+        method: "POST",
+        body: JSON.stringify({ title }),
+      });
+      if (response.project) setActiveProject(response.project);
+    } catch (requestError) {
+      setError(requestError.message || "Unable to create the milestone.");
+    }
+  };
+
   const members = activeProject?.students || [];
   const currentUserId = String(user?._id || user?.id || "");
   const leaderId = String(
@@ -330,18 +386,26 @@ const TasksMilestones = () => {
     user?.role === "admin" ||
     user?.role === "supervisor" ||
     currentUserId === leaderId;
+  const canProposeTask = activeProject?.status === "active" && (
+    canCreateTask || members.some((member) => String(member?._id || member) === currentUserId)
+  );
+  const filteredTasks = tasks.filter((task) => {
+    if (taskFilter === "assigned") return String(task.assignedTo?._id || task.assignedTo || "") === currentUserId;
+    if (taskFilter === "created") return String(task.createdBy?._id || task.createdBy || "") === currentUserId;
+    return true;
+  });
   const columns = [
     {
       id: "todo",
       label: "Planned",
       helper: "Ready work and prerequisites",
-      tasks: tasks.filter((task) => normalizeStatus(task.status) === "todo"),
+      tasks: filteredTasks.filter((task) => normalizeStatus(task.status) === "todo"),
     },
     {
       id: "in_progress",
       label: "In progress",
       helper: "Active work with a defined outcome",
-      tasks: tasks.filter(
+      tasks: filteredTasks.filter(
         (task) => normalizeStatus(task.status) === "in_progress",
       ),
     },
@@ -349,15 +413,15 @@ const TasksMilestones = () => {
       id: "review",
       label: "Review & decisions",
       helper: "Work awaiting feedback or resolution",
-      tasks: tasks.filter((task) =>
-        ["review", "blocked"].includes(normalizeStatus(task.status)),
+      tasks: filteredTasks.filter((task) =>
+        ["review", "revision", "blocked"].includes(normalizeStatus(task.status)),
       ),
     },
     {
       id: "done",
       label: "Completed",
       helper: "Accepted outcomes",
-      tasks: tasks.filter((task) => completed(task)),
+      tasks: filteredTasks.filter((task) => completed(task)),
     },
   ];
 
@@ -383,6 +447,14 @@ const TasksMilestones = () => {
     const status = normalizeStatus(task.status);
     const waiting = waitingOnDependencies(task);
     const isSupervisor = ["supervisor", "admin"].includes(user?.role);
+    if (task.kind === "suggestion" && task.suggestionState === "pending") {
+      return canCreateTask ? (
+        <div className="flex gap-2">
+          <button onClick={() => decideSuggestion(task, "accept")} className={primaryActionClass}>Accept suggestion</button>
+          <button onClick={() => decideSuggestion(task, "reject")} className={secondaryActionClass}>Decline</button>
+        </div>
+      ) : <span className="text-xs font-semibold text-amber-700 dark:text-amber-200">Awaiting leader or supervisor decision</span>;
+    }
     if (status === "todo")
       return (
         <button
@@ -420,6 +492,12 @@ const TasksMilestones = () => {
           className={primaryActionClass}
         >
           Resume task
+        </button>
+      );
+    if (status === "revision")
+      return (
+        <button disabled={Boolean(updatingId)} onClick={() => transition(task, "in_progress")} className={primaryActionClass}>
+          Start revision
         </button>
       );
     if (status === "review")
@@ -484,7 +562,7 @@ const TasksMilestones = () => {
               · every task should produce a verifiable project outcome.
             </p>
           </div>
-          {canCreateTask && (
+          {canProposeTask && (
             <button
               onClick={() => {
                 setError("");
@@ -495,7 +573,7 @@ const TasksMilestones = () => {
               <span className="material-symbols-outlined text-[18px]">
                 add_task
               </span>
-              New task
+              {canCreateTask ? "New official task" : "Propose a task"}
             </button>
           )}
         </header>
@@ -567,7 +645,16 @@ const TasksMilestones = () => {
           ))}
         </section>
 
-        <section className="mt-6 grid gap-4 xl:grid-cols-4">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-3">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Task filters">
+            {[["all", "All project tasks"], ["assigned", "Assigned to me"], ["created", "Created by me"]].map(([value, label]) => (
+              <button key={value} onClick={() => setTaskFilter(value)} className={`rounded-lg px-3 py-2 text-xs font-bold ${taskFilter === value ? "bg-primary text-on-primary" : "text-secondary hover:bg-surface-container"}`}>{label}</button>
+            ))}
+          </div>
+          {canCreateTask && <button onClick={createMilestone} className={secondaryActionClass}><span className="material-symbols-outlined mr-1 text-base">flag</span>New milestone</button>}
+        </div>
+
+        <section className="mt-4 grid gap-4 xl:grid-cols-4">
           {columns.map((column) => (
             <section
               key={column.id}
@@ -612,6 +699,8 @@ const TasksMilestones = () => {
                         <h3 className="mt-3 text-sm font-extrabold leading-snug text-on-surface">
                           {task.title}
                         </h3>
+                        {task.kind === "suggestion" && task.suggestionState === "pending" && <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-200">Task suggestion · not yet official</p>}
+                        {(task.phase || task.milestone) && <p className="mt-2 text-xs font-semibold text-primary">{task.phase || "Milestone-linked work"}</p>}
                         {task.description && (
                           <p className="mt-2 text-xs leading-relaxed text-secondary">
                             {task.description}
@@ -664,6 +753,10 @@ const TasksMilestones = () => {
                             taskActions(task)
                           )}
                         </div>
+                        <div className="mt-3 flex flex-wrap gap-2 border-t border-outline-variant/25 pt-3">
+                          <button onClick={() => addComment(task)} className="text-xs font-bold text-primary hover:underline">Comment ({task.comments?.length || 0})</button>
+                          {["supervisor", "admin"].includes(user?.role) && <button onClick={() => addComment(task, true)} className="text-xs font-bold text-secondary hover:text-primary">Add instruction</button>}
+                        </div>
                       </article>
                     );
                   })
@@ -687,11 +780,10 @@ const TasksMilestones = () => {
               <header className="flex items-start justify-between gap-4 border-b border-outline-variant/30 p-6">
                 <div>
                   <h2 className="text-xl font-extrabold text-on-surface">
-                    Create a connected task
+                    {canCreateTask ? "Create a connected task" : "Propose a task"}
                   </h2>
                   <p className="mt-1 text-sm text-secondary">
-                    Define the outcome, priority, timing, owner, and any
-                    prerequisite work.
+                    {canCreateTask ? "Define the outcome, priority, timing, owner, milestone, and prerequisite work." : "Suggest useful work for the leader or supervisor to review and assign."}
                   </p>
                 </div>
                 <button
@@ -769,6 +861,21 @@ const TasksMilestones = () => {
                     className={fieldInputClass}
                   />
                 </label>
+                <label>
+                  <span className={fieldLabelClass}>Milestone</span>
+                  <select value={draft.milestone} onChange={(event) => setDraft({ ...draft, milestone: event.target.value })} className={fieldInputClass}>
+                    <option value="">No milestone yet</option>
+                    {(activeProject.milestones || []).filter((item) => item.status !== "cancelled").map((item) => <option key={item._id} value={item._id}>{item.title}</option>)}
+                  </select>
+                </label>
+                <label>
+                  <span className={fieldLabelClass}>Project phase</span>
+                  <input value={draft.phase} onChange={(event) => setDraft({ ...draft, phase: event.target.value })} placeholder="e.g. Data collection" className={fieldInputClass} />
+                </label>
+                <label className="sm:col-span-2">
+                  <span className={fieldLabelClass}>Required deliverable</span>
+                  <input value={draft.requiredDeliverable} onChange={(event) => setDraft({ ...draft, requiredDeliverable: event.target.value })} placeholder="e.g. Validated survey instrument and approval note" className={fieldInputClass} />
+                </label>
                 {canCreateTask && members.length > 0 && (
                   <label>
                     <span className={fieldLabelClass}>Owner</span>
@@ -839,7 +946,7 @@ const TasksMilestones = () => {
                   disabled={saving}
                   className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-on-primary disabled:opacity-60"
                 >
-                  {saving ? "Creating…" : "Create task"}
+                  {saving ? "Saving…" : canCreateTask ? "Create official task" : "Submit suggestion"}
                 </button>
               </footer>
             </form>

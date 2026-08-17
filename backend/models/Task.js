@@ -17,9 +17,14 @@ const taskSchema = new mongoose.Schema({
     type: mongoose.Schema.ObjectId,
     ref: 'User'
   },
+  // New tasks always set this in the controller; null remains readable for
+  // records created before task authorship was introduced.
+  createdBy: { type: mongoose.Schema.ObjectId, ref: 'User', default: null },
+  kind: { type: String, enum: ['official', 'suggestion'], default: 'official' },
+  suggestionState: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'accepted' },
   status: {
     type: String,
-    enum: ['todo', 'in_progress', 'blocked', 'done', 'cancelled', 'review', 'completed', 'delayed'],
+    enum: ['todo', 'in_progress', 'blocked', 'review', 'revision', 'done', 'cancelled', 'completed', 'delayed'],
     default: 'todo'
   },
   priority: { type: String, enum: ['low', 'medium', 'high', 'critical'], default: 'medium' },
@@ -27,6 +32,9 @@ const taskSchema = new mongoose.Schema({
     type: Date
   },
   dependencies: [{ type: mongoose.Schema.ObjectId, ref: 'Task' }],
+  milestone: { type: mongoose.Schema.ObjectId, default: null },
+  phase: { type: String, trim: true, maxlength: 100, default: '' },
+  requiredDeliverable: { type: String, trim: true, maxlength: 240, default: '' },
   acceptanceCriteria: { type: String, default: '' },
   blockedReason: { type: String, default: '' },
   completedAt: Date,
@@ -44,6 +52,14 @@ const taskSchema = new mongoose.Schema({
     submission: { type: mongoose.Schema.ObjectId, ref: 'Submission', default: null },
     occurredAt: { type: Date, default: Date.now }
   }],
+  comments: [{
+    author: { type: mongoose.Schema.ObjectId, ref: 'User', required: true },
+    body: { type: String, required: true, trim: true, maxlength: 3000 },
+    kind: { type: String, enum: ['comment', 'supervisor_instruction'], default: 'comment' },
+    createdAt: { type: Date, default: Date.now },
+    editedAt: { type: Date, default: null }
+  }],
+  revisionNumber: { type: Number, min: 0, default: 0 },
   createdAt: {
     type: Date,
     default: Date.now

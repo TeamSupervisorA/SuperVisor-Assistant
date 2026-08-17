@@ -16,6 +16,7 @@ const {
   getProjectAuditHistory,
   transferProjectLeadership
 } = require('../controllers/projectController');
+const { createProjectMilestone } = require('../controllers/projectController');
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
@@ -39,6 +40,7 @@ router.route('/:id')
 router.get('/:id/report', getProjectReport);
 router.get('/:id/history', getProjectAuditHistory);
 router.put('/:id/leader', transferProjectLeadership);
+router.post('/:id/milestones', createProjectMilestone);
 
 router.post('/:id/members', addProjectMember);
 router.post('/:id/members/:invitationId/respond', respondToMemberInvitation);

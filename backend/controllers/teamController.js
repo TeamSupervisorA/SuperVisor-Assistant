@@ -58,7 +58,7 @@ const validateMembers = async (members, project, activeLeader = null) => {
 
 // Leader of the team, that project's assigned supervisor, or an admin may modify it.
 const canModifyTeam = (team, project, user) => {
-  if (user.role === 'admin') return true;
+  if (user.role === 'admin') return canAccessProject(project, user);
   if (idOf(project?.supervisor) === user.id) return true;
   return team.members.some(m => idOf(m.user) === user.id && m.role === 'Leader');
 };
@@ -73,7 +73,7 @@ exports.getAllTeams = async (req, res) => {
         return res.status(403).json({ success: false, error: 'Not authorized to view this project\'s teams' });
       }
       filter.project = req.query.project;
-    } else if (req.user.role !== 'admin') {
+    } else {
       filter.project = { $in: await projectIdsForUser(req.user) };
     }
 
@@ -210,7 +210,7 @@ exports.inviteSupervisor = async (req, res) => {
     }
     if (project.supervisor) return res.status(409).json({ success: false, error: 'This project already has an assigned supervisor' });
 
-    const supervisor = await User.findOne({ _id: req.body?.supervisorId, role: 'supervisor', status: 'active' })
+    const supervisor = await User.findOne({ _id: req.body?.supervisorId, role: 'supervisor', status: 'active', institution: project.institution || null })
       .select('name department expertise maxActiveTeams');
     if (!supervisor) return res.status(422).json({ success: false, error: 'Choose an active supervisor from the directory' });
     const activeWorkload = await Project.countDocuments({ supervisor: supervisor._id, status: { $in: ['proposed', 'active', 'on_hold'] } });
@@ -326,7 +326,7 @@ exports.confirmLeader = async (req, res) => {
     const team = await Team.findById(req.params.id);
     if (!team) return res.status(404).json({ success: false, error: 'Team not found' });
     const project = await Project.findById(team.project);
-    if (req.user.role !== 'admin' && project.supervisor?.toString() !== req.user.id) return res.status(403).json({ success: false, error: 'Only the assigned supervisor may confirm a leader' });
+    if (!canAccessProject(project, req.user) || (req.user.role !== 'admin' && project.supervisor?.toString() !== req.user.id)) return res.status(403).json({ success: false, error: 'Only the assigned supervisor may confirm a leader' });
     if (!team.pendingLeader) return res.status(409).json({ success: false, error: 'No leader nomination is awaiting confirmation' });
 
     const previousLeader = team.activeLeader;

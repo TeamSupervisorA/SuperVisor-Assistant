@@ -4,6 +4,7 @@ const AIInteraction = require('../models/AIInteraction');
 const Task = require('../models/Task');
 const Submission = require('../models/Submission');
 const ProgressLog = require('../models/ProgressLog');
+const User = require('../models/User');
 const { Project, canAccessProject } = require('../utils/projectAccess');
 
 const aiErrorStatus = (error) => {
@@ -44,8 +45,15 @@ const recordInteraction = async (req, feature, input, result) => {
 
 exports.getInteractions = async (req, res) => {
   try {
-    const query = req.user.role === 'admin' ? {} : { actor: req.user.id };
-    if (req.query.project) query.project = req.query.project;
+    const query = req.user.role === 'admin'
+      ? { actor: { $in: await User.find({ institution: req.user.institution || null }).distinct('_id') } }
+      : { actor: req.user.id };
+    if (req.query.project) {
+      const project = await Project.findById(req.query.project);
+      if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
+      if (!canAccessProject(project, req.user)) return res.status(403).json({ success: false, error: 'Not authorized to view this project interaction history' });
+      query.project = project._id;
+    }
     const interactions = await AIInteraction.find(query).sort({ createdAt: -1 }).limit(50);
     res.json({ success: true, data: interactions });
   } catch (error) { res.status(400).json({ success: false, error: error.message }); }

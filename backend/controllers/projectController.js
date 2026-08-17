@@ -1,4 +1,4 @@
-const { Project, idOf, canAccessProject } = require('../utils/projectAccess');
+const { Project, idOf, sameInstitution, canAccessProject } = require('../utils/projectAccess');
 const Task = require('../models/Task');
 const Submission = require('../models/Submission');
 const Meeting = require('../models/Meeting');
@@ -14,11 +14,12 @@ const Resource = require('../models/Resource');
 const Message = require('../models/Message');
 const Evaluation = require('../models/Evaluation');
 const PlagiarismReport = require('../models/PlagiarismReport');
+const Course = require('../models/Course');
 const { recordAudit } = require('../services/auditService');
 const AuditLog = require('../models/AuditLog');
 const { taskMetrics, projectHealth, projectCapabilities } = require('../utils/projectWorkflow');
 
-const activeStudentIds = async (studentIds) => {
+const activeStudentIds = async (studentIds, institution = null) => {
   if (!Array.isArray(studentIds)) {
     const error = new Error('students must be an array of student IDs');
     error.statusCode = 422;
@@ -29,7 +30,8 @@ const activeStudentIds = async (studentIds) => {
   const students = await User.find({
     _id: { $in: uniqueIds },
     role: 'student',
-    status: 'active'
+    status: 'active',
+    institution
   }).select('_id');
   if (students.length !== uniqueIds.length) {
     const error = new Error('Every project member must be an active student account');
@@ -46,7 +48,10 @@ const populateProject = (id) => Project.findById(id)
   .populate('memberInvitations.user', 'name email')
   .populate('memberInvitations.invitedBy', 'name')
   .populate('supervisorInvitations.supervisor', 'name email department expertise maxActiveTeams')
-  .populate('supervisorInvitations.invitedBy', 'name');
+  .populate('supervisorInvitations.invitedBy', 'name')
+  .populate('supervisorHistory.supervisor', 'name email')
+  .populate('supervisorHistory.assignedBy', 'name role')
+  .populate('milestones.createdBy', 'name role');
 
 const notify = async (fields) => {
   try { await Notification.create(fields); } catch { /* notifications are non-critical */ }
@@ -58,10 +63,11 @@ const notify = async (fields) => {
 exports.getProjects = async (req, res) => {
   try {
     let query = {};
+    query.institution = req.user.institution || null;
     if (req.user.role === 'student') {
-      query = { students: req.user.id };
+      query.students = req.user.id;
     } else if (req.user.role === 'supervisor') {
-      query = { supervisor: req.user.id };
+      query.supervisor = req.user.id;
     }
 
     const projects = await Project.find(query)
@@ -87,9 +93,11 @@ exports.exploreProjects = async (req, res) => {
     // Students see only projects they belong to. Supervisors see their own
     // projects plus unassigned proposals they can claim; administrators see all.
     if (req.user.role === 'student') {
-      filters.push({ students: req.user.id });
+      filters.push({ institution: req.user.institution || null }, { students: req.user.id });
     } else if (req.user.role === 'supervisor') {
-      filters.push({ supervisor: req.user.id });
+      filters.push({ institution: req.user.institution || null }, { supervisor: req.user.id });
+    } else {
+      filters.push({ institution: req.user.institution || null });
     }
     
     if (search && typeof search === 'string') {
@@ -150,9 +158,24 @@ exports.createProject = async (req, res) => {
     let projectData = {
       title,
       description,
+      institution: req.user.institution || null,
       department: String(req.body?.department || req.user.department || '').trim() || null,
-      section: String(req.body?.section || '').trim() || null
+      section: String(req.body?.section || '').trim() || null,
+      projectType: req.body?.projectType || 'research',
+      course: req.body?.course || null,
+      academicYear: String(req.body?.academicYear || '').trim() || null,
+      timezone: String(req.body?.timezone || 'Asia/Dhaka').trim(),
+      expectedStartDate: req.body?.expectedStartDate || null,
+      expectedEndDate: req.body?.expectedEndDate || null
     };
+    if (projectData.expectedStartDate && projectData.expectedEndDate && new Date(projectData.expectedEndDate) < new Date(projectData.expectedStartDate)) {
+      return res.status(422).json({ success: false, error: 'Expected end date cannot be before the start date' });
+    }
+    if (projectData.course) {
+      const course = await Course.findOne({ _id: projectData.course, institution: req.user.institution || null }).select('_id department');
+      if (!course) return res.status(422).json({ success: false, error: 'Choose a course from your institution' });
+      if (!projectData.department) projectData.department = course.department;
+    }
 
     if (req.user.role === 'student') {
       projectData.students = [req.user.id];
@@ -163,7 +186,7 @@ exports.createProject = async (req, res) => {
       projectData.status = 'awaiting_supervisor';
       projectData.supervisionSource = 'unassigned';
     } else {
-      projectData.students = await activeStudentIds(students || []);
+      projectData.students = await activeStudentIds(students || [], req.user.institution || null);
       projectData.leaderUserId = projectData.students[0] || null;
       // A connected supervisor does not bypass academic approval. The first
       // student owns Proposal Version 1 and approval is the only activation
@@ -182,7 +205,7 @@ exports.createProject = async (req, res) => {
         if (!req.body.supervisor) {
           return res.status(422).json({ success: false, error: 'Choose an active supervisor when creating a project as an administrator' });
         }
-        const supervisor = await User.findOne({ _id: req.body.supervisor, role: 'supervisor', status: 'active' }).select('_id');
+        const supervisor = await User.findOne({ _id: req.body.supervisor, role: 'supervisor', status: 'active', institution: req.user.institution || null }).select('_id');
         if (!supervisor) return res.status(422).json({ success: false, error: 'The assigned supervisor must be an active supervisor account' });
         projectData.supervisor = supervisor._id;
         projectData.supervisionSource = 'admin_assignment';
@@ -192,6 +215,15 @@ exports.createProject = async (req, res) => {
     }
 
     const project = await Project.create(projectData);
+    if (project.supervisor) {
+      project.supervisorHistory.push({
+        supervisor: project.supervisor,
+        assignedBy: req.user.id,
+        source: project.supervisionSource,
+        startedAt: project.supervisorAssignedAt || new Date()
+      });
+      await project.save();
+    }
     try {
       await ProposalVersion.create({
         project: project._id,
@@ -220,6 +252,7 @@ exports.claimProject = async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
+    if (!canAccessProject(project, req.user)) return res.status(403).json({ success: false, error: 'Administrators can assign projects only inside their institution' });
 
     let supervisor;
     if (req.user.role === 'supervisor') {
@@ -235,10 +268,19 @@ exports.claimProject = async (req, res) => {
     }
 
     const previousSupervisor = project.supervisor ? idOf(project.supervisor) : null;
+    if (!sameInstitution(project, supervisor)) return res.status(403).json({ success: false, error: 'The supervisor must belong to the same institution as the project' });
+    const activeHistory = project.supervisorHistory?.find((entry) => !entry.endedAt);
+    if (activeHistory && idOf(activeHistory.supervisor) !== idOf(supervisor._id)) {
+      activeHistory.endedAt = new Date();
+      activeHistory.endReason = String(req.body?.reason || 'Supervisor reassigned').trim().slice(0, 500);
+    }
     project.supervisor = supervisor._id;
     project.supervisionSource = req.user.role === 'admin' ? 'admin_assignment' : 'supervisor_claim';
     project.supervisorAssignedAt = new Date();
     project.supervisorAssignedBy = req.user.id;
+    if (!activeHistory || idOf(activeHistory.supervisor) !== idOf(supervisor._id)) {
+      project.supervisorHistory.push({ supervisor: supervisor._id, assignedBy: req.user.id, source: project.supervisionSource, startedAt: project.supervisorAssignedAt });
+    }
     if (['draft', 'awaiting_supervisor', 'proposed'].includes(project.status)) {
       project.status = project.proposalState === 'approved' ? 'active' : 'awaiting_approval';
     }
@@ -313,9 +355,10 @@ exports.updateProject = async (req, res) => {
     if (Object.hasOwn(req.body, 'status') && !capabilities.isAdmin && !capabilities.isSupervisor) {
       return res.status(403).json({ success: false, error: 'Only the assigned supervisor or an administrator can change project status' });
     }
+    const setupFields = ['title', 'description', 'projectType', 'course', 'academicYear', 'timezone', 'expectedStartDate', 'expectedEndDate', 'department', 'section'];
     const permittedFields = capabilities.isAdmin || capabilities.isSupervisor
-      ? ['title', 'description', 'status']
-      : ['title', 'description'];
+      ? [...setupFields, 'status']
+      : setupFields;
     // Membership and ownership are deliberately immutable through this general
     // update route; the dedicated, authorization-checked membership workflow
     // is the only way to change a project team.
@@ -326,6 +369,13 @@ exports.updateProject = async (req, res) => {
     );
     if (Object.keys(updates).length === 0) {
       return res.status(422).json({ success: false, error: 'No supported project fields were provided' });
+    }
+    const nextStart = updates.expectedStartDate ?? project.expectedStartDate;
+    const nextEnd = updates.expectedEndDate ?? project.expectedEndDate;
+    if (nextStart && nextEnd && new Date(nextEnd) < new Date(nextStart)) return res.status(422).json({ success: false, error: 'Expected end date cannot be before the start date' });
+    if (updates.course) {
+      const course = await Course.findOne({ _id: updates.course, institution: project.institution || null }).select('_id');
+      if (!course) return res.status(422).json({ success: false, error: 'Choose a course from this institution' });
     }
 
     if (updates.status && updates.status !== project.status) {
@@ -366,7 +416,7 @@ exports.deleteProject = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
-    if (req.user.role !== 'admin' && project.supervisor?.toString() !== req.user.id) {
+    if (!canAccessProject(project, req.user) || (req.user.role !== 'admin' && project.supervisor?.toString() !== req.user.id)) {
       return res.status(403).json({ success: false, error: 'Not authorized to delete this project' });
     }
 
@@ -506,7 +556,7 @@ exports.addProjectMember = async (req, res) => {
       return res.status(403).json({ success: false, error: 'Only the project leader, assigned supervisor, or an administrator can invite students' });
     }
 
-    const newMember = await User.findOne({ email: email.toLowerCase().trim() });
+    const newMember = await User.findOne({ email: email.toLowerCase().trim(), institution: project.institution || null });
     if (!newMember) {
       return res.status(404).json({ success: false, error: 'No user found with that email' });
     }
@@ -521,6 +571,7 @@ exports.addProjectMember = async (req, res) => {
     if (existingPending) return res.status(409).json({ success: false, error: 'This student already has a pending invitation' });
     project.memberInvitations.push({ email: newMember.email, user: newMember._id, invitedBy: req.user.id });
     await project.save();
+    await recordAudit({ actor: req.user.id, action: 'project.member_invited', entityType: 'project', entityId: project._id, metadata: { invitedUser: newMember._id } });
 
     // Best-effort notification — team change should not fail if this does
     try {
@@ -566,6 +617,7 @@ exports.removeProjectMember = async (req, res) => {
 
     project.students = project.students.filter(s => idOf(s) !== req.params.userId);
     await project.save();
+    await recordAudit({ actor: req.user.id, action: 'project.member_removed', entityType: 'project', entityId: project._id, metadata: { removedUser: req.params.userId, selfRemoval: isSelf } });
 
     const populated = await populateProject(project._id);
 
@@ -590,6 +642,7 @@ exports.respondToMemberInvitation = async (req, res) => {
     invitation.state = decision === 'accept' ? 'accepted' : 'declined';
     invitation.respondedAt = new Date();
     if (decision === 'accept' && !project.students.some((student) => idOf(student) === req.user.id)) {
+      if (!sameInstitution(project, req.user)) return res.status(403).json({ success: false, error: 'This invitation is for a different institution' });
       project.students.push(req.user.id);
       if (!project.leaderUserId) {
         project.leaderUserId = req.user.id;
@@ -613,13 +666,14 @@ exports.inviteProjectSupervisor = async (req, res) => {
     const project = await Project.findById(req.params.id);
     if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
     if (!projectCapabilities(project, req.user).canInviteSupervisor) return res.status(403).json({ success: false, error: 'Only the project leader or an administrator can invite a supervisor to an unassigned project' });
-    const supervisor = await User.findOne({ _id: req.body?.supervisorId, role: 'supervisor', status: 'active' });
+    const supervisor = await User.findOne({ _id: req.body?.supervisorId, role: 'supervisor', status: 'active', institution: project.institution || null });
     if (!supervisor) return res.status(422).json({ success: false, error: 'Choose an active supervisor' });
     const activeProjectCount = await Project.countDocuments({ supervisor: supervisor._id, status: { $in: ['awaiting_approval', 'active', 'on_hold'] } });
     if (activeProjectCount >= (supervisor.maxActiveTeams || 6)) return res.status(409).json({ success: false, error: 'This supervisor is currently at project capacity' });
     if (project.supervisorInvitations.some((item) => idOf(item.supervisor) === supervisor.id && item.state === 'pending')) return res.status(409).json({ success: false, error: 'This supervisor already has a pending invitation' });
     project.supervisorInvitations.push({ supervisor: supervisor._id, invitedBy: req.user.id, message: String(req.body?.message || '').trim() });
     await project.save();
+    await recordAudit({ actor: req.user.id, action: 'project.supervisor_invited', entityType: 'project', entityId: project._id, metadata: { supervisor: supervisor._id } });
     await notify({ user: supervisor._id, title: 'Supervision invitation', message: `${req.user.name} invited you to supervise "${project.title}".`, type: 'info', link: '/team-management' });
     res.status(201).json({ success: true, data: await populateProject(project._id) });
   } catch (error) {
@@ -632,6 +686,7 @@ exports.getMyProjectInvitations = async (req, res) => {
     const query = req.user.role === 'supervisor'
       ? { supervisorInvitations: { $elemMatch: { supervisor: req.user.id, state: 'pending' } } }
       : { memberInvitations: { $elemMatch: { $or: [{ user: req.user.id }, { email: req.user.email }], state: 'pending' } } };
+    query.institution = req.user.institution || null;
     const projects = await Project.find(query).populate('students', 'name department').populate('leaderUserId', 'name').populate('supervisorInvitations.invitedBy', 'name').populate('memberInvitations.invitedBy', 'name');
     res.json({ success: true, count: projects.length, data: projects });
   } catch (error) {
@@ -646,6 +701,7 @@ exports.respondToSupervisorInvitation = async (req, res) => {
     const invitation = project.supervisorInvitations.id(req.params.invitationId);
     if (!invitation || invitation.state !== 'pending') return res.status(404).json({ success: false, error: 'Pending invitation not found' });
     if (req.user.role !== 'supervisor' || idOf(invitation.supervisor) !== req.user.id) return res.status(403).json({ success: false, error: 'This invitation belongs to another supervisor' });
+    if (!sameInstitution(project, req.user)) return res.status(403).json({ success: false, error: 'This invitation is for a different institution' });
     const decision = req.body?.decision;
     if (!['accept', 'decline'].includes(decision)) return res.status(422).json({ success: false, error: 'Decision must be accept or decline' });
     invitation.state = decision === 'accept' ? 'accepted' : 'declined';
@@ -659,6 +715,7 @@ exports.respondToSupervisorInvitation = async (req, res) => {
       project.supervisionSource = 'student_invitation';
       project.supervisorAssignedAt = new Date();
       project.supervisorAssignedBy = invitation.invitedBy;
+      project.supervisorHistory.push({ supervisor: req.user.id, assignedBy: invitation.invitedBy, source: 'student_invitation', startedAt: project.supervisorAssignedAt });
       project.status = project.proposalState === 'approved' ? 'active' : 'awaiting_approval';
       project.supervisorInvitations.forEach((item) => { if (item.id !== invitation.id && item.state === 'pending') item.state = 'cancelled'; });
     }
@@ -668,6 +725,24 @@ exports.respondToSupervisorInvitation = async (req, res) => {
   } catch (error) {
     res.status(error.statusCode || 400).json({ success: false, error: error.message });
   }
+};
+
+exports.createProjectMilestone = async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+    if (!project) return res.status(404).json({ success: false, error: 'Project not found' });
+    const capabilities = projectCapabilities(project, req.user);
+    if (!(capabilities.isAdmin || capabilities.isSupervisor || capabilities.isLeader)) return res.status(403).json({ success: false, error: 'Only the project leader, assigned supervisor, or administrator can create milestones' });
+    const title = String(req.body?.title || '').trim();
+    if (!title) return res.status(422).json({ success: false, error: 'Milestone title is required' });
+    const dueDate = req.body?.dueDate || null;
+    if (dueDate && project.expectedEndDate && new Date(dueDate) > new Date(project.expectedEndDate)) return res.status(422).json({ success: false, error: 'A milestone cannot end after the project expected end date' });
+    project.milestones.push({ title, phase: String(req.body?.phase || '').trim(), dueDate, createdBy: req.user.id });
+    await project.save();
+    const milestone = project.milestones[project.milestones.length - 1];
+    await recordAudit({ actor: req.user.id, action: 'project.milestone_created', entityType: 'project', entityId: project._id, metadata: { milestoneId: milestone._id, title } });
+    res.status(201).json({ success: true, data: milestone, project: await populateProject(project._id) });
+  } catch (error) { res.status(error.statusCode || 400).json({ success: false, error: error.message }); }
 };
 
 exports.transferProjectLeadership = async (req, res) => {

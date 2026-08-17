@@ -38,7 +38,7 @@ router.get('/', protect, async (req, res) => {
         return res.status(403).json({ success: false, error: 'Not authorized to view this project\'s reports' });
       }
       filter.project = projectRecord._id;
-    } else if (req.user.role !== 'admin') {
+    } else {
       filter.project = { $in: await projectIdsForUser(req.user) };
     }
     if (submission) {

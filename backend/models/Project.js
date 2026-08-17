@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const projectSchema = new mongoose.Schema({
+  institution: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Institution',
+    default: null,
+    index: true
+  },
   title: {
     type: String,
     required: [true, 'Please add a project title']
@@ -20,6 +26,16 @@ const projectSchema = new mongoose.Schema({
     maxlength: 80,
     default: null
   },
+  projectType: {
+    type: String,
+    enum: ['thesis', 'capstone', 'course_project', 'research', 'software', 'other'],
+    default: 'research'
+  },
+  course: { type: mongoose.Schema.ObjectId, ref: 'Course', default: null },
+  academicYear: { type: String, trim: true, maxlength: 40, default: null },
+  timezone: { type: String, trim: true, maxlength: 80, default: 'Asia/Dhaka' },
+  expectedStartDate: { type: Date, default: null },
+  expectedEndDate: { type: Date, default: null },
   supervisor: {
     type: mongoose.Schema.ObjectId,
     ref: 'User',
@@ -79,6 +95,22 @@ const projectSchema = new mongoose.Schema({
     ref: 'User',
     default: null
   },
+  supervisorHistory: [{
+    supervisor: { type: mongoose.Schema.ObjectId, ref: 'User', required: true },
+    assignedBy: { type: mongoose.Schema.ObjectId, ref: 'User', required: true },
+    source: { type: String, enum: ['student_invitation', 'supervisor_claim', 'admin_assignment'], required: true },
+    startedAt: { type: Date, default: Date.now },
+    endedAt: { type: Date, default: null },
+    endReason: { type: String, trim: true, maxlength: 500, default: '' }
+  }],
+  milestones: [{
+    title: { type: String, required: true, trim: true, maxlength: 160 },
+    phase: { type: String, trim: true, maxlength: 100, default: '' },
+    dueDate: { type: Date, default: null },
+    status: { type: String, enum: ['planned', 'active', 'completed', 'cancelled'], default: 'planned' },
+    createdBy: { type: mongoose.Schema.ObjectId, ref: 'User', required: true },
+    createdAt: { type: Date, default: Date.now }
+  }],
   createdAt: {
     type: Date,
     default: Date.now
@@ -87,5 +119,6 @@ const projectSchema = new mongoose.Schema({
 
 projectSchema.index({ 'memberInvitations.email': 1, 'memberInvitations.state': 1 });
 projectSchema.index({ 'supervisorInvitations.supervisor': 1, 'supervisorInvitations.state': 1 });
+projectSchema.index({ institution: 1, status: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Project', projectSchema);

@@ -30,6 +30,12 @@ const userSchema = new mongoose.Schema({
     enum: ['student', 'supervisor', 'admin'],
     default: 'student'
   },
+  institution: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Institution',
+    default: null,
+    index: true
+  },
   status: {
     type: String,
     enum: ['active', 'inactive'],
@@ -41,6 +47,11 @@ const userSchema = new mongoose.Schema({
   },
   department: {
     type: String,
+    default: null
+  },
+  departmentRef: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Department',
     default: null
   },
   batch: {

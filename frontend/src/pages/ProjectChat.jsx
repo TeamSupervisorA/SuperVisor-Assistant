@@ -185,7 +185,7 @@ const ProjectChat = () => {
               <span className="material-symbols-outlined text-[24px]">{activeTab === 'ai' ? 'auto_awesome' : 'group'}</span>
             </div>
             <div>
-              <h1 className="font-title-lg font-black text-on-surface tracking-tight">{activeTab === 'ai' ? assistantName : 'Project Team Chat'}</h1>
+              <h1 className="font-title-lg font-black text-on-surface tracking-tight">{activeTab === 'ai' ? assistantName : 'Team Chat'}</h1>
               <p className="font-body-sm text-on-surface-variant">{activeTab === 'ai' ? 'Role-aware guidance grounded in your current project' : `${activeProject.title} · refreshes automatically`}</p>
             </div>
           </div>

@@ -53,7 +53,7 @@ const MeetingManagement = () => {
     try {
       const res = await apiFetch('/api/meetings', {
         method: 'POST',
-        body: JSON.stringify({ ...newMeeting, project: activeProject._id })
+        body: JSON.stringify({ ...newMeeting, startsAtUtc: new Date(`${newMeeting.date}T${newMeeting.time}`).toISOString(), project: activeProject._id })
       });
       
       if (res.success) {

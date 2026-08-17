@@ -95,7 +95,7 @@ exports.decideProposal = async (req, res) => {
     const version = await ProposalVersion.findById(req.params.versionId);
     if (!version) return res.status(404).json({ success: false, error: 'Proposal version not found' });
     const project = await getProject(version.project);
-    if (req.user.role !== 'admin' && project.supervisor?.toString() !== req.user.id) return res.status(403).json({ success: false, error: 'Only the assigned supervisor may decide this proposal' });
+    if (!canAccessProject(project, req.user) || (req.user.role !== 'admin' && project.supervisor?.toString() !== req.user.id)) return res.status(403).json({ success: false, error: 'Only the assigned supervisor may decide this proposal' });
     if (!['submitted', 'resubmitted', 'under_review'].includes(version.state)) return res.status(409).json({ success: false, error: 'This proposal is not awaiting a decision' });
 
     version.state = decision;

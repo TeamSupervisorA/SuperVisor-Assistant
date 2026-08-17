@@ -1,4 +1,6 @@
 const User = require('../models/User');
+const Institution = require('../models/Institution');
+const Department = require('../models/Department');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
@@ -105,6 +107,7 @@ const publicUser = (user) => ({
   name: user.name,
   email: user.email,
   role: user.role,
+  institution: user.institution,
   department: user.department,
   studentId: user.studentId,
   batch: user.batch
@@ -168,8 +171,48 @@ const buildLocalRegistration = (body = {}) => ({
   role: safeRole(body.role),
   studentId: optionalText(body.studentId, 'Student ID', 100),
   department: optionalText(body.department, 'Department', 120),
-  batch: optionalText(body.batch, 'Batch', 100)
+  batch: optionalText(body.batch, 'Batch', 100),
+  _institutionSlug: optionalText(body.institutionSlug, 'Institution', 120),
+  _departmentId: optionalText(body.departmentId, 'Department', 80)
 });
+
+const resolveRegistrationTenant = async (registration) => {
+  const tenantInput = { ...registration };
+  delete tenantInput._institutionSlug;
+  delete tenantInput._departmentId;
+  let institution = null;
+  if (registration._institutionSlug) {
+    institution = await Institution.findOne({ slug: registration._institutionSlug.toLowerCase(), status: 'active' });
+    if (!institution) throw createHttpError('Choose an active institution', 422);
+  } else {
+    const institutions = await Institution.find({ status: 'active' }).select('_id').limit(2);
+    if (institutions.length > 1) throw createHttpError('Choose your institution before creating an account', 422);
+    institution = institutions[0] || null;
+  }
+  tenantInput.institution = institution?._id || null;
+  if (institution) {
+    const allowedDomains = (institution.emailDomains || []).map((domain) => String(domain).toLowerCase());
+    const emailDomain = String(tenantInput.email || '').split('@').pop().toLowerCase();
+    if (allowedDomains.length && !allowedDomains.includes(emailDomain)) {
+      throw createHttpError('Use an email address issued by the selected institution, or ask its administrator for account access', 422);
+    }
+    const departmentCount = await Department.countDocuments({ institution: institution._id, status: 'active' });
+    if (!departmentCount) throw createHttpError('This institution has not opened registration yet because its department list is empty', 409);
+    if (registration._departmentId) {
+      const department = await Department.findOne({ _id: registration._departmentId, institution: institution._id, status: 'active' });
+      if (!department) throw createHttpError('Choose a department managed by your institution', 422);
+      tenantInput.departmentRef = department._id;
+      tenantInput.department = department.name;
+    } else {
+      const escaped = String(registration.department || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const department = escaped ? await Department.findOne({ institution: institution._id, status: 'active', name: { $regex: `^${escaped}$`, $options: 'i' } }) : null;
+      if (!department) throw createHttpError('Choose a department managed by your institution', 422);
+      tenantInput.departmentRef = department._id;
+      tenantInput.department = department.name;
+    }
+  }
+  return tenantInput;
+};
 
 const setPendingVerification = (user, details) => {
   user.emailVerified = false;
@@ -199,6 +242,7 @@ const sendPendingRegistrationCode = async (user) => {
 const pendingEmailFields = '+password +emailVerificationCode +emailVerificationExpires +emailVerificationAttempts +emailVerificationLastSentAt';
 
 const registerDirectly = async (registration, res) => {
+  registration = await resolveRegistrationTenant(registration);
   let user = await User.findOne({ email: registration.email }).select(pendingEmailFields);
   if (user && (user.onboardingStatus !== 'email_verification_pending' || user.emailVerified !== false)) {
     throw createHttpError('An account already exists with this email. Sign in or reset your password instead.', 409);
@@ -225,11 +269,13 @@ const registerDirectly = async (registration, res) => {
 exports.requestVerification = async (req, res) => {
   let newlyCreatedUser = null;
   try {
-    const registration = buildLocalRegistration(req.body);
+    let registration = buildLocalRegistration(req.body);
 
     if (!emailVerificationEnabled()) {
       return registerDirectly(registration, res);
     }
+
+    registration = await resolveRegistrationTenant(registration);
 
     let user = await User.findOne({ email: registration.email }).select(pendingEmailFields);
 
@@ -275,6 +321,14 @@ exports.register = async (req, res) => {
     if (error?.code === 11000) return res.status(409).json({ success: false, error: 'An account already exists with this email. Sign in or reset your password instead.' });
     return sendServerError(res, error, 'Unable to create your account. Please try again later.');
   }
+};
+
+exports.getRegistrationOptions = async (req, res) => {
+  try {
+    const institutions = await Institution.find({ status: 'active' }).select('name slug emailDomains').sort({ name: 1 }).lean();
+    const departments = await Department.find({ status: 'active', institution: { $in: institutions.map((item) => item._id) } }).select('institution code name').sort({ name: 1 }).lean();
+    res.json({ success: true, data: institutions.map((institution) => ({ ...institution, departments: departments.filter((department) => String(department.institution) === String(institution._id)) })) });
+  } catch (error) { return sendServerError(res, error, 'Unable to load registration options'); }
 };
 
 // @desc    Resend the current pending-registration code
@@ -498,6 +552,15 @@ exports.completeGoogleProfile = async (req, res) => {
     user.studentId = optionalText(req.body?.studentId, 'Student ID', 100);
     user.department = optionalText(req.body?.department, 'Department', 120);
     user.batch = optionalText(req.body?.batch, 'Batch', 100);
+    const tenantProfile = await resolveRegistrationTenant({
+      email: user.email,
+      department: user.department,
+      _institutionSlug: optionalText(req.body?.institutionSlug, 'Institution', 120),
+      _departmentId: optionalText(req.body?.departmentId, 'Department', 80)
+    });
+    user.institution = tenantProfile.institution;
+    user.departmentRef = tenantProfile.departmentRef || null;
+    user.department = tenantProfile.department;
     if (req.body?.password !== undefined && req.body.password !== '') {
       const password = requiredPassword(req.body.password);
       passwordConfirmationMatches(password, req.body?.confirmPassword);

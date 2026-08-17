@@ -79,21 +79,6 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
           </button>
         </div>
         
-        {/* New Work Button */}
-        {role === 'student' && (
-          <div className={`shrink-0 ${isCollapsed ? 'mt-3 px-3' : 'mt-5 px-3'}`}>
-            <Link 
-              to="/create-new-work" 
-              onClick={closeMobile}
-              aria-label={isCollapsed ? 'Create new work' : undefined}
-              className={`flex w-full items-center bg-primary font-label-md text-[13px] font-semibold text-on-primary shadow-sm transition-all hover:bg-surface-tint hover:shadow-md hover:shadow-primary/20 active:scale-95 ${isCollapsed ? 'h-12 justify-center rounded-2xl' : 'h-11 justify-center gap-2 rounded-xl'}`}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>add</span>
-              {!isCollapsed && <span>Create New Work</span>}
-            </Link>
-          </div>
-        )}
-        
         {/* Navigation */}
         <nav aria-label="Primary navigation" className={`sidebar-nav flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden ${isCollapsed ? 'sidebar-nav--collapsed gap-1 px-2 py-3' : 'gap-0.5 px-3 py-4'}`}>
           {navItems.map((item) => {

@@ -14,6 +14,11 @@ const progressLogSchema = new mongoose.Schema({
     respondedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     respondedAt: Date
   },
+  reviewState: {
+    type: String,
+    enum: ['pending', 'acknowledged', 'approved', 'changes_requested'],
+    default: 'pending'
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

@@ -27,6 +27,8 @@ const submissionSchema = new mongoose.Schema({
       return !String(this.content || '').trim();
     }
   },
+  milestone: { type: mongoose.Schema.ObjectId, default: null },
+  proposalVersion: { type: mongoose.Schema.ObjectId, ref: 'ProposalVersion', default: null },
   content: {
     type: String,
     default: '',

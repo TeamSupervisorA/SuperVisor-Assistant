@@ -3,6 +3,15 @@ import { apiFetch } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 
+const defaultCriteria = [
+  { key: 'problemUnderstanding', label: 'Problem understanding', maxScore: 10 },
+  { key: 'methodology', label: 'Methodology', maxScore: 20 },
+  { key: 'implementation', label: 'Implementation', maxScore: 30 },
+  { key: 'documentation', label: 'Documentation', maxScore: 40 }
+];
+
+const emptyScores = (criteria) => Object.fromEntries(criteria.map(({ key }) => [key, 0]));
+
 const containerVariants = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.1 } }
@@ -14,12 +23,15 @@ const itemVariants = {
 };
 
 const EvaluationsGrades = () => {
-  const { activeProject } = useAuth();
+  const { activeProject, user } = useAuth();
   const [evaluations, setEvaluations] = useState([]);
+  const [criteria, setCriteria] = useState(defaultCriteria);
+  const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [newEval, setNewEval] = useState({ 
-    scores: { problemUnderstanding: 0, methodology: 0, implementation: 0, documentation: 0 },
+    scores: emptyScores(defaultCriteria),
+    submission: '',
     feedback: '' 
   });
   const projectId = activeProject?._id;
@@ -31,7 +43,12 @@ const EvaluationsGrades = () => {
       const res = await apiFetch(`/api/evaluations?project=${projectId}`).catch(() => ({ data: [] }));
       if (res && res.data) {
         setEvaluations(res.data);
+        const nextCriteria = res.rubric?.criteria?.length ? res.rubric.criteria : defaultCriteria;
+        setCriteria(nextCriteria);
+        setNewEval((current) => ({ ...current, scores: emptyScores(nextCriteria) }));
       }
+      const submissionRes = await apiFetch(`/api/submissions?project=${projectId}`).catch(() => ({ data: [] }));
+      setSubmissions(submissionRes.data || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -59,7 +76,7 @@ const EvaluationsGrades = () => {
       
       if (res.success) {
         setShowModal(false);
-        setNewEval({ scores: { problemUnderstanding: 0, methodology: 0, implementation: 0, documentation: 0 }, feedback: '' });
+        setNewEval({ scores: emptyScores(criteria), submission: '', feedback: '' });
         if (res.data) {
           setEvaluations([...evaluations, res.data]);
         } else {
@@ -71,9 +88,8 @@ const EvaluationsGrades = () => {
     }
   };
 
-  const totalScore = (scores) => {
-    return Number(scores.problemUnderstanding) + Number(scores.methodology) + Number(scores.implementation) + Number(scores.documentation);
-  };
+  const totalScore = (scores) => Object.values(scores || {}).reduce((sum, value) => sum + Number(value || 0), 0);
+  const canEvaluate = ['supervisor', 'admin'].includes(user?.role);
 
   if (!activeProject) {
     return (
@@ -106,10 +122,10 @@ const EvaluationsGrades = () => {
             <h1 className="font-display text-[32px] md:text-[42px] font-black text-on-surface tracking-tight leading-none mb-2">Evaluations & Grades</h1>
             <p className="font-title-md text-[16px] text-on-surface-variant font-medium">Project assessment based on standard rubric criteria.</p>
           </div>
-          <button onClick={() => setShowModal(true)} className="bg-primary text-on-primary px-6 py-3.5 rounded-[16px] font-title-sm text-[15px] font-bold flex items-center gap-2 hover:bg-primary-fixed-variant transition-colors shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98]">
+          {canEvaluate && <button onClick={() => setShowModal(true)} className="bg-primary text-on-primary px-6 py-3.5 rounded-[16px] font-title-sm text-[15px] font-bold flex items-center gap-2 hover:bg-primary-fixed-variant transition-colors shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98]">
             <span className="material-symbols-outlined text-[20px]">add_task</span>
             New Evaluation
-          </button>
+          </button>}
         </motion.div>
 
         {loading ? (
@@ -150,23 +166,13 @@ const EvaluationsGrades = () => {
                   </div>
                   
                   <div className="space-y-4 mb-8 relative z-10">
-                    <div className="flex justify-between items-center p-3 rounded-[12px] bg-surface-container-lowest/50 border border-outline-variant/20 hover:border-outline-variant/50 transition-colors">
-                      <span className="font-body-sm text-[13px] text-secondary">Problem Understanding (10)</span>
-                      <span className="font-title-sm text-[15px] font-bold text-on-surface">{ev.scores.problemUnderstanding}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 rounded-[12px] bg-surface-container-lowest/50 border border-outline-variant/20 hover:border-outline-variant/50 transition-colors">
-                      <span className="font-body-sm text-[13px] text-secondary">Methodology (20)</span>
-                      <span className="font-title-sm text-[15px] font-bold text-on-surface">{ev.scores.methodology}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 rounded-[12px] bg-surface-container-lowest/50 border border-outline-variant/20 hover:border-outline-variant/50 transition-colors">
-                      <span className="font-body-sm text-[13px] text-secondary">Implementation (30)</span>
-                      <span className="font-title-sm text-[15px] font-bold text-on-surface">{ev.scores.implementation}</span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 rounded-[12px] bg-surface-container-lowest/50 border border-outline-variant/20 hover:border-outline-variant/50 transition-colors">
-                      <span className="font-body-sm text-[13px] text-secondary">Documentation (40)</span>
-                      <span className="font-title-sm text-[15px] font-bold text-on-surface">{ev.scores.documentation}</span>
-                    </div>
+                    {(ev.rubricSnapshot?.length ? ev.rubricSnapshot : criteria).map((criterion) => <div key={criterion.key} className="flex justify-between items-center p-3 rounded-[12px] bg-surface-container-lowest/50 border border-outline-variant/20 hover:border-outline-variant/50 transition-colors">
+                      <span className="font-body-sm text-[13px] text-secondary">{criterion.label} ({criterion.maxScore})</span>
+                      <span className="font-title-sm text-[15px] font-bold text-on-surface">{ev.scores?.[criterion.key] ?? 0}</span>
+                    </div>)}
                   </div>
+
+                  {ev.submission?.title && <p className="mb-5 text-sm text-secondary">Deliverable: <span className="font-semibold text-on-surface">{ev.submission.title}</span></p>}
 
                   <div className="bg-surface-container/30 backdrop-blur-md p-5 rounded-[20px] mt-auto border border-outline-variant/20 relative z-10">
                     <div className="flex items-center gap-2 mb-2">
@@ -207,27 +213,22 @@ const EvaluationsGrades = () => {
                      <span className="material-symbols-outlined text-[24px]">grading</span>
                   </div>
                   <h3 className="font-display text-[28px] font-black text-on-surface">Add Evaluation</h3>
-                  <p className="font-body-sm text-[14px] text-secondary mt-1">Grade the project based on the standard rubric.</p>
+                  <p className="font-body-sm text-[14px] text-secondary mt-1">Use the rubric configured for this project&apos;s course.</p>
                 </div>
 
                 <form onSubmit={handleCreate} className="p-8 space-y-8 overflow-y-auto flex-1 relative z-10">
+                  <div className="space-y-2">
+                    <label className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">Related submission (optional)</label>
+                    <select value={newEval.submission} onChange={(e) => setNewEval({ ...newEval, submission: e.target.value })} className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl text-on-surface">
+                      <option value="">Project-level evaluation</option>
+                      {submissions.map((submission) => <option key={submission._id} value={submission._id}>{submission.title} — {submission.status}</option>)}
+                    </select>
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">Problem Understanding (0-10)</label>
-                      <input type="number" min="0" max="10" required value={newEval.scores.problemUnderstanding} onChange={e => setNewEval({...newEval, scores: {...newEval.scores, problemUnderstanding: e.target.value}})} className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">Methodology (0-20)</label>
-                      <input type="number" min="0" max="20" required value={newEval.scores.methodology} onChange={e => setNewEval({...newEval, scores: {...newEval.scores, methodology: e.target.value}})} className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">Implementation (0-30)</label>
-                      <input type="number" min="0" max="30" required value={newEval.scores.implementation} onChange={e => setNewEval({...newEval, scores: {...newEval.scores, implementation: e.target.value}})} className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">Documentation (0-40)</label>
-                      <input type="number" min="0" max="40" required value={newEval.scores.documentation} onChange={e => setNewEval({...newEval, scores: {...newEval.scores, documentation: e.target.value}})} className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" />
-                    </div>
+                    {criteria.map((criterion) => <div key={criterion.key} className="space-y-2">
+                      <label className="block font-label-sm text-[12px] font-bold text-secondary uppercase tracking-widest">{criterion.label} (0-{criterion.maxScore})</label>
+                      <input type="number" min="0" max={criterion.maxScore} required value={newEval.scores[criterion.key] ?? 0} onChange={(e) => setNewEval({ ...newEval, scores: { ...newEval.scores, [criterion.key]: e.target.value } })} className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl font-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" />
+                    </div>)}
                   </div>
                   
                   <div className="bg-primary/5 border border-primary/20 p-5 rounded-[20px] flex items-center justify-between">

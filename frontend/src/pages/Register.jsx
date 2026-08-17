@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiFetch } from '../lib/api';
@@ -38,6 +38,8 @@ const Register = () => {
     fullName: '',
     email: '',
     role: 'student',
+    institutionSlug: '',
+    departmentId: '',
     studentId: '',
     department: '',
     batch: '',
@@ -48,13 +50,26 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [institutions, setInstitutions] = useState([]);
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const passwordStrength = useMemo(() => getPasswordStrength(form.password), [form.password]);
+  const selectedInstitution = institutions.find((item) => item.slug === form.institutionSlug) || (institutions.length === 1 ? institutions[0] : null);
+  const registrationUnavailable = Boolean(selectedInstitution && !selectedInstitution.departments?.length);
+
+  useEffect(() => {
+    apiFetch('/api/auth/registration-options')
+      .then((response) => {
+        const options = response.data || [];
+        setInstitutions(options);
+        if (options.length === 1) setForm((current) => ({ ...current, institutionSlug: options[0].slug }));
+      })
+      .catch(() => setInstitutions([]));
+  }, []);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm({ ...form, [e.target.name]: e.target.value, ...(e.target.name === 'institutionSlug' ? { departmentId: '', department: '' } : {}) });
   };
 
   const handleSubmit = async (e) => {
@@ -79,6 +94,8 @@ const Register = () => {
           email: form.email,
           password: form.password,
           role: form.role,
+          institutionSlug: form.institutionSlug || undefined,
+          departmentId: form.departmentId || undefined,
           studentId: form.studentId || undefined,
           department: form.department || undefined,
           batch: form.batch || undefined
@@ -180,6 +197,15 @@ const Register = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {institutions.length > 0 && (
+                <div className="space-y-2 sm:col-span-2">
+                  <label className="block pl-1 text-[12px] font-bold uppercase tracking-widest text-secondary">Institution</label>
+                  <select name="institutionSlug" value={form.institutionSlug} onChange={handleChange} required className="w-full rounded-2xl border border-outline-variant/50 bg-surface-container-lowest/70 px-4 py-3.5 text-[15px] text-on-surface outline-none focus:border-primary">
+                    <option value="">Choose your institution</option>
+                    {institutions.map((institution) => <option key={institution._id} value={institution.slug}>{institution.name}</option>)}
+                  </select>
+                </div>
+              )}
               <div className="space-y-2">
                 <label className="block font-label-md text-[12px] font-bold text-secondary uppercase tracking-widest pl-1">Full Name</label>
                 <div className="relative group">
@@ -210,7 +236,16 @@ const Register = () => {
                     <label className="block font-label-md text-[12px] font-bold text-secondary uppercase tracking-widest pl-1">Department</label>
                     <div className="relative group">
                       <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] group-focus-within:text-primary transition-colors">domain</span>
-                      <input name="department" value={form.department} onChange={handleChange} className="w-full bg-surface-container-lowest/50 backdrop-blur-md border border-outline-variant/50 rounded-2xl pl-11 pr-4 py-3.5 font-body-md text-[15px] text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-on-surface-variant/50 hover:bg-surface-container-lowest/80 shadow-inner" placeholder="e.g. Computer Science" />
+                      {selectedInstitution?.departments?.length ? (
+                        <select name="departmentId" value={form.departmentId} onChange={handleChange} required className="w-full rounded-2xl border border-outline-variant/50 bg-surface-container-lowest/70 py-3.5 pl-11 pr-4 text-[15px] text-on-surface outline-none focus:border-primary">
+                          <option value="">Choose department</option>
+                          {selectedInstitution.departments.map((department) => <option key={department._id} value={department._id}>{department.name} ({department.code})</option>)}
+                        </select>
+                      ) : selectedInstitution ? (
+                        <div role="status" className="rounded-2xl border border-amber-400/40 bg-amber-400/10 py-3.5 pl-11 pr-4 text-sm text-on-surface">Registration opens after the institution adds its departments.</div>
+                      ) : (
+                        <input name="department" value={form.department} onChange={handleChange} className="w-full bg-surface-container-lowest/50 backdrop-blur-md border border-outline-variant/50 rounded-2xl pl-11 pr-4 py-3.5 font-body-md text-[15px] text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-on-surface-variant/50 hover:bg-surface-container-lowest/80 shadow-inner" placeholder="e.g. Computer Science" />
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -255,7 +290,7 @@ const Register = () => {
             <button
               className="w-full bg-primary hover:bg-primary-fixed-variant text-on-primary font-title-md text-[16px] font-bold py-4 rounded-2xl transition-all duration-300 mt-8 flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(var(--primary-rgb),0.25)] hover:shadow-[0_12px_25px_rgba(var(--primary-rgb),0.35)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed group"
               type="submit"
-              disabled={loading}
+              disabled={loading || registrationUnavailable}
             >
               {loading ? (
                 <><motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="material-symbols-outlined text-[20px]">sync</motion.span> Creating account...</>

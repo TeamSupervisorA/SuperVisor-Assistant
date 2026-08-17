@@ -9,13 +9,16 @@ const { taskMetrics } = require('../utils/projectWorkflow');
 
 exports.getAdminMetrics = async (req, res) => {
   try {
-    const totalStudents = await User.countDocuments({ role: 'student' });
-    const totalTeachers = await User.countDocuments({ role: 'supervisor' });
-    const activeProjects = await Project.countDocuments({ status: { $in: ['draft', 'awaiting_supervisor', 'awaiting_approval', 'proposed', 'active'] } });
+    const tenant = { institution: req.user.institution || null };
+    const totalStudents = await User.countDocuments({ ...tenant, role: 'student' });
+    const totalTeachers = await User.countDocuments({ ...tenant, role: 'supervisor' });
+    const tenantProjects = await Project.find({ ...tenant }).distinct('_id');
+    const activeProjects = await Project.countDocuments({ ...tenant, status: { $in: ['draft', 'awaiting_supervisor', 'awaiting_approval', 'proposed', 'active'] } });
     
     // Real counts from submissions and plagiarism reports
-    const assignmentsSubmitted = await Submission.countDocuments();
+    const assignmentsSubmitted = await Submission.countDocuments({ project: { $in: tenantProjects } });
     const plagiarismAlerts = await PlagiarismReport.countDocuments({
+      project: { $in: tenantProjects },
       status: 'Completed',
       isCurrent: { $ne: false },
       overallSimilarity: { $gte: 20 }

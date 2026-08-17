@@ -13,6 +13,7 @@ const meetingSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please add a time']
   },
+  startsAtUtc: { type: Date, required: true, index: true },
   timezone: { type: String, trim: true, default: 'Asia/Dhaka' },
   type: {
     type: String,
@@ -59,10 +60,6 @@ const meetingSchema = new mongoose.Schema({
   }],
   cancellationReason: { type: String, default: '' },
   rescheduledFrom: { type: Date, default: null },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('Meeting', meetingSchema);
