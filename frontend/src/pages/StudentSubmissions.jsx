@@ -198,6 +198,25 @@ const StudentSubmissions = () => {
     }
   };
 
+  const getAiFeedback = async (submissionId, content) => {
+    if (!content) {
+      setError("This submission requires text content to generate AI feedback.");
+      return;
+    }
+    setError("");
+    setNotice("");
+    try {
+      const response = await apiFetch('/api/ai/feedback', {
+        method: 'POST',
+        body: JSON.stringify({ text: content, criteria: 'General academic quality and clarity' })
+      });
+      setSubmissions(current => current.map(sub => sub._id === submissionId ? { ...sub, aiFeedback: response.data } : sub));
+      setNotice("AI Feedback generated successfully.");
+    } catch (requestError) {
+      setError(requestError.message || "Failed to generate AI feedback.");
+    }
+  };
+
   if (!activeProject) {
     return (
       <div className="w-full min-h-[calc(100vh-80px)] flex items-center justify-center bg-background p-6">
@@ -421,8 +440,20 @@ const StudentSubmissions = () => {
                           Review submission
                         </button>
                       )}
+                      <button
+                        onClick={() => getAiFeedback(submission._id, submission.content)}
+                        className="rounded-xl border border-tertiary/30 px-3 py-2 text-xs font-bold text-tertiary transition hover:bg-tertiary/10"
+                      >
+                        AI Feedback
+                      </button>
                     </div>
                   </div>
+                  {submission.aiFeedback && (
+                    <div className="mt-4 rounded-xl border border-primary/25 bg-primary/5 p-4 text-sm text-on-surface">
+                       <p className="font-bold text-primary mb-2 flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">auto_awesome</span> AI Feedback</p>
+                       <p className="whitespace-pre-wrap leading-relaxed">{submission.aiFeedback}</p>
+                    </div>
+                  )}
                 </motion.article>
               );
             })}

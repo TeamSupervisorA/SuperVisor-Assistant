@@ -11,6 +11,9 @@ const ProposalLifecycle = () => {
   const [outlineLoading, setOutlineLoading] = useState(false);
   const [message, setMessage] = useState('');
 
+  const [aiFeedback, setAiFeedback] = useState({});
+  const [reviewLoading, setReviewLoading] = useState(null);
+
   const isSupervisor = ['supervisor', 'admin'].includes(user?.role);
   const projectId = activeProject?._id;
 
@@ -67,6 +70,21 @@ const ProposalLifecycle = () => {
     } catch (error) { setMessage(error.message); } finally { setOutlineLoading(false); }
   };
 
+  const getAiReview = async (version) => {
+    if (reviewLoading === version._id) return;
+    setReviewLoading(version._id);
+    try {
+      const response = await apiFetch('/api/ai/review-proposal', {
+        method: 'POST', body: JSON.stringify({ proposalText: version.content })
+      });
+      setAiFeedback(prev => ({ ...prev, [version._id]: response.data }));
+    } catch (error) {
+      setMessage(`AI Review failed: ${error.message}`);
+    } finally {
+      setReviewLoading(null);
+    }
+  };
+
   const submit = async (versionId) => {
     try {
       await apiFetch(`/api/proposals/${versionId}/submit`, { method: 'POST' });
@@ -119,7 +137,14 @@ const ProposalLifecycle = () => {
                 <button onClick={() => decide(version._id, 'revision_requested')} className="rounded-lg border border-tertiary text-tertiary px-4 py-2 font-semibold">Request revision</button>
                 <button onClick={() => decide(version._id, 'rejected')} className="rounded-lg border border-error text-error px-4 py-2 font-semibold">Reject</button>
               </>}
+              <button onClick={() => getAiReview(version)} disabled={reviewLoading === version._id} className="rounded-lg border border-primary/30 bg-primary/10 text-primary px-4 py-2 font-semibold disabled:opacity-60">{reviewLoading === version._id ? 'Reviewing…' : 'AI Review'}</button>
             </div>
+            {aiFeedback[version._id] && (
+              <div className="mt-4 rounded-xl border border-primary/25 bg-primary/5 p-4">
+                <div className="flex items-center gap-2 mb-2 text-primary font-bold"><span className="material-symbols-outlined">auto_awesome</span> AI Review</div>
+                <pre className="whitespace-pre-wrap font-sans text-sm text-on-surface">{aiFeedback[version._id]}</pre>
+              </div>
+            )}
           </article>
         ))}
       </section>
