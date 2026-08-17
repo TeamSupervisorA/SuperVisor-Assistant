@@ -72,22 +72,71 @@ const SpotlightCard = ({ children, className = "" }) => {
   );
 };
 
-// Text Reveal Component (Staggered Characters/Words)
-const TextReveal = ({ text, className, delay = 0 }) => {
-  const words = text.split(" ");
+const ResearchSignalMap = () => {
+  const signals = [
+    { label: 'Proposal', detail: 'Scope aligned', icon: 'description', position: 'lg:left-5 lg:top-20' },
+    { label: 'Evidence', detail: 'Sources verified', icon: 'menu_book', position: 'lg:right-5 lg:top-20' },
+    { label: 'Methods', detail: 'Review ready', icon: 'science', position: 'lg:left-5 lg:bottom-20' },
+    { label: 'Integrity', detail: 'Checks recorded', icon: 'verified_user', position: 'lg:right-5 lg:bottom-20' }
+  ];
+
   return (
-    <div className={`flex flex-wrap justify-center ${className}`}>
-      {words.map((word, i) => (
-        <motion.span
-          key={i}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: delay + i * 0.1, ease: [0.2, 0.65, 0.3, 0.9] }}
-          className="mr-3"
+    <div className="relative overflow-hidden rounded-[34px] border border-outline-variant/30 bg-surface/75 p-5 shadow-[0_30px_90px_-35px_rgba(53,37,205,.45)] backdrop-blur-2xl sm:p-7 dark:bg-surface/55">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.22] dark:opacity-[0.12]"
+        style={{ backgroundImage: 'linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)', backgroundSize: '32px 32px' }}
+      />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/15" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-primary/30" />
+      <motion.div
+        aria-hidden="true"
+        animate={{ rotate: 360 }}
+        transition={{ duration: 24, repeat: Infinity, ease: 'linear' }}
+        className="pointer-events-none absolute left-1/2 top-1/2 hidden h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full lg:block"
+      >
+        <span className="absolute left-1/2 top-[-5px] h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-tertiary shadow-[0_0_20px_rgba(88,80,255,.8)]" />
+      </motion.div>
+
+      <div className="relative z-10 flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">Guidance graph</p>
+          <p className="mt-1 text-xs text-on-surface-variant">Every decision stays connected.</p>
+        </div>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> Live context
+        </span>
+      </div>
+
+      <div className="relative z-10 mt-7 grid min-h-[350px] grid-cols-2 content-between gap-3 lg:block">
+        {signals.map((signal, index) => (
+          <motion.div
+            key={signal.label}
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1, y: [0, index % 2 ? -5 : 5, 0] }}
+            transition={{ opacity: { delay: 0.35 + index * 0.1 }, scale: { delay: 0.35 + index * 0.1 }, y: { duration: 4 + index, repeat: Infinity, ease: 'easeInOut' } }}
+            className={`rounded-2xl border border-outline-variant/30 bg-surface/90 p-3 shadow-lg backdrop-blur-xl lg:absolute lg:w-[150px] ${signal.position}`}
+          >
+            <span className="material-symbols-outlined text-[18px] text-primary">{signal.icon}</span>
+            <p className="mt-2 text-xs font-extrabold text-on-surface">{signal.label}</p>
+            <p className="mt-0.5 text-[10px] text-on-surface-variant">{signal.detail}</p>
+          </motion.div>
+        ))}
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.7, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="col-span-2 mx-auto my-3 flex h-32 w-32 flex-col items-center justify-center rounded-[32px] border border-primary/25 bg-gradient-to-br from-primary to-tertiary text-center text-on-primary shadow-[0_20px_50px_-15px_rgba(53,37,205,.65)] lg:absolute lg:left-1/2 lg:top-1/2 lg:my-0 lg:-translate-x-1/2 lg:-translate-y-1/2"
         >
-          {word}
-        </motion.span>
-      ))}
+          <span className="material-symbols-outlined text-[26px]">hub</span>
+          <span className="mt-2 text-[10px] font-black uppercase tracking-[0.16em]">Research</span>
+          <span className="text-[10px] text-on-primary/75">in motion</span>
+        </motion.div>
+      </div>
+
+      <div className="relative z-10 mt-3 flex items-center justify-between rounded-2xl border border-outline-variant/20 bg-surface-container-low/80 px-4 py-3 text-[10px] font-bold text-on-surface-variant">
+        <span>Student work</span><span className="material-symbols-outlined text-[15px] text-primary">sync_alt</span><span>Supervisor decision</span><span className="material-symbols-outlined text-[15px] text-primary">sync_alt</span><span>Admin oversight</span>
+      </div>
     </div>
   );
 };
@@ -214,44 +263,74 @@ const LandingPage = () => {
           {/* Hero Section */}
           <motion.section 
             style={{ y: heroY, opacity: heroOpacity }}
-            className="pt-32 lg:pt-48 pb-20 flex flex-col items-center text-center relative"
+            className="relative grid min-h-[760px] items-center gap-16 pb-24 pt-20 lg:grid-cols-[1.06fr_.94fr] lg:pb-32 lg:pt-28"
           >
+            <div className="relative z-10 max-w-3xl text-left">
+              <motion.div
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="mb-7 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-primary"
+              >
+                <span className="h-2 w-2 rounded-full bg-primary shadow-[0_0_16px_rgba(83,68,255,.8)]" />
+                One connected academic record
+              </motion.div>
 
+              <motion.h1
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                className="font-display text-[52px] font-black leading-[0.98] tracking-[-0.055em] text-on-surface sm:text-[72px] lg:text-[82px]"
+              >
+                Research moves when <span className="bg-gradient-to-r from-[#087ea4] via-primary to-tertiary bg-clip-text text-transparent">guidance connects.</span>
+              </motion.h1>
 
-            <TextReveal 
-              text="Elevate Academic"
-              className="font-display text-[56px] sm:text-[72px] lg:text-[100px] leading-[1.05] font-black text-on-surface tracking-tighter" 
-            />
-            <TextReveal 
-              text="Supervision & Research"
-              delay={0.2}
-              className="font-display text-[56px] sm:text-[72px] lg:text-[100px] leading-[1.05] font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-primary via-tertiary to-primary bg-[length:200%_auto] animate-gradient pb-2" 
-            />
-            
-            <motion.p 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-              className="font-body-lg text-[20px] lg:text-[24px] text-on-surface-variant max-w-3xl mb-12 mt-8 leading-relaxed font-light"
+              <motion.p
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.3 }}
+                className="mt-8 max-w-2xl text-[18px] font-light leading-relaxed text-on-surface-variant lg:text-[21px]"
+              >
+                Supervisor Assistant links student work, evidence, feedback, integrity checks, and institutional oversight—so the next academic decision is always clear.
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.48 }}
+                className="mt-10 flex flex-col items-start gap-5 sm:flex-row sm:items-center"
+              >
+                <Link to="/register" className="group relative inline-flex items-center justify-center gap-3 overflow-hidden rounded-full bg-on-surface px-8 py-4 text-[15px] font-bold text-surface shadow-[0_16px_45px_-18px_rgba(0,0,0,.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_50px_-18px_rgba(53,37,205,.8)]">
+                  <span className="relative z-10">Create your research workspace</span>
+                  <span className="material-symbols-outlined relative z-10 text-[19px] transition-transform group-hover:translate-x-1">arrow_forward</span>
+                  <span className="absolute inset-0 translate-y-full bg-gradient-to-r from-primary to-tertiary transition-transform duration-300 group-hover:translate-y-0" />
+                </Link>
+                <Link to="/login" className="inline-flex items-center gap-2 text-sm font-bold text-on-surface-variant transition-colors hover:text-primary">
+                  Already collaborating? <span className="text-primary">Sign in</span>
+                </Link>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8, delay: 0.65 }}
+                className="mt-10 flex flex-wrap gap-2"
+              >
+                {['Role-aware workspaces', 'Evidence-linked feedback', 'Human-controlled AI'].map((item) => (
+                  <span key={item} className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant/25 bg-surface/60 px-3 py-1.5 text-[11px] font-semibold text-on-surface-variant backdrop-blur-md">
+                    <span className="material-symbols-outlined text-[14px] text-primary">check_circle</span>{item}
+                  </span>
+                ))}
+              </motion.div>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 40, rotate: 2 }}
+              animate={{ opacity: 1, x: 0, rotate: 0 }}
+              transition={{ duration: 0.9, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="relative z-10"
             >
-              The intelligent OS for academic projects. Streamline workflows, ensure integrity, and provide actionable feedback with institutional-grade AI.
-            </motion.p>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.7, ease: [0.16, 1, 0.3, 1] }}
-              className="flex flex-col sm:flex-row gap-5"
-            >
-              <Link to="/register" className="group font-label-lg text-[16px] font-bold bg-on-surface text-surface px-8 py-4 rounded-full transition-all duration-300 hover:shadow-[0_0_40px_rgba(53,37,205,0.4)] hover:-translate-y-1 flex items-center justify-center gap-3 relative overflow-hidden">
-                <span className="relative z-10">Start Building the Future</span>
-                <span className="material-symbols-outlined relative z-10 transition-transform group-hover:translate-x-2 text-[20px]">arrow_forward</span>
-                <div className="absolute inset-0 bg-gradient-to-r from-primary to-tertiary opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-              </Link>
-              <button className="group font-label-lg text-[16px] font-bold text-on-surface bg-surface/50 backdrop-blur-md border border-outline-variant/40 px-8 py-4 rounded-full hover:bg-surface-variant/50 transition-all duration-300 flex items-center justify-center gap-3">
-                <span className="material-symbols-outlined icon-fill text-on-surface-variant group-hover:text-primary transition-colors">play_circle</span>
-                Watch Platform Demo
-              </button>
+              <ResearchSignalMap />
             </motion.div>
           </motion.section>
 
@@ -296,14 +375,27 @@ const LandingPage = () => {
             </div>
           </motion.div>
 
-          {/* Trusted By / Social Proof */}
-          <section className="pb-32 relative z-20">
-            <p className="text-center font-label-sm font-bold text-on-surface-variant uppercase tracking-widest mb-8 text-[12px] opacity-80">Trusted by innovative institutions worldwide</p>
-            <div className="flex flex-wrap justify-center items-center gap-10 md:gap-20 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
-              <div className="flex items-center gap-2 font-display font-bold text-xl"><span className="material-symbols-outlined text-3xl">account_balance</span> Oxford Research</div>
-              <div className="flex items-center gap-2 font-display font-bold text-xl"><span className="material-symbols-outlined text-3xl">science</span> MIT Labs</div>
-              <div className="flex items-center gap-2 font-display font-bold text-xl"><span className="material-symbols-outlined text-3xl">biotech</span> Stanford Bio</div>
-              <div className="flex items-center gap-2 font-display font-bold text-xl"><span className="material-symbols-outlined text-3xl">public</span> Global Tech U</div>
+          {/* Connected research lifecycle */}
+          <section className="relative z-20 pb-28">
+            <div className="overflow-hidden rounded-[32px] border border-outline-variant/25 bg-surface/60 p-3 shadow-sm backdrop-blur-xl">
+              <div className="grid gap-2 md:grid-cols-4">
+                {[
+                  ['01', 'Scope', 'Proposal studio', 'edit_note'],
+                  ['02', 'Ground', 'Literature desk', 'library_books'],
+                  ['03', 'Review', 'Supervisor decisions', 'rate_review'],
+                  ['04', 'Defend', 'Submission record', 'workspace_premium']
+                ].map(([number, title, detail, icon], index) => (
+                  <div key={title} className="group relative rounded-[24px] border border-transparent px-5 py-5 transition hover:border-primary/20 hover:bg-primary/5">
+                    {index < 3 && <span className="absolute -right-2 top-1/2 z-10 hidden -translate-y-1/2 text-outline-variant md:block">→</span>}
+                    <div className="flex items-center justify-between">
+                      <span className="font-display text-[11px] font-black tracking-[0.2em] text-primary">{number}</span>
+                      <span className="material-symbols-outlined text-[20px] text-on-surface-variant transition group-hover:text-primary">{icon}</span>
+                    </div>
+                    <p className="mt-5 text-lg font-black text-on-surface">{title}</p>
+                    <p className="mt-1 text-xs text-on-surface-variant">{detail}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
 
