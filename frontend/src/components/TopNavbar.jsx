@@ -332,6 +332,7 @@ const TopNavbar = ({ onMenuClick, isDark, toggleDark }) => {
                   {[
                     { icon: 'person', label: 'My Profile', action: () => { setShowUserMenu(false); navigate('/profile'); } },
                     { icon: 'settings', label: 'Settings', action: () => { setShowUserMenu(false); navigate('/settings'); } },
+                    { icon: 'mail', label: 'Contact Support', action: () => { window.location.href = 'mailto:suprevisorassistant@gmail.com'; } },
                     { icon: isDark ? 'light_mode' : 'dark_mode', label: isDark ? 'Light Mode' : 'Dark Mode', action: () => { toggleDark(); } },
                   ].map((item, i) => (
                     <button

@@ -684,6 +684,7 @@ const LandingPage = () => {
               <ul className="space-y-4 font-body-sm text-[15px] text-on-surface-variant">
                 <li><Link className="hover:text-primary transition-colors block" to="/register">Create account</Link></li>
                 <li><Link className="hover:text-primary transition-colors block" to="/login">Sign in</Link></li>
+                <li><a className="hover:text-primary transition-colors block" href="mailto:suprevisorassistant@gmail.com">Contact Us</a></li>
               </ul>
             </div>
 
