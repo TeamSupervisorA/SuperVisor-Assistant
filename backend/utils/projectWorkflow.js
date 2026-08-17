@@ -56,7 +56,7 @@ const projectCapabilities = (project, user) => {
     canManageRoster: isAdmin || isLeader || isSupervisor,
     canInviteStudents: isAdmin || isLeader || isSupervisor,
     canInviteSupervisor: !supervisorId && (isAdmin || isLeader),
-    canAssignTasks: active && (isAdmin || isLeader || isSupervisor),
+    canAssignTasks: project?.status !== 'archived' && (isAdmin || isLeader || isSupervisor),
     canReview: active && (isAdmin || isSupervisor)
   };
 };

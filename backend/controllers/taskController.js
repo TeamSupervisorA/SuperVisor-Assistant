@@ -153,7 +153,7 @@ exports.createTask = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
 
-    if (!canAccessProject(project, req.user) || project.status !== 'active') return res.status(403).json({ success: false, error: 'Only active project members can add or propose tasks' });
+    if (!canAccessProject(project, req.user) || project.status === 'archived') return res.status(403).json({ success: false, error: 'Cannot add tasks to an archived project' });
     const canCreateOfficial = projectCapabilities(project, req.user).canAssignTasks;
 
     // Tasks created by students default to being assigned to themselves,

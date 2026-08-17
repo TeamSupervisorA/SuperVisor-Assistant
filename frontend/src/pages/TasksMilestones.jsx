@@ -386,7 +386,7 @@ const TasksMilestones = () => {
     user?.role === "admin" ||
     user?.role === "supervisor" ||
     currentUserId === leaderId;
-  const canProposeTask = activeProject?.status === "active" && (
+  const canProposeTask = activeProject?.status !== "archived" && (
     canCreateTask || members.some((member) => String(member?._id || member) === currentUserId)
   );
   const filteredTasks = tasks.filter((task) => {
