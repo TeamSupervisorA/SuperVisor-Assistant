@@ -16,6 +16,8 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
     { name: 'Work', icon: 'checklist', path: '/tasks-milestones' },
     { name: 'Deliverables', icon: 'upload_file', path: '/student-submissions' },
     { name: 'Supervision', icon: 'groups', path: '/team-management' },
+    { name: 'Meetings', icon: 'event', path: '/meeting-management' },
+    { name: 'Team Chat', icon: 'chat', path: '/chat' },
     { name: 'Workspace', icon: 'developer_mode', path: '/research-studio' },
   ];
 
@@ -24,7 +26,8 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
     { name: 'Supervised Projects', icon: 'folder_open', path: '/explore' },
     { name: 'Reviews', icon: 'rate_review', path: '/reviews' },
     { name: 'Students & Workload', icon: 'groups', path: '/team-management' },
-    { name: 'Meetings & Messages', icon: 'forum', path: '/meeting-management' },
+    { name: 'Meetings', icon: 'event', path: '/meeting-management' },
+    { name: 'Team Chat', icon: 'chat', path: '/chat' },
     { name: 'Workspace', icon: 'developer_mode', path: '/research-studio' },
   ];
 

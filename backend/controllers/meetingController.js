@@ -42,8 +42,8 @@ exports.createMeeting = async (req, res) => {
     if (!canAccessProject(project, req.user)) {
       return res.status(403).json({ success: false, error: 'Not authorized to create a meeting for this project' });
     }
-    if (project.status !== 'active') {
-      return res.status(409).json({ success: false, error: 'Project meetings open after supervision and proposal approval activate the project' });
+    if (project.status === 'archived') {
+      return res.status(409).json({ success: false, error: 'Cannot schedule meetings for an archived project' });
     }
     if (!attendeesBelongToProject(req.body.attendees, project)) {
       return res.status(422).json({ success: false, error: 'Meeting attendees must belong to the project' });
