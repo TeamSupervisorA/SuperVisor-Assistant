@@ -1,12 +1,11 @@
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 
 const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const role = user?.role || 'student';
 
   // Role-based nav items
@@ -64,11 +63,6 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
   ];
 
   const navItems = role === 'admin' ? adminItems : role === 'supervisor' ? supervisorItems : studentItems;
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
 
   return (
     <motion.aside 
@@ -144,28 +138,6 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
           })}
         </nav>
         
-        {/* Footer — Logout */}
-        <div className="px-3 py-4 border-t border-outline-variant/20 shrink-0">
-          {!isCollapsed && user && (
-            <div className="flex items-center gap-3 px-3 py-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold text-[13px] shrink-0">
-                {user.name?.charAt(0)?.toUpperCase() || 'U'}
-              </div>
-              <div className="min-w-0">
-                <p className="font-label-md text-[13px] font-semibold text-on-surface truncate">{user.name}</p>
-                <p className="font-label-md text-[11px] text-outline truncate">{user.email}</p>
-              </div>
-            </div>
-          )}
-          <button 
-            onClick={handleLogout}
-            title={isCollapsed ? 'Logout' : ''}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-secondary hover:bg-error-container hover:text-error transition-colors duration-200 active:scale-[0.97]"
-          >
-            <span className="material-symbols-outlined text-[22px]">logout</span>
-            {!isCollapsed && <span className="whitespace-nowrap text-[14px] font-medium">Logout</span>}
-          </button>
-        </div>
       </div>
 
       {/* Toggle Collapse Button (Desktop Only) */}
