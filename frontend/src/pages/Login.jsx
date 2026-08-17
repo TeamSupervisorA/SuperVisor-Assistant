@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import GoogleAuthButton from '../components/GoogleAuthButton';
+import BrandLogo from '../components/BrandLogo';
+import { finishGoogleAuthentication } from '../lib/googleAuth';
 
 const roleHome = {
   student: '/dashboard',
@@ -19,23 +21,6 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
-
-  const finishAuthentication = (data) => {
-    if (data?.requiresProfile || data?.needsProfile) {
-      const onboardingToken = data.onboardingToken || data.setupToken || data.registrationToken;
-      if (!onboardingToken) throw new Error('Google sign-in needs profile completion, but the server did not provide a secure setup token.');
-      sessionStorage.setItem('googleOnboarding', JSON.stringify({
-        token: onboardingToken,
-        name: data.profile?.name || data.user?.name || '',
-        email: data.profile?.email || data.user?.email || ''
-      }));
-      navigate('/complete-profile');
-      return;
-    }
-    if (!data?.token || !data?.user) throw new Error('The server did not return a valid sign-in session.');
-    login(data.token, data.user);
-    navigate(roleHome[data.user.role] || '/dashboard');
-  };
 
   useEffect(() => {
     const notice = sessionStorage.getItem('authNotice');
@@ -56,7 +41,9 @@ const Login = () => {
         body: JSON.stringify({ email, password })
       });
 
-      finishAuthentication(data);
+      if (!data?.token || !data?.user) throw new Error('The server did not return a valid sign-in session.');
+      login(data.token, data.user);
+      navigate(roleHome[data.user.role] || '/dashboard');
     } catch (err) {
       setError(err.message || 'Failed to login');
     } finally {
@@ -72,7 +59,7 @@ const Login = () => {
         method: 'POST',
         body: JSON.stringify({ credential })
       });
-      finishAuthentication(data);
+      navigate(finishGoogleAuthentication(data, login));
     } catch (err) {
       setError(err.message || 'Unable to continue with Google.');
     } finally {
@@ -108,12 +95,9 @@ const Login = () => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="flex items-center gap-3 mb-10"
+          className="mb-10 flex h-14 w-[260px] items-center justify-center rounded-2xl bg-[#11131a] px-4 py-2.5 shadow-lg shadow-primary/15"
         >
-          <div className="w-12 h-12 rounded-2xl bg-primary/20 backdrop-blur-md flex items-center justify-center border border-primary/30 shadow-lg">
-            <span className="material-symbols-outlined text-primary text-[28px] icon-fill">school</span>
-          </div>
-          <h1 className="font-display text-[28px] font-black text-on-surface tracking-tight">SuperVisor<span className="text-primary font-light">AI</span></h1>
+          <BrandLogo className="h-auto w-full" />
         </motion.div>
 
         {/* Central Glass Card */}

@@ -168,6 +168,42 @@
   }
 }
 
+/* The application rail owns its scrolling. Keep the scrollbar subtle in the
+   expanded menu and visually hidden in the compact icon rail, where a native
+   Windows scrollbar can consume almost a quarter of the usable width. Wheel,
+   touch, keyboard, and programmatic scrolling remain available. */
+.sidebar-nav {
+  overscroll-behavior: contain;
+  scrollbar-color: color-mix(in srgb, var(--color-outline) 58%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-outline) 58%, transparent);
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-primary) 55%, var(--color-outline));
+}
+
+.sidebar-nav--collapsed {
+  scrollbar-width: none;
+}
+
+.sidebar-nav--collapsed::-webkit-scrollbar {
+  display: none;
+  width: 0;
+}
+
 /* Editor-first paper workbench. Desktop uses one viewport: compact project
    controls stay above two independently scrollable source/PDF panes. */
 .paper-editor-page {

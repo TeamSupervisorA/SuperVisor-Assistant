@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import GoogleAuthButton from '../components/GoogleAuthButton';
+import BrandLogo from '../components/BrandLogo';
+import { finishGoogleAuthentication } from '../lib/googleAuth';
 
 const roleHome = {
   student: '/dashboard',
@@ -70,7 +72,7 @@ const Register = () => {
 
     setLoading(true);
     try {
-      await apiFetch('/api/auth/register/request-verification', {
+      const data = await apiFetch('/api/auth/register', {
         method: 'POST',
         body: JSON.stringify({
           name: form.fullName,
@@ -82,9 +84,10 @@ const Register = () => {
           batch: form.batch || undefined
         })
       });
-      const normalizedEmail = form.email.trim().toLowerCase();
-      sessionStorage.setItem('pendingVerificationEmail', normalizedEmail);
-      navigate('/verify-email');
+      if (!data?.token || !data?.user) throw new Error('The server did not return a valid account session.');
+      sessionStorage.removeItem('pendingVerificationEmail');
+      login(data.token, data.user);
+      navigate(roleHome[data.user.role] || '/dashboard');
     } catch (err) {
       setError(err.message || 'Failed to register');
     } finally {
@@ -100,20 +103,7 @@ const Register = () => {
         method: 'POST',
         body: JSON.stringify({ credential })
       });
-      if (data?.requiresProfile) {
-        const registrationToken = data.registrationToken;
-        if (!registrationToken) throw new Error('Google sign-in needs profile completion, but the server did not provide a secure setup token.');
-        sessionStorage.setItem('googleOnboarding', JSON.stringify({
-          token: registrationToken,
-          name: data.profile?.name || '',
-          email: data.profile?.email || ''
-        }));
-        navigate('/complete-profile');
-        return;
-      }
-      if (!data?.token || !data?.user) throw new Error('The server did not return a valid sign-in session.');
-      login(data.token, data.user);
-      navigate(roleHome[data.user.role] || '/dashboard');
+      navigate(finishGoogleAuthentication(data, login));
     } catch (err) {
       setError(err.message || 'Unable to continue with Google.');
     } finally {
@@ -144,12 +134,9 @@ const Register = () => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="flex items-center gap-3 mb-8"
+          className="mb-8 flex h-14 w-[260px] items-center justify-center rounded-2xl bg-[#11131a] px-4 py-2.5 shadow-lg shadow-primary/15"
         >
-          <div className="w-12 h-12 rounded-2xl bg-primary/20 backdrop-blur-md flex items-center justify-center border border-primary/30 shadow-lg">
-            <span className="material-symbols-outlined text-primary text-[28px] icon-fill">school</span>
-          </div>
-          <h1 className="font-display text-[28px] font-black text-on-surface tracking-tight">SuperVisor<span className="text-primary font-light">AI</span></h1>
+          <BrandLogo className="h-auto w-full" />
         </motion.div>
 
         {/* Central Glass Card */}
@@ -271,9 +258,9 @@ const Register = () => {
               disabled={loading}
             >
               {loading ? (
-                <><motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="material-symbols-outlined text-[20px]">sync</motion.span> Sending code...</>
+                <><motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="material-symbols-outlined text-[20px]">sync</motion.span> Creating account...</>
               ) : (
-                <>Send verification code <span className="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">arrow_forward</span></>
+                <>Create New Account <span className="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">arrow_forward</span></>
               )}
             </button>
           </form>

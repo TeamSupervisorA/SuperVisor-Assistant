@@ -15,14 +15,15 @@ Deploy `frontend` and `backend` as separate Vercel projects, with each project's
 
 ## Account verification, recovery, and Google sign-in
 
-New password-based registrations are not activated until the person enters the six-digit code sent to their email. The code is short-lived and stored only as a hash. Password-reset requests always return the same confirmation message, whether or not the address exists, so the endpoint cannot be used to enumerate accounts.
+Email-code verification is temporarily disabled: new password registrations receive a session immediately. The verification code implementation and page remain available for later activation. Password-reset requests always return the same confirmation message, whether or not the address exists, so the endpoint cannot be used to enumerate accounts.
 
-### 1. Enable transactional email
+### 1. Reactivate registration verification and transactional email
 
 1. In Resend, verify a domain that you own and create an API key.
 2. In the **backend Vercel project**, add these production variables:
 
    ```text
+   EMAIL_VERIFICATION_ENABLED=true
    RESEND_API_KEY=re_...
    EMAIL_FROM=SuperVisorAI <noreply@your-verified-domain.example>
    FRONTEND_URL=https://your-frontend.vercel.app
@@ -48,9 +49,13 @@ New password-based registrations are not activated until the person enters the s
 4. Redeploy the backend and then the frontend. Do **not** put an OAuth client secret in the frontend or add a Google service-account key to this application.
 5. A new Google user receives a short-lived profile-completion session and is then created as a student. Google sign-in cannot self-provision an administrator or supervisor.
 
+The two client-ID variables must contain the same Web application client ID. In Google Cloud, add each exact frontend origin (scheme and hostname only, with no path or trailing slash) under **Authorized JavaScript origins**. At minimum, add the production frontend URL; add `http://localhost:5173` only for local development.
+
+For access from other devices and Google accounts, open **Google Auth Platform → Audience**. If the publishing status is **Testing**, add every permitted account as a test user; otherwise those accounts cannot sign in. For a public deployment, choose **External** and publish the app to **In production**. This application requests only the basic Google identity token and does not need Google Drive, Gmail, or other sensitive OAuth scopes.
+
 ## Roles and access
 
-- **Students:** use `/register`, verify their email, then sign in at `/login`.
+- **Students:** use `/register`; while verification is disabled, registration signs them in immediately.
 - **Supervisors:** an active administrator promotes or provisions a verified account through **Admin dashboard → Manage users**. The supervisor then uses the normal `/login` page and is directed to `/supervisor-dashboard` automatically.
 - **Administrators:** use `/admin-login` and are directed to `/admin-dashboard`. Administrator accounts are never created by public registration. Keep `ALLOW_PUBLIC_SUPERVISOR_REGISTRATION=false` in production.
 

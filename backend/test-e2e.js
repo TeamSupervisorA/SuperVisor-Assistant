@@ -3,6 +3,7 @@ process.env.NODE_ENV = 'test';
 process.env.PORT = '5000';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'e2e-secret';
 process.env.ALLOW_PUBLIC_SUPERVISOR_REGISTRATION = 'true';
+process.env.EMAIL_VERIFICATION_ENABLED = 'true';
 require('./server');
 
 const API_BASE = 'http://localhost:5000/api';

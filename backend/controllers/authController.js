@@ -55,6 +55,10 @@ const safeRole = (role) => (
     : 'student'
 );
 
+// Temporarily defaults to off. Set this exact backend value to "true" when
+// the institution is ready to require email ownership during registration.
+const emailVerificationEnabled = () => process.env.EMAIL_VERIFICATION_ENABLED === 'true';
+
 const isReadyForAuthentication = (user) => (
   user.emailVerified !== false && (!user.onboardingStatus || user.onboardingStatus === 'complete')
 );
@@ -194,13 +198,39 @@ const sendPendingRegistrationCode = async (user) => {
 
 const pendingEmailFields = '+password +emailVerificationCode +emailVerificationExpires +emailVerificationAttempts +emailVerificationLastSentAt';
 
-// @desc    Begin password registration and send a one-time email code
+const registerDirectly = async (registration, res) => {
+  let user = await User.findOne({ email: registration.email }).select(pendingEmailFields);
+  if (user && (user.onboardingStatus !== 'email_verification_pending' || user.emailVerified !== false)) {
+    throw createHttpError('An account already exists with this email. Sign in or reset your password instead.', 409);
+  }
+
+  if (user) {
+    Object.assign(user, registration);
+  } else {
+    user = new User(registration);
+  }
+  user.emailVerified = true;
+  user.onboardingStatus = 'complete';
+  user.emailVerificationCode = undefined;
+  user.emailVerificationExpires = undefined;
+  user.emailVerificationAttempts = 0;
+  user.emailVerificationLastSentAt = undefined;
+  await user.save();
+  return sendTokenResponse(user, 201, res);
+};
+
+// @desc    Register directly or begin email verification when enabled
 // @route   POST /api/auth/register/request-verification
 // @access  Public
 exports.requestVerification = async (req, res) => {
   let newlyCreatedUser = null;
   try {
     const registration = buildLocalRegistration(req.body);
+
+    if (!emailVerificationEnabled()) {
+      return registerDirectly(registration, res);
+    }
+
     let user = await User.findOne({ email: registration.email }).select(pendingEmailFields);
 
     if (user) {
@@ -234,9 +264,18 @@ exports.requestVerification = async (req, res) => {
   }
 };
 
-// Backwards-compatible path for older clients. It intentionally does not
-// issue a session until the new email-verification step is completed.
-exports.register = exports.requestVerification;
+// Direct sign-up path used while email-code registration is paused. Keeping
+// it separate prevents an outdated deployment variable from sending the
+// current sign-up form into the dormant verification flow.
+exports.register = async (req, res) => {
+  try {
+    return await registerDirectly(buildLocalRegistration(req.body), res);
+  } catch (error) {
+    if (error?.statusCode) return res.status(error.statusCode).json({ success: false, error: error.message });
+    if (error?.code === 11000) return res.status(409).json({ success: false, error: 'An account already exists with this email. Sign in or reset your password instead.' });
+    return sendServerError(res, error, 'Unable to create your account. Please try again later.');
+  }
+};
 
 // @desc    Resend the current pending-registration code
 // @route   POST /api/auth/register/resend-verification
@@ -319,6 +358,11 @@ exports.login = async (req, res) => {
     const isMatch = user?.password ? await user.matchPassword(password) : false;
     if (!user || !isMatch) return res.status(401).json({ success: false, error: 'Invalid credentials' });
     if (user.status === 'inactive') return res.status(403).json({ success: false, error: 'This account has been deactivated' });
+    if (!emailVerificationEnabled() && user.emailVerified === false && user.onboardingStatus === 'email_verification_pending') {
+      user.emailVerified = true;
+      user.onboardingStatus = 'complete';
+      await user.save({ validateBeforeSave: false });
+    }
     if (!isReadyForAuthentication(user)) return res.status(403).json({ success: false, error: 'Verify your email address before signing in.' });
 
     return sendTokenResponse(user, 200, res);
@@ -366,7 +410,14 @@ exports.googleAuthentication = async (req, res) => {
     try {
       const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: audiences });
       payload = ticket.getPayload();
-    } catch {
+    } catch (verificationError) {
+      const reason = String(verificationError?.message || '');
+      if (/audience|recipient/i.test(reason)) {
+        return res.status(503).json({ success: false, error: 'Google sign-in is configured with a different client ID on the frontend and backend. Contact the platform administrator.' });
+      }
+      if (/expired|too late|used too late/i.test(reason)) {
+        return res.status(401).json({ success: false, error: 'The Google sign-in response expired. Please choose your Google account again.' });
+      }
       return res.status(401).json({ success: false, error: 'Google could not verify this sign-in request. Please try again.' });
     }
     if (!payload?.sub || !payload?.email || !(payload.email_verified === true || payload.email_verified === 'true')) {

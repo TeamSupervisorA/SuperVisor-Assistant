@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './components/AuthContext';
 import { ThemeProvider } from './components/ThemeContext';
 import LandingPage from './pages/LandingPage';
@@ -8,7 +8,6 @@ import AdminLogin from './pages/AdminLogin';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import VerifyEmail from './pages/VerifyEmail';
 import CompleteGoogleProfile from './pages/CompleteGoogleProfile';
 import StudentDashboard from './pages/StudentDashboard';
 import SupervisorDashboard from './pages/SupervisorDashboard';
@@ -53,7 +52,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/verify-email" element={<Navigate to="/register" replace />} />
           <Route path="/complete-profile" element={<CompleteGoogleProfile />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           

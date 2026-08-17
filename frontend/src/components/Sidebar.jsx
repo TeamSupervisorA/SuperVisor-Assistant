@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
+import BrandLogo from './BrandLogo';
 
 const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
   const location = useLocation();
@@ -23,13 +24,13 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
     { name: 'Team', icon: 'groups', path: '/team-management' },
     { name: 'Meetings', icon: 'event', path: '/meeting-management' },
     { name: 'Resources', icon: 'library_books', path: '/project-resource-library' },
-    { name: 'Paper Editor', icon: 'article', path: '/paper-editor' },
+    { name: 'Paper Editor', icon: 'article', path: '/paper-editor', dividerBefore: true },
     { name: 'Code IDE', icon: 'terminal', path: '/code-ide' },
     { name: 'Report', icon: 'summarize', path: '/project-report' },
     { name: 'Proposals', icon: 'article', path: '/proposals' },
     { name: 'Reviews', icon: 'rate_review', path: '/reviews' },
-    ...commonItems,
-    { name: 'Settings', icon: 'settings', path: '/settings' },
+    ...commonItems.map((item) => ({ ...item, dividerBefore: true })),
+    { name: 'Settings', icon: 'settings', path: '/settings', dividerBefore: true },
   ];
 
   const supervisorItems = [
@@ -44,13 +45,13 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
     { name: 'Team', icon: 'groups', path: '/team-management' },
     { name: 'Meetings', icon: 'event', path: '/meeting-management' },
     { name: 'Resources', icon: 'library_books', path: '/project-resource-library' },
-    { name: 'Paper Editor', icon: 'article', path: '/paper-editor' },
+    { name: 'Paper Editor', icon: 'article', path: '/paper-editor', dividerBefore: true },
     { name: 'Code IDE', icon: 'terminal', path: '/code-ide' },
     { name: 'Report', icon: 'summarize', path: '/project-report' },
     { name: 'Proposals', icon: 'article', path: '/proposals' },
     { name: 'Reviews', icon: 'rate_review', path: '/reviews' },
-    ...commonItems,
-    { name: 'Settings', icon: 'settings', path: '/settings' },
+    ...commonItems.map((item) => ({ ...item, dividerBefore: true })),
+    { name: 'Settings', icon: 'settings', path: '/settings', dividerBefore: true },
   ];
 
   const adminItems = [
@@ -59,8 +60,8 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
     { name: 'Course Management', icon: 'school', path: '/course-management' },
     { name: 'Users & Departments', icon: 'manage_accounts', path: '/admin-management' },
     { name: 'Plagiarism Check', icon: 'policy', path: '/plagiarism-checker' },
-    ...commonItems,
-    { name: 'Settings', icon: 'settings', path: '/settings' },
+    ...commonItems.map((item) => ({ ...item, dividerBefore: true })),
+    { name: 'Settings', icon: 'settings', path: '/settings', dividerBefore: true },
   ];
 
   const navItems = role === 'admin' ? adminItems : role === 'supervisor' ? supervisorItems : studentItems;
@@ -70,15 +71,20 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
       initial={false}
       animate={{ width: isCollapsed ? 80 : 280 }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="bg-surface h-full z-50 relative shrink-0"
+      className="relative z-50 h-full shrink-0 bg-surface"
     >
       <div className="flex flex-col h-full border-r border-outline-variant/30 overflow-hidden bg-surface relative">
         {/* Header */}
-        <div className="p-4 flex items-center justify-between border-b border-outline-variant/20 h-20 shrink-0">
-          <div className="flex items-center gap-3 overflow-hidden whitespace-nowrap">
-            <div className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-primary to-primary-fixed-variant flex items-center justify-center shadow-md shadow-primary/20">
-              <span className="material-symbols-outlined text-on-primary icon-fill text-[22px]">school</span>
-            </div>
+        <div className={`flex h-20 shrink-0 items-center border-b border-outline-variant/20 ${isCollapsed ? 'justify-center px-3' : 'justify-between px-4'}`}>
+          <div className="flex min-w-0 items-center gap-3 overflow-hidden whitespace-nowrap">
+            <Link
+              to={role === 'admin' ? '/admin-dashboard' : role === 'supervisor' ? '/supervisor-dashboard' : '/dashboard'}
+              onClick={closeMobile}
+              aria-label="Supervisor Assistant home"
+              className={`flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#11131a] shadow-md shadow-primary/15 ${isCollapsed ? 'h-11 w-11 p-1.5' : 'h-12 w-[174px] px-3 py-2'}`}
+            >
+              <BrandLogo compact={isCollapsed} className={isCollapsed ? 'h-full w-full' : 'h-auto w-full'} />
+            </Link>
             {!isCollapsed && (
               <motion.div 
                 initial={{ opacity: 0 }} 
@@ -86,7 +92,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
               >
-                <p className="font-label-md text-[12px] font-semibold text-secondary capitalize">{role} workspace</p>
+                <p className="sr-only capitalize">{role} workspace</p>
               </motion.div>
             )}
           </div>
@@ -101,11 +107,11 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
         
         {/* New Work Button */}
         {role === 'student' && (
-          <div className="px-3 mt-5 shrink-0">
+          <div className={`shrink-0 ${isCollapsed ? 'mt-3 px-3' : 'mt-5 px-3'}`}>
             <Link 
               to="/create-new-work" 
               onClick={closeMobile}
-              className={`w-full bg-primary text-on-primary h-11 rounded-xl flex items-center ${isCollapsed ? 'justify-center' : 'justify-center gap-2'} font-label-md text-[13px] font-semibold hover:bg-surface-tint transition-all shadow-sm hover:shadow-md hover:shadow-primary/20 active:scale-95`}
+              className={`flex w-full items-center bg-primary font-label-md text-[13px] font-semibold text-on-primary shadow-sm transition-all hover:bg-surface-tint hover:shadow-md hover:shadow-primary/20 active:scale-95 ${isCollapsed ? 'h-12 justify-center rounded-2xl' : 'h-11 justify-center gap-2 rounded-xl'}`}
             >
               <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>add</span>
               {!isCollapsed && <span>Create New Work</span>}
@@ -114,27 +120,30 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
         )}
         
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-5 space-y-0.5">
+        <nav aria-label="Primary navigation" className={`sidebar-nav flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden ${isCollapsed ? 'sidebar-nav--collapsed gap-1 px-2 py-3' : 'gap-0.5 px-3 py-4'}`}>
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
-              <Link 
-                key={item.name} 
-                to={item.path} 
-                onClick={closeMobile}
-                title={isCollapsed ? item.name : ''}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200 active:scale-[0.97] group
-                  ${isActive 
-                    ? 'bg-primary/10 text-primary font-bold' 
-                    : 'text-secondary hover:bg-surface-container-low hover:text-on-surface'
-                  }`}
-              >
-                <span className={`material-symbols-outlined text-[22px] ${isActive ? 'icon-fill' : 'group-hover:scale-110 transition-transform'}`}>{item.icon}</span>
-                {!isCollapsed && <span className="whitespace-nowrap text-[14px]">{item.name}</span>}
-                {isActive && !isCollapsed && (
-                  <motion.div layoutId="sidebar-active" className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
-                )}
-              </Link>
+              <React.Fragment key={item.name}>
+                {item.dividerBefore && <div aria-hidden="true" className={`shrink-0 border-t border-outline-variant/25 ${isCollapsed ? 'mx-2 my-1.5' : 'mx-3 my-2'}`} />}
+                <Link
+                  to={item.path}
+                  onClick={closeMobile}
+                  title={isCollapsed ? item.name : ''}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`group flex shrink-0 items-center rounded-xl font-medium transition-all duration-200 active:scale-[0.97] ${isCollapsed ? 'h-10 justify-center px-0' : 'gap-3 px-3 py-2.5'}
+                    ${isActive
+                      ? 'bg-primary/12 text-primary font-bold ring-1 ring-inset ring-primary/10'
+                      : 'text-secondary hover:bg-surface-container-low hover:text-on-surface'
+                    }`}
+                >
+                  <span className={`material-symbols-outlined text-[22px] ${isActive ? 'icon-fill' : 'transition-transform group-hover:scale-110'}`}>{item.icon}</span>
+                  {!isCollapsed && <span className="whitespace-nowrap text-[14px]">{item.name}</span>}
+                  {isActive && !isCollapsed && (
+                    <motion.div layoutId="sidebar-active" className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />
+                  )}
+                </Link>
+              </React.Fragment>
             );
           })}
         </nav>
@@ -147,7 +156,7 @@ const Sidebar = ({ isCollapsed, toggleCollapse, closeMobile }) => {
         onClick={toggleCollapse} 
         aria-label={isCollapsed ? 'Keep sidebar open' : 'Allow sidebar to collapse'}
         title={isCollapsed ? 'Keep sidebar open' : 'Allow sidebar to collapse'}
-        className="hidden md:flex absolute top-7 -right-3.5 p-1 rounded-full bg-surface border border-outline-variant/30 text-on-surface-variant hover:bg-surface-container transition-colors shadow-sm z-[60]"
+        className="absolute -right-4 top-6 z-[60] hidden h-8 w-8 items-center justify-center rounded-full border border-outline-variant/40 bg-surface-container-low text-on-surface-variant shadow-md transition-colors hover:border-primary/35 hover:bg-surface-container hover:text-primary md:flex"
       >
         <span className="material-symbols-outlined text-[18px]">
           {isCollapsed ? 'chevron_right' : 'chevron_left'}

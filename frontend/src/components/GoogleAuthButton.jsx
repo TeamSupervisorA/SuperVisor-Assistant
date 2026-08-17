@@ -1,28 +1,67 @@
 import { useEffect, useId, useRef, useState } from 'react';
 
 const GOOGLE_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
+const GOOGLE_SCRIPT_TIMEOUT_MS = 12000;
+let googleIdentityServicesPromise;
 
-const loadGoogleIdentityServices = () => new Promise((resolve, reject) => {
+const loadGoogleIdentityServices = () => {
   if (window.google?.accounts?.id) {
-    resolve(window.google);
-    return;
+    return Promise.resolve(window.google);
   }
+  if (googleIdentityServicesPromise) return googleIdentityServicesPromise;
 
-  const existing = document.querySelector(`script[src="${GOOGLE_SCRIPT_URL}"]`);
-  if (existing) {
-    existing.addEventListener('load', () => resolve(window.google), { once: true });
-    existing.addEventListener('error', () => reject(new Error('Google sign-in could not be loaded.')), { once: true });
-    return;
-  }
+  googleIdentityServicesPromise = new Promise((resolve, reject) => {
+    let script = document.querySelector(`script[src="${GOOGLE_SCRIPT_URL}"]`);
+    if (script?.dataset.googleIdentityState === 'failed') {
+      script.remove();
+      script = null;
+    }
 
-  const script = document.createElement('script');
-  script.src = GOOGLE_SCRIPT_URL;
-  script.async = true;
-  script.defer = true;
-  script.onload = () => resolve(window.google);
-  script.onerror = () => reject(new Error('Google sign-in could not be loaded.'));
-  document.head.appendChild(script);
-});
+    const timeout = window.setTimeout(() => {
+      if (script) script.dataset.googleIdentityState = 'failed';
+      reject(new Error('Google sign-in took too long to load. Check your connection and try again.'));
+    }, GOOGLE_SCRIPT_TIMEOUT_MS);
+
+    const loaded = () => {
+      window.clearTimeout(timeout);
+      if (!window.google?.accounts?.id) {
+        if (script) script.dataset.googleIdentityState = 'failed';
+        reject(new Error('Google sign-in loaded an invalid response. Please try again.'));
+        return;
+      }
+      if (script) script.dataset.googleIdentityState = 'ready';
+      resolve(window.google);
+    };
+    const failed = () => {
+      window.clearTimeout(timeout);
+      if (script) script.dataset.googleIdentityState = 'failed';
+      reject(new Error('Google sign-in could not be loaded. Check your connection and browser privacy settings.'));
+    };
+
+    if (script) {
+      if (script.dataset.googleIdentityState === 'ready') {
+        loaded();
+        return;
+      }
+      script.addEventListener('load', loaded, { once: true });
+      script.addEventListener('error', failed, { once: true });
+      return;
+    }
+
+    script = document.createElement('script');
+    script.src = GOOGLE_SCRIPT_URL;
+    script.async = true;
+    script.defer = true;
+    script.addEventListener('load', loaded, { once: true });
+    script.addEventListener('error', failed, { once: true });
+    document.head.appendChild(script);
+  }).catch((error) => {
+    googleIdentityServicesPromise = undefined;
+    throw error;
+  });
+
+  return googleIdentityServicesPromise;
+};
 
 /**
  * Renders the official Google Identity Services button. The Google client ID is
@@ -36,6 +75,7 @@ const GoogleAuthButton = ({ onCredential, onError, disabled = false, label = 'Co
   const errorRef = useRef(onError);
   const instanceId = useId().replace(/:/g, '');
   const [status, setStatus] = useState('loading');
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
 
   useEffect(() => {
@@ -50,6 +90,7 @@ const GoogleAuthButton = ({ onCredential, onError, disabled = false, label = 'Co
     }
 
     let disposed = false;
+    setStatus('loading');
     loadGoogleIdentityServices()
       .then((google) => {
         if (disposed || !google?.accounts?.id || !targetRef.current) return;
@@ -64,7 +105,9 @@ const GoogleAuthButton = ({ onCredential, onError, disabled = false, label = 'Co
           },
           auto_select: false,
           cancel_on_tap_outside: true,
-          context: 'signin'
+          context: 'signin',
+          ux_mode: 'popup',
+          use_fedcm_for_button: true
         });
         targetRef.current.replaceChildren();
         google.accounts.id.renderButton(targetRef.current, {
@@ -74,7 +117,9 @@ const GoogleAuthButton = ({ onCredential, onError, disabled = false, label = 'Co
           text: label.includes('Sign') ? 'signin_with' : 'continue_with',
           shape: 'pill',
           logo_alignment: 'left',
-          width: Math.max(220, targetRef.current.clientWidth || 320)
+          // Google supports a maximum button width of 400px. Keeping the
+          // configured value in range avoids inconsistent iframe rendering.
+          width: Math.min(400, Math.max(220, targetRef.current.clientWidth || 320))
         });
         setStatus('ready');
       })
@@ -86,7 +131,7 @@ const GoogleAuthButton = ({ onCredential, onError, disabled = false, label = 'Co
       });
 
     return () => { disposed = true; };
-  }, [clientId, instanceId, label]);
+  }, [clientId, instanceId, label, loadAttempt]);
 
   if (!clientId) {
     return (
@@ -117,15 +162,16 @@ const GoogleAuthButton = ({ onCredential, onError, disabled = false, label = 'Co
         {status !== 'ready' && (
           <button
             type="button"
-            disabled
-            className="absolute inset-0 flex min-h-12 w-full cursor-wait items-center justify-center gap-3 rounded-2xl border border-outline-variant/60 bg-surface-container-lowest px-4 text-sm font-bold text-on-surface shadow-sm"
+            disabled={status !== 'error' || disabled}
+            onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+            className={`absolute inset-0 flex min-h-12 w-full items-center justify-center gap-3 rounded-2xl border border-outline-variant/60 bg-surface-container-lowest px-4 text-sm font-bold text-on-surface shadow-sm ${status === 'error' ? 'cursor-pointer hover:border-primary hover:text-primary' : 'cursor-wait'}`}
           >
             <span aria-hidden="true" className="grid size-6 place-items-center rounded-full bg-white font-black text-[#4285f4] shadow-sm">G</span>
-            {status === 'error' ? 'Continue with Google' : 'Loading Google sign-in…'}
+            {status === 'error' ? 'Retry Google sign-in' : 'Loading Google sign-in…'}
           </button>
         )}
       </div>
-      {status === 'error' && <p className="mt-2 text-center text-xs text-error">Google sign-in is temporarily unavailable. Refresh the page and try again.</p>}
+      {status === 'error' && <p className="mt-2 text-center text-xs text-error">Google sign-in is temporarily unavailable. Check that third-party sign-in is allowed, then retry.</p>}
     </div>
   );
 };

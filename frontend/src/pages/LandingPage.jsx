@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useScroll, useTransform, useMotionValue, useSpring, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../hooks/useTheme';
+import BrandLogo from '../components/BrandLogo';
 
 // --- Reusable Advanced Components ---
 
@@ -149,10 +150,9 @@ const LandingPage = () => {
           className="flex items-center gap-3 group cursor-pointer"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         >
-          <div className="w-10 h-10 rounded-[14px] bg-gradient-to-br from-primary to-primary-fixed-variant flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
-            <span aria-hidden="true" className="material-symbols-outlined text-on-primary icon-fill text-[20px]">school</span>
+          <div className="flex h-11 w-[210px] items-center justify-center rounded-[14px] bg-[#11131a] px-3 py-2 shadow-lg shadow-primary/20 transition-transform group-hover:scale-[1.02]">
+            <BrandLogo className="h-auto w-full" />
           </div>
-          <span className="font-headline-md text-[22px] font-black tracking-tight text-on-surface">SuperVisor<span className="text-primary">.ai</span></span>
         </motion.div>
 
         {/* Central Navigation */}
@@ -508,8 +508,8 @@ const LandingPage = () => {
                        </div>
                      </div>
                     <div className="flex-1 order-1 md:order-2">
-                      <div className="w-16 h-16 rounded-full bg-tertiary flex items-center justify-center mb-8 text-on-primary shadow-lg shadow-tertiary/30">
-                        <span aria-hidden="true" className="material-symbols-outlined text-3xl icon-fill">school</span>
+                      <div className="mb-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#11131a] p-2 text-on-primary shadow-lg shadow-tertiary/30">
+                        <BrandLogo compact decorative className="h-full w-full" />
                       </div>
                       <h3 className="font-headline-lg text-[36px] font-black text-on-surface mb-6 tracking-tight">Focus on research.</h3>
                       <p className="font-body-lg text-[18px] text-on-surface-variant leading-relaxed mb-8">
@@ -618,7 +618,7 @@ const LandingPage = () => {
                   Ready to transform your academic workflow?
                 </h2>
                 <p className="font-body-lg text-[20px] text-white/80 mb-10 font-light">
-                  Join hundreds of institutions already using SuperVisor.ai to elevate their research output.
+                  Join institutions using Supervisor Assistant to elevate their research output.
                 </p>
                 <Link to="/register" className="inline-flex font-label-lg text-[18px] font-bold bg-white text-primary px-10 py-5 rounded-full hover:scale-105 transition-all duration-300 shadow-xl shadow-black/20 hover:shadow-2xl hover:shadow-black/30 items-center justify-center gap-2">
                   Get Started for Free
@@ -635,9 +635,8 @@ const LandingPage = () => {
         <div className="w-full max-w-container_max px-margin_desktop mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-4 mb-20">
             <div className="col-span-1 md:col-span-4 lg:col-span-5">
-              <div className="flex items-center gap-3 mb-6">
-                <span aria-hidden="true" className="material-symbols-outlined text-primary text-3xl icon-fill">school</span>
-                <span className="font-headline-md text-[24px] font-black tracking-tight text-on-surface">SuperVisor<span className="text-primary">.ai</span></span>
+              <div className="mb-6 flex h-12 w-[230px] items-center rounded-xl bg-[#11131a] px-3 py-2">
+                <BrandLogo className="h-auto w-full" />
               </div>
               <p className="font-body-md text-[16px] text-on-surface-variant max-w-sm leading-relaxed mb-8 font-light">
                 Elevating academic research and supervision through intelligent, institutional-grade technology.
@@ -675,7 +674,7 @@ const LandingPage = () => {
           </div>
           
           <div className="border-t border-outline-variant/20 pt-8 flex flex-col md:flex-row justify-between items-center font-body-sm text-[14px] text-on-surface-variant">
-            <p>© 2026 SuperVisor.ai. All rights reserved.</p>
+            <p>© 2026 Supervisor Assistant. All rights reserved.</p>
             <div className="flex gap-6 mt-4 md:mt-0">
               <a href="#" className="hover:text-primary transition-colors"><span className="material-symbols-outlined text-[20px]">public</span></a>
               <a href="#" className="hover:text-primary transition-colors"><span className="material-symbols-outlined text-[20px]">mail</span></a>

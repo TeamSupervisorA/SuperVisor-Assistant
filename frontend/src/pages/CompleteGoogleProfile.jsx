@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
+import BrandLogo from '../components/BrandLogo';
 
 const roleHome = {
   student: '/dashboard',
@@ -69,8 +70,8 @@ const CompleteGoogleProfile = () => {
       <div className="absolute -bottom-24 -right-10 h-80 w-80 rounded-full bg-tertiary-container/20 blur-3xl" />
       <section className="relative w-full max-w-2xl rounded-[2rem] border border-outline-variant/30 bg-surface/90 p-7 shadow-2xl backdrop-blur-xl sm:p-10">
         <Link to="/register" className="inline-flex items-center gap-1 text-sm font-bold text-primary hover:underline">← Back to sign up</Link>
-        <div className="mt-7 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-          <span className="material-symbols-outlined text-[28px]">school</span>
+        <div className="mt-7 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#11131a] p-2 shadow-md shadow-primary/15">
+          <BrandLogo compact className="h-full w-full" />
         </div>
         <h1 className="mt-5 text-3xl font-extrabold tracking-tight text-on-surface">Complete your profile</h1>
         <p className="mt-2 text-sm leading-relaxed text-secondary">Google has verified your email. Add the academic details your workspace needs.</p>

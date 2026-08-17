@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 232 266" role="img" aria-labelledby="title desc">
+  <title id="title">Supervisor Assistant</title>
+  <desc id="desc">Abstract S and V supervision mark with a cyan focus point.</desc>
+  <path
+    d="M191 52C160 22 91 21 58 56C29 87 47 121 101 130C157 139 177 164 153 194L116 241L67 188M116 241L173 184"
+    fill="none"
+    stroke="#7D74FF"
+    stroke-width="30"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="116" cy="73" r="15" fill="#47BFFF"/>
+</svg>

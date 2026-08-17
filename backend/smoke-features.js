@@ -3,6 +3,7 @@ process.env.NODE_ENV = 'test';
 process.env.PORT = '5099';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'smoke-secret';
 process.env.ALLOW_PUBLIC_SUPERVISOR_REGISTRATION = 'true';
+process.env.EMAIL_VERIFICATION_ENABLED = 'true';
 process.env.EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS = '30';
 // Exercise the exact Paper Editor failure path without allowing a developer's
 // local compiler configuration to make this smoke test reach a real service.
@@ -99,6 +100,16 @@ const run = async () => {
   const pendingResend = await api('/api/auth/register/resend-verification', { method: 'POST', body: { email: emails.pending } });
   const verifiedPending = await api('/api/auth/register/verify', { method: 'POST', body: { email: emails.pending, code: '000000' } });
   check('email verification blocks login, rejects wrong codes, allows safe resend, and activates only after the correct code', pendingSignup.status === 202 && pendingLogin.status === 403 && wrongVerification.status === 400 && pendingResend.status === 200 && verifiedPending.status === 201 && !!verifiedPending.data.token);
+  process.env.EMAIL_VERIFICATION_ENABLED = 'false';
+  const directRegistration = await api('/api/auth/register/request-verification', {
+    method: 'POST', body: { name: 'Direct Registration', email: `direct-${runId}@test.com`, password: 'pass1234', role: 'student' }
+  });
+  check('registration issues a session without an email code while verification is disabled', directRegistration.status === 201 && !!directRegistration.data?.token && directRegistration.data?.user?.role === 'student');
+  process.env.EMAIL_VERIFICATION_ENABLED = 'true';
+  const directSignupRoute = await api('/api/auth/register', {
+    method: 'POST', body: { name: 'Sign Up Route', email: `signup-${runId}@test.com`, password: 'pass1234', role: 'student' }
+  });
+  check('the current sign-up route never redirects into email-code verification', directSignupRoute.status === 201 && !!directSignupRoute.data?.token && directSignupRoute.data?.user?.role === 'student');
   const googleNotConfigured = await api('/api/auth/google', { method: 'POST', body: { credential: 'not-a-real-token' } });
   check('Google sign-in does not accept credentials when the client ID is not configured', googleNotConfigured.status === 503 && !googleNotConfigured.data.token);
   const unknownReset = await api('/api/auth/forgot-password', { method: 'POST', body: { email: 'unknown@test.com' } });
