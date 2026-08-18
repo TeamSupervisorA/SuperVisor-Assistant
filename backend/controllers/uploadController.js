@@ -1,33 +1,9 @@
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
+const mongoose = require('mongoose');
 
-// Local disk uploads are only supported during development. Vercel's function
-// filesystem is read-only, so creating this directory at module-load time would
-// crash every API route, even routes that do not upload a file.
-const usesServerlessFilesystem = () => process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
-const uploadDir = path.join(__dirname, '../uploads');
-if (!usesServerlessFilesystem() && !fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const extensions = {
-      'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif',
-      'application/pdf': '.pdf', 'application/msword': '.doc',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
-      'application/vnd.ms-excel': '.xls',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
-      'text/plain': '.txt'
-    };
-    cb(null, `file-${uniqueSuffix}${extensions[file.mimetype]}`);
-  }
-});
+// Use memory storage for serverless environments (e.g. Vercel)
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   const allowedMimeTypes = [
@@ -54,10 +30,7 @@ const upload = multer({
 }).single('file');
 
 exports.uploadFile = (req, res) => {
-  if (usesServerlessFilesystem()) {
-    return res.status(503).json({ success: false, error: 'File uploads require a configured private object-storage provider in production.' });
-  }
-  upload(req, res, function (err) {
+  upload(req, res, async function (err) {
     if (err instanceof multer.MulterError) {
       return res.status(400).json({ success: false, error: err.message });
     } else if (err) {
@@ -68,17 +41,72 @@ exports.uploadFile = (req, res) => {
       return res.status(400).json({ success: false, error: 'Please upload a file' });
     }
 
-    // Return the URL path
-    const fileUrl = `/uploads/${req.file.filename}`;
-    
-    res.status(200).json({
-      success: true,
-      data: {
-        fileUrl,
-        originalName: req.file.originalname,
-        mimeType: req.file.mimetype,
-        size: req.file.size
-      }
-    });
+    try {
+      const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
+        bucketName: 'uploads'
+      });
+      
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const extensions = {
+        'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif',
+        'application/pdf': '.pdf', 'application/msword': '.doc',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+        'application/vnd.ms-excel': '.xls',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+        'text/plain': '.txt'
+      };
+      
+      const ext = extensions[req.file.mimetype] || '';
+      const filename = `file-${uniqueSuffix}${ext}`;
+      
+      const uploadStream = bucket.openUploadStream(filename, {
+        contentType: req.file.mimetype,
+        metadata: { originalName: req.file.originalname }
+      });
+      
+      uploadStream.end(req.file.buffer);
+      
+      uploadStream.on('finish', () => {
+        const fileUrl = `/api/upload/file/${filename}`;
+        res.status(200).json({
+          success: true,
+          data: {
+            fileUrl,
+            originalName: req.file.originalname,
+            mimeType: req.file.mimetype,
+            size: req.file.size
+          }
+        });
+      });
+      
+      uploadStream.on('error', (uploadErr) => {
+        console.error('GridFS Upload Error:', uploadErr);
+        res.status(500).json({ success: false, error: 'Failed to upload file to database' });
+      });
+    } catch (dbError) {
+      console.error('Database Error:', dbError);
+      res.status(500).json({ success: false, error: 'Database connection error during upload' });
+    }
   });
+};
+
+exports.getFile = async (req, res) => {
+  try {
+    const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
+      bucketName: 'uploads'
+    });
+    const files = await bucket.find({ filename: req.params.filename }).toArray();
+    if (!files || files.length === 0) {
+      return res.status(404).json({ success: false, error: 'File not found' });
+    }
+    const file = files[0];
+    res.setHeader('Content-Type', file.contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${file.metadata?.originalName || file.filename}"`);
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+    
+    bucket.openDownloadStreamByName(req.params.filename).pipe(res);
+  } catch (err) {
+    console.error('File Download Error:', err);
+    res.status(500).json({ success: false, error: 'Error downloading file' });
+  }
 };
