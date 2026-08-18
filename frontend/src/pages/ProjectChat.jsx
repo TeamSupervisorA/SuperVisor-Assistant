@@ -78,7 +78,7 @@ const ProjectChat = () => {
     loadMessages(true);
     const interval = window.setInterval(() => {
       if (document.visibilityState === 'visible') loadMessages();
-    }, 15000);
+    }, 60000);
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') loadMessages();
     };

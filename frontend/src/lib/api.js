@@ -1,5 +1,5 @@
 const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
-const API_BASE_URL = (configuredApiUrl || (import.meta.env.DEV ? 'http://localhost:5000' : '')).replace(/\/$/, '');
+const API_BASE_URL = (configuredApiUrl || (import.meta.env.DEV ? `http://${window.location.hostname}:5000` : '')).replace(/\/$/, '');
 
 const getApiBaseUrl = () => {
   if (API_BASE_URL) return API_BASE_URL;
@@ -12,7 +12,7 @@ const handleUnauthorizedResponse = (response) => {
   window.dispatchEvent(new Event('auth-invalid'));
 };
 
-const fetchWithTimeout = async (url, { timeoutMs = 15000, ...options } = {}) => {
+const fetchWithTimeout = async (url, { timeoutMs = 60000, ...options } = {}) => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
