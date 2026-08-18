@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useSearchParams } from 'react-router-dom';
 
 const containerVariants = {
@@ -27,6 +27,14 @@ const PlagiarismChecker = () => {
   const canRunChecks = ['supervisor', 'admin'].includes(user?.role);
   const projectId = activeProject?._id;
   const requestedSubmission = searchParams.get('submission');
+  
+  // New States for Custom Text
+  const [activeTab, setActiveTab] = useState('submissions'); // 'submissions' or 'custom'
+  const [customText, setCustomText] = useState('');
+  const [humanizing, setHumanizing] = useState(false);
+  const [humanizedText, setHumanizedText] = useState('');
+  const fileInputRef = useRef(null);
+
   const screenableSubmissions = useMemo(
     () => submissions.filter((submission) => String(submission.content || '').trim().length >= 200),
     [submissions]
@@ -63,24 +71,42 @@ const PlagiarismChecker = () => {
   }, [requestedSubmission, screenableSubmissions, selectedSub]);
 
   const handleRunCheck = async () => {
-    if (!canRunChecks) { setError('Only the assigned supervisor or an administrator can run an integrity screen. Students can view shared reports.'); return; }
-    if (!selectedSub) { setError('Select a submission first.'); return; }
+    if (activeTab === 'submissions') {
+      if (!canRunChecks) { setError('Only the assigned supervisor or an administrator can run an integrity screen. Students can view shared reports.'); return; }
+      if (!selectedSub) { setError('Select a submission first.'); return; }
+    } else {
+      if (customText.trim().length < 200) { setError('Please provide at least 200 characters of text.'); return; }
+    }
+    
     setError('');
     setNotice('');
+    setHumanizedText('');
     setRunning(true);
     try {
-      // No client-side mock fallback here: fabricating a similarity score for an
-      // academic-integrity report would be misleading — surface the real error instead
-      const res = await apiFetch('/api/plagiarism', {
-        method: 'POST',
-        body: JSON.stringify({ project: activeProject._id, submission: selectedSub })
-      });
+      let res;
+      if (activeTab === 'submissions') {
+        res = await apiFetch('/api/plagiarism', {
+          method: 'POST',
+          body: JSON.stringify({ project: activeProject._id, submission: selectedSub })
+        });
+      } else {
+        res = await apiFetch('/api/plagiarism/quick', {
+          method: 'POST',
+          body: JSON.stringify({ text: customText })
+        });
+      }
 
       if (res.success && res.data) {
-        const submissionDoc = submissions.find((submission) => submission._id === selectedSub);
-        const report = { ...res.data, submission: res.data.submission?.title ? res.data.submission : submissionDoc };
-        setReports((current) => [report, ...current.filter((item) => item._id !== report._id)]);
-        setNotice(res.reused ? 'The current submission text was already screened recently, so its existing report was reused.' : 'The integrity screen is complete. Review every cited source before making an academic decision.');
+        if (activeTab === 'submissions') {
+          const submissionDoc = submissions.find((submission) => submission._id === selectedSub);
+          const report = { ...res.data, submission: res.data.submission?.title ? res.data.submission : submissionDoc };
+          setReports((current) => [report, ...current.filter((item) => item._id !== report._id)]);
+          setNotice(res.reused ? 'The current submission text was already screened recently, so its existing report was reused.' : 'The integrity screen is complete. Review every cited source before making an academic decision.');
+        } else {
+          const customReport = { ...res.data, isCustom: true, submission: { title: 'Custom Text Screen' } };
+          setReports([customReport]);
+          setNotice('The integrity screen is complete.');
+        }
       }
     } catch (e) {
       setError(e.message || 'Integrity screening failed.');
@@ -89,7 +115,45 @@ const PlagiarismChecker = () => {
     }
   };
 
-  if (!activeProject) {
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (file.name.endsWith('.txt')) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setCustomText(ev.target.result);
+        setError('');
+      };
+      reader.onerror = () => setError('Failed to read text file.');
+      reader.readAsText(file);
+    } else {
+      setError('Currently only .txt files are supported for instant upload. For other files, please copy and paste the text directly.');
+    }
+    // reset input
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleHumanize = async () => {
+    if (!customText || customText.trim().length === 0) return;
+    setHumanizing(true);
+    setError('');
+    try {
+      const res = await apiFetch('/api/ai/humanize', {
+        method: 'POST',
+        body: JSON.stringify({ text: customText })
+      });
+      if (res.success && res.data) {
+        setHumanizedText(res.data);
+      }
+    } catch (e) {
+      setError(e.message || 'Failed to humanize text.');
+    } finally {
+      setHumanizing(false);
+    }
+  };
+
+  if (!activeProject && activeTab === 'submissions') {
     return (
       <div className="w-full min-h-[calc(100vh-80px)] flex items-center justify-center relative overflow-hidden bg-background">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-tertiary/5 rounded-full blur-[100px] pointer-events-none"></div>
@@ -98,7 +162,7 @@ const PlagiarismChecker = () => {
              <span className="material-symbols-outlined text-[40px] text-tertiary">policy</span>
           </div>
           <h2 className="font-display text-[28px] font-black text-on-surface mb-2">No Project Selected</h2>
-          <p className="font-body-md text-[16px] text-secondary">Please select an active project from your dashboard to run plagiarism checks.</p>
+          <p className="font-body-md text-[16px] text-secondary">Please select an active project from your dashboard to run project submissions plagiarism checks.</p>
         </motion.div>
       </div>
     );
@@ -118,13 +182,39 @@ const PlagiarismChecker = () => {
           <div>
             <span className="inline-block px-3 py-1 rounded-full bg-tertiary/10 text-tertiary font-label-md text-[12px] font-bold mb-3 border border-tertiary/20 uppercase tracking-wide">Integrity</span>
             <h1 className="font-display text-[32px] md:text-[42px] font-black text-on-surface tracking-tight leading-none mb-2">Integrity Screen</h1>
-            <p className="font-title-md text-[16px] text-on-surface-variant font-medium">Screen stored submission text against grounded public-web evidence, then review the sources yourself.</p>
-            <Link to="/student-submissions" className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-primary hover:underline"><span className="material-symbols-outlined text-[17px]">upload_file</span>Open project submissions</Link>
+            <p className="font-title-md text-[16px] text-on-surface-variant font-medium">Screen stored submission text or custom text against grounded public-web evidence.</p>
+            {activeTab === 'submissions' && (
+              <Link to="/student-submissions" className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-primary hover:underline"><span className="material-symbols-outlined text-[17px]">upload_file</span>Open project submissions</Link>
+            )}
           </div>
           
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-surface/80 backdrop-blur-xl p-2 rounded-[20px] border border-outline-variant/50 shadow-sm w-full md:w-auto">
+          <div className="flex bg-surface-container-low p-1 rounded-xl border border-outline-variant/30 flex-shrink-0">
+             <button
+               onClick={() => { setActiveTab('submissions'); setError(''); setNotice(''); }}
+               className={`px-4 sm:px-6 py-2 rounded-lg font-title-sm text-[13px] sm:text-[14px] font-bold transition-all ${activeTab === 'submissions' ? 'bg-surface shadow-sm text-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
+             >
+               Project Submissions
+             </button>
+             <button
+               onClick={() => { setActiveTab('custom'); setError(''); setNotice(''); setReports([]); }}
+               className={`px-4 sm:px-6 py-2 rounded-lg font-title-sm text-[13px] sm:text-[14px] font-bold transition-all ${activeTab === 'custom' ? 'bg-surface shadow-sm text-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
+             >
+               Custom Text
+             </button>
+          </div>
+        </motion.div>
+
+        {activeTab === 'submissions' && !canRunChecks && <div className="rounded-2xl border border-primary/25 bg-primary/5 px-5 py-3 text-sm text-on-surface-variant">Students can view integrity reports shared for this project. The assigned supervisor or an administrator runs the screen after reviewing a submission.</div>}
+        
+        {activeTab === 'submissions' && canRunChecks && submissions.length > 0 && screenableSubmissions.length === 0 && <div className="rounded-2xl border border-tertiary/25 bg-tertiary/10 px-5 py-3 text-sm text-on-surface-variant">None of this project’s submissions contains the minimum 200 characters of stored text. Open <Link to="/student-submissions" className="font-bold text-primary hover:underline">project submissions</Link> and ask the student to paste the text; attachments are not fetched or read automatically.</div>}
+
+        {error && <div role="alert" className="rounded-2xl border border-error/30 bg-error/10 px-5 py-3 text-sm font-medium text-error">{error}</div>}
+        {notice && <div role="status" className="rounded-2xl border border-primary/25 bg-primary/10 px-5 py-3 text-sm font-medium text-on-surface">{notice}</div>}
+
+        {activeTab === 'submissions' ? (
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-surface/80 backdrop-blur-xl p-4 rounded-[24px] border border-outline-variant/50 shadow-sm w-full">
             <select 
-              className="bg-surface-container-lowest px-4 py-3 rounded-xl border border-outline-variant/50 font-body-md text-[14px] text-on-surface focus:outline-none focus:border-tertiary focus:ring-1 focus:ring-tertiary min-w-[240px] appearance-none cursor-pointer transition-all flex-1"
+              className="bg-surface-container-lowest px-4 py-3 rounded-xl border border-outline-variant/50 font-body-md text-[14px] text-on-surface focus:outline-none focus:border-tertiary focus:ring-1 focus:ring-tertiary appearance-none cursor-pointer transition-all flex-1"
               value={selectedSub}
               onChange={(e) => setSelectedSub(e.target.value)}
             >
@@ -136,26 +226,75 @@ const PlagiarismChecker = () => {
             <button 
               onClick={handleRunCheck}
               disabled={running || !selectedSub || !canRunChecks}
-              className={`px-6 py-3 rounded-xl font-title-sm text-[14px] font-bold flex items-center justify-center gap-2 transition-all flex-shrink-0
+              className={`px-8 py-3 rounded-xl font-title-sm text-[14px] font-bold flex items-center justify-center gap-2 transition-all flex-shrink-0
                 ${running || !selectedSub || !canRunChecks ? 'bg-surface-variant text-on-surface-variant cursor-not-allowed opacity-70' : 'bg-tertiary text-on-tertiary hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 shadow-sm'}`}
             >
               {running ? (
                 <><motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="material-symbols-outlined text-[18px]">sync</motion.span> Scanning...</>
               ) : (
-                <><span className="material-symbols-outlined text-[18px]">search</span> Run grounded screen</>
+                <><span className="material-symbols-outlined text-[18px]">search</span> Run screen</>
               )}
             </button>
           </div>
-        </motion.div>
-
-        {!canRunChecks && <div className="rounded-2xl border border-primary/25 bg-primary/5 px-5 py-3 text-sm text-on-surface-variant">Students can view integrity reports shared for this project. The assigned supervisor or an administrator runs the screen after reviewing a submission.</div>}
-
-        {canRunChecks && <div className="rounded-2xl border border-outline-variant/40 bg-surface-container-low px-5 py-3 text-sm leading-relaxed text-on-surface-variant"><strong className="text-on-surface">Before screening:</strong> the stored submission text is sent to the project’s configured Google Gemini service and compared with selected public-web search evidence. Do not submit confidential or restricted material without institutional approval.</div>}
-
-        {canRunChecks && submissions.length > 0 && screenableSubmissions.length === 0 && <div className="rounded-2xl border border-tertiary/25 bg-tertiary/10 px-5 py-3 text-sm text-on-surface-variant">None of this project’s submissions contains the minimum 200 characters of stored text. Open <Link to="/student-submissions" className="font-bold text-primary hover:underline">project submissions</Link> and ask the student to paste the text; attachments are not fetched or read automatically.</div>}
-
-        {error && <div role="alert" className="rounded-2xl border border-error/30 bg-error/10 px-5 py-3 text-sm font-medium text-error">{error}</div>}
-        {notice && <div role="status" className="rounded-2xl border border-primary/25 bg-primary/10 px-5 py-3 text-sm font-medium text-on-surface">{notice}</div>}
+        ) : (
+          <div className="flex flex-col gap-4 bg-surface/80 backdrop-blur-xl p-6 rounded-[24px] border border-outline-variant/50 shadow-sm w-full">
+             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+               <h3 className="font-title-md font-bold text-on-surface">Custom Text Check</h3>
+               <div className="flex flex-wrap gap-2">
+                 <input type="file" accept=".txt" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
+                 <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl font-label-md font-bold flex items-center gap-2 transition-colors">
+                   <span className="material-symbols-outlined text-[18px]">upload_file</span>
+                   Upload .txt
+                 </button>
+                 <button onClick={handleHumanize} disabled={humanizing || !customText || customText.length < 50} className="px-4 py-2 border border-primary/30 text-primary hover:bg-primary/5 rounded-xl font-label-md font-bold flex items-center gap-2 transition-colors disabled:opacity-50">
+                   {humanizing ? <span className="material-symbols-outlined text-[18px] animate-spin">sync</span> : <span className="material-symbols-outlined text-[18px]">auto_awesome</span>}
+                   Humanize
+                 </button>
+               </div>
+             </div>
+             
+             <textarea 
+               value={customText}
+               onChange={(e) => setCustomText(e.target.value)}
+               placeholder="Paste your text here (minimum 200 characters) to check for plagiarism or humanize it..."
+               className="w-full h-[200px] p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/50 text-on-surface font-body-md focus:outline-none focus:ring-1 focus:ring-primary resize-y"
+               maxLength={60000}
+             ></textarea>
+             
+             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 text-xs text-secondary font-medium">
+               <span>{customText.length.toLocaleString()} / 60,000 characters</span>
+               <button 
+                onClick={handleRunCheck}
+                disabled={running || customText.trim().length < 200}
+                className={`px-8 py-3 rounded-xl font-title-sm text-[14px] font-bold flex items-center justify-center gap-2 transition-all flex-shrink-0
+                  ${running || customText.trim().length < 200 ? 'bg-surface-variant text-on-surface-variant cursor-not-allowed opacity-70' : 'bg-tertiary text-on-tertiary hover:shadow-md hover:-translate-y-0.5 shadow-sm'}`}
+               >
+                 {running ? (
+                  <><motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="material-symbols-outlined text-[18px]">sync</motion.span> Scanning...</>
+                 ) : (
+                  <><span className="material-symbols-outlined text-[18px]">search</span> Run screen</>
+                 )}
+               </button>
+             </div>
+             
+             <AnimatePresence>
+               {humanizedText && (
+                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mt-4">
+                   <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                     <div className="flex items-center gap-2 mb-2 text-primary font-bold">
+                       <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+                       <h4>Humanized Text Suggestion</h4>
+                     </div>
+                     <div className="text-on-surface text-sm whitespace-pre-wrap">{humanizedText}</div>
+                     <button onClick={() => { setCustomText(humanizedText); setHumanizedText(''); }} className="mt-4 px-4 py-2 bg-primary text-on-primary rounded-lg font-bold text-sm hover:shadow-md transition-shadow">
+                       Apply to Editor
+                     </button>
+                   </div>
+                 </motion.div>
+               )}
+             </AnimatePresence>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex-1 flex justify-center items-center py-20">
@@ -167,7 +306,11 @@ const PlagiarismChecker = () => {
               <span className="material-symbols-outlined text-[40px] text-secondary">plagiarism</span>
             </div>
             <h3 className="font-title-lg text-[22px] font-bold text-on-surface mb-2">No Reports Generated</h3>
-            <p className="font-body-md text-[15px] text-secondary">Select a submission from the dropdown above and run a check to generate an originality report.</p>
+            <p className="font-body-md text-[15px] text-secondary">
+              {activeTab === 'submissions' 
+                ? 'Select a submission from the dropdown above and run a check to generate an originality report.' 
+                : 'Paste text or upload a .txt file and run a check to view grounded overlap.'}
+            </p>
           </motion.div>
         ) : (
           <motion.div variants={containerVariants} className="grid grid-cols-1 gap-6 lg:gap-8 flex-1 overflow-y-auto pb-8 custom-scrollbar">
@@ -187,7 +330,9 @@ const PlagiarismChecker = () => {
                   <div className="flex flex-col items-center justify-center w-full md:w-[320px] p-8 border-b md:border-b-0 md:border-r border-outline-variant/30 relative z-10 bg-surface/50">
                     <div className="mb-6 flex flex-col items-center gap-2 text-center">
                       <h3 className="font-title-md text-[18px] font-bold text-on-surface leading-snug">{report.submission?.title || 'Unknown Submission'}</h3>
-                      <span className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider ${report.isCurrent === false ? 'bg-tertiary/10 text-tertiary' : 'bg-primary/10 text-primary'}`}>{report.isCurrent === false ? 'Earlier version' : 'Current submission'}</span>
+                      {!report.isCustom && (
+                        <span className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider ${report.isCurrent === false ? 'bg-tertiary/10 text-tertiary' : 'bg-primary/10 text-primary'}`}>{report.isCurrent === false ? 'Earlier version' : 'Current submission'}</span>
+                      )}
                     </div>
                     
                     <div className="relative w-40 h-40 flex items-center justify-center mb-6">
@@ -213,7 +358,7 @@ const PlagiarismChecker = () => {
                       <span className="material-symbols-outlined text-[16px]">{isDanger ? 'error' : isWarning ? 'warning' : 'check_circle'}</span>
                       {isDanger ? 'Higher overlap to review' : isWarning ? 'Some overlap to review' : 'Limited grounded overlap'}
                     </div>
-                    <span className="font-label-sm text-[11px] font-semibold text-secondary uppercase tracking-widest mt-6">Checked: {new Date(report.createdAt).toLocaleDateString()}</span>
+                    {!report.isCustom && <span className="font-label-sm text-[11px] font-semibold text-secondary uppercase tracking-widest mt-6">Checked: {new Date(report.createdAt).toLocaleDateString()}</span>}
                     <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px] text-secondary">
                       <span>{Number(report.checkedCharacterCount || 0).toLocaleString()} characters</span>
                       <span>{Number(report.searchQueryCount || 0).toLocaleString()} search queries</span>

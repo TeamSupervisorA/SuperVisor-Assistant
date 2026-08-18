@@ -202,4 +202,30 @@ router.post('/', protect, authorize('supervisor', 'admin'), integrityLimiter, as
   }
 });
 
+router.post('/quick', protect, integrityLimiter, async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text || String(text).trim().length < 200) {
+      return res.status(422).json({
+        success: false,
+        error: 'Please provide at least 200 characters of text to perform a reliable integrity screen.'
+      });
+    }
+
+    const result = await screenIntegrity({ text, comparisonSubmissions: [] });
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    const isInputError = /required|at least|too long/i.test(error?.message);
+    const isQuotaError = /RESOURCE_EXHAUSTED|quota|\b429\b/i.test(error?.message);
+    return res.status(isInputError ? 422 : isQuotaError ? 429 : 503).json({
+      success: false,
+      error: isInputError
+        ? error.message
+        : isQuotaError
+          ? 'The AI service quota has been reached. Please try again later.'
+          : 'Similarity checking is temporarily unavailable.'
+    });
+  }
+});
+
 module.exports = router;

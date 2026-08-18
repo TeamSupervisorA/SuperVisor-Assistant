@@ -340,3 +340,13 @@ exports.checkPlagiarism = async (text) => {
     disclaimer: 'This screen checks selected public-web evidence only. It is not a comprehensive similarity database, plagiarism probability, or misconduct determination. A qualified reviewer must compare the cited sources, attribution, context, and institutional policy.'
   };
 };
+
+exports.humanizeText = async (text) => {
+  const response = await request({
+    prompt: "Please humanize this text to make it sound natural, well-written, and more human-like, while maintaining its academic meaning and original intent: \n\n" + text,
+    systemInstruction: 'You are an AI assistant helping a student improve their writing to sound more natural and human-like.',
+    json: false
+  });
+  return plainAssistantText(response.text, 60000);
+};
+

@@ -118,6 +118,27 @@ exports.academicAssistant = async (req, res) => {
   }
 };
 
+// @desc    Humanize text
+// @route   POST /api/ai/humanize
+// @access  Private
+exports.humanizeText = async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text || String(text).trim().length === 0) {
+      return res.status(400).json({ success: false, error: 'Text is required.' });
+    }
+    
+    const result = await geminiService.humanizeText(text);
+    await recordInteraction(req, 'humanize_text', { textLength: text.length }, { output: result, status: 'succeeded' });
+    
+    res.json({ success: true, data: result });
+  } catch (error) {
+    await recordInteraction(req, 'humanize_text', { textLength: req.body?.text?.length || 0 }, { status: 'failed', error: error.message });
+    res.status(aiErrorStatus(error)).json({ success: false, error: aiErrorMessage(error) });
+  }
+};
+
+
 exports.rateInteraction = async (req, res) => {
   try {
     const rating = Number(req.body.rating);
