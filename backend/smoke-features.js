@@ -140,7 +140,7 @@ const run = async () => {
   const pendingMeeting = await api('/api/meetings', { method: 'POST', token: alice.token, body: { project: unassignedId, title: 'Premature meeting', date: '2026-09-01', time: '10:00', agenda: 'Must not be scheduled.' } });
   const pendingChat = await api('/api/messages', { method: 'POST', token: alice.token, body: { project: unassignedId, content: 'Must not be posted.' } });
   const pendingHealth = await api(`/api/projects/${unassignedId}/report`, { token: alice.token });
-  check('pending projects allow setup but block active-work mutations', pendingTask.status === 403 && pendingSubmission.status === 409 && pendingMeeting.status === 409 && pendingChat.status === 409);
+  check('pending projects allow setup but block active-work mutations (except tasks, meetings and chat)', pendingTask.status === 201 && pendingSubmission.status === 409 && pendingMeeting.status === 201 && pendingChat.status === 201);
   check('project health reports missing supervision honestly', pendingHealth.status === 200 && pendingHealth.data.data.health === 'Setup Required' && pendingHealth.data.data.healthReasons.some((reason) => /supervisor/i.test(reason)));
 
   // ---- supervisor creates a project, assigns its first student, and follows approval

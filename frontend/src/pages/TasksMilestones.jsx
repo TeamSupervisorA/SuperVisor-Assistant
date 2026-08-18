@@ -708,17 +708,6 @@ const TasksMilestones = () => {
               <div className="space-y-3">
                 {loading ? (
                   <div className="rounded-xl bg-surface p-4 text-sm text-secondary">
-                      <div>
-                        <h2 className="font-bold text-on-surface">{column.label}</h2>
-                        <p className="mt-1 text-xs text-secondary">{column.helper}</p>
-                      </div>
-                      <span className="rounded-full bg-surface px-2 py-1 text-xs font-bold text-secondary">
-                        {column.tasks.length}
-                      </span>
-                    </header>
-                    <div className="space-y-3">
-                      {loading ? (
-                        <div className="rounded-xl bg-surface p-4 text-sm text-secondary">
                           Loading tasks…
                         </div>
                       ) : (
