@@ -71,3 +71,35 @@ exports.updateSettings = async (req, res) => {
     res.status(400).json({ success: false, error: error.message });
   }
 };
+
+// Update user password (or setup for Google users)
+exports.updatePassword = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('+password');
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+    
+    const { currentPassword, newPassword } = req.body;
+    
+    // If the user already has a password, verify the current one
+    if (user.password) {
+      if (!currentPassword) {
+        return res.status(422).json({ success: false, error: 'Current password is required to change your password' });
+      }
+      const isMatch = await user.matchPassword(currentPassword);
+      if (!isMatch) {
+        return res.status(401).json({ success: false, error: 'Incorrect current password' });
+      }
+    }
+    
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(422).json({ success: false, error: 'New password must be at least 8 characters long' });
+    }
+    
+    user.password = newPassword;
+    await user.save();
+    
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};

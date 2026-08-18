@@ -27,6 +27,17 @@ const Settings = () => {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
+  
+  // Password change state
+  const [passwordState, setPasswordState] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordNotice, setPasswordNotice] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
   const canConfigureIntegrity = user?.role === 'supervisor';
 
   useEffect(() => {
@@ -76,6 +87,43 @@ const Settings = () => {
     }
   };
 
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setPasswordSaving(true);
+    setPasswordNotice('');
+    setPasswordError('');
+
+    if (passwordState.newPassword !== passwordState.confirmPassword) {
+      setPasswordError('New passwords do not match.');
+      setPasswordSaving(false);
+      return;
+    }
+
+    if (passwordState.newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters long.');
+      setPasswordSaving(false);
+      return;
+    }
+
+    try {
+      const res = await apiFetch('/api/users/password', {
+        method: 'PUT',
+        body: JSON.stringify({
+          currentPassword: passwordState.currentPassword,
+          newPassword: passwordState.newPassword
+        })
+      });
+      if (res.success) {
+        setPasswordNotice('Password updated successfully.');
+        setPasswordState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      }
+    } catch (err) {
+      setPasswordError(err.message || 'Unable to update password.');
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="w-full min-h-[calc(100vh-80px)] flex items-center justify-center">
@@ -95,9 +143,9 @@ const Settings = () => {
         className="relative z-10 pt-6 px-6 md:px-10 pb-12 w-full max-w-[1440px] mx-auto flex flex-col gap-8"
       >
         <motion.div variants={itemVariants} className="mb-2">
-          <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary font-label-md text-[12px] font-bold mb-3 border border-primary/20 uppercase tracking-wide">Workspace Settings</span>
-          <h2 className="font-display text-[32px] md:text-[42px] font-black text-on-surface tracking-tight leading-none mb-2">AI & Integrity Settings</h2>
-          <p className="font-title-md text-[16px] text-on-surface-variant font-medium max-w-xl">Manage your workspace assistance preferences. Automatic integrity screening is an assigned-supervisor policy.</p>
+          <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary font-label-md text-[12px] font-bold mb-3 border border-primary/20 uppercase tracking-wide">Workspace & Account Settings</span>
+          <h2 className="font-display text-[32px] md:text-[42px] font-black text-on-surface tracking-tight leading-none mb-2">Account, AI & Integrity Settings</h2>
+          <p className="font-title-md text-[16px] text-on-surface-variant font-medium max-w-xl">Manage your workspace assistance preferences and account details. Automatic integrity screening is an assigned-supervisor policy.</p>
         </motion.div>
         {notice && <div role="status" className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">{notice}</div>}
         {error && <div role="alert" className="rounded-xl border border-error/25 bg-error/10 px-4 py-3 text-sm text-error">{error}</div>}
@@ -234,6 +282,73 @@ const Settings = () => {
                 </div>
               </div>
             </motion.section> : <motion.section variants={itemVariants} className="rounded-[32px] border border-outline-variant/30 bg-surface p-8 shadow-sm"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-tertiary/10 text-tertiary"><span className="material-symbols-outlined">policy</span></div><h3 className="font-title-lg text-[22px] font-bold text-on-surface">Integrity policy</h3></div><p className="mt-5 text-sm leading-relaxed text-secondary">Automatic similarity screening and its threshold are controlled by the supervisor assigned to each project. This prevents institution-wide accounts from silently changing a team’s academic-review policy.</p><p className="mt-4 rounded-xl bg-surface-container-low p-4 text-sm text-on-surface-variant">You can still use AI assistance preferences above. Ask the project’s assigned supervisor to review or change the integrity policy.</p></motion.section>}
+            
+            {/* Password Change Card */}
+            <motion.section variants={itemVariants} className="bg-surface/80 backdrop-blur-xl rounded-[32px] p-8 shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-outline-variant/30">
+              <div className="flex items-center gap-3 mb-4">
+                 <div className="w-10 h-10 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center shadow-sm">
+                    <span className="material-symbols-outlined text-[20px]">lock</span>
+                 </div>
+                 <h3 className="font-title-lg text-[22px] font-bold text-on-surface">Password</h3>
+              </div>
+              <p className="font-body-sm text-[14px] text-secondary mb-6 leading-relaxed">Update your password or set one up if you signed in with Google.</p>
+              
+              {passwordNotice && <div role="status" className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300 mb-4">{passwordNotice}</div>}
+              {passwordError && <div role="alert" className="rounded-xl border border-error/25 bg-error/10 px-4 py-3 text-sm text-error mb-4">{passwordError}</div>}
+              
+              <form onSubmit={handlePasswordChange} className="space-y-4">
+                {user?.hasPassword !== false && (
+                  <div>
+                    <label className="block font-label-md text-[13px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Current Password</label>
+                    <input 
+                      type="password" 
+                      value={passwordState.currentPassword}
+                      onChange={(e) => setPasswordState(prev => ({ ...prev, currentPassword: e.target.value }))}
+                      className="w-full bg-surface-container-lowest/50 px-4 py-3 rounded-xl border border-outline-variant/40 text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                      placeholder={user?.hasPassword ? "Enter current password" : "Enter current password (if set)"}
+                    />
+                  </div>
+                )}
+                
+                <div>
+                  <label className="block font-label-md text-[13px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">New Password</label>
+                  <input 
+                    type="password" 
+                    value={passwordState.newPassword}
+                    onChange={(e) => setPasswordState(prev => ({ ...prev, newPassword: e.target.value }))}
+                    className="w-full bg-surface-container-lowest/50 px-4 py-3 rounded-xl border border-outline-variant/40 text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                    placeholder="Enter new password"
+                    required
+                    minLength={8}
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-label-md text-[13px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Confirm Password</label>
+                  <input 
+                    type="password" 
+                    value={passwordState.confirmPassword}
+                    onChange={(e) => setPasswordState(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                    className="w-full bg-surface-container-lowest/50 px-4 py-3 rounded-xl border border-outline-variant/40 text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                    placeholder="Confirm new password"
+                    required
+                    minLength={8}
+                  />
+                </div>
+                
+                <button 
+                  type="submit"
+                  disabled={passwordSaving} 
+                  className={`w-full py-3 mt-2 bg-secondary text-on-secondary rounded-xl font-title-sm text-[15px] font-bold shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 ${passwordSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
+                >
+                  {passwordSaving ? (
+                    <><motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="material-symbols-outlined text-[18px]">sync</motion.span> Updating...</>
+                  ) : (
+                    <><span className="material-symbols-outlined text-[18px]">key</span> Update Password</>
+                  )}
+                </button>
+              </form>
+            </motion.section>
           </div>
         </motion.div>
 

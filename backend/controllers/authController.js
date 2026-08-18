@@ -584,8 +584,11 @@ exports.completeGoogleProfile = async (req, res) => {
 // @access  Private
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
-    return res.status(200).json({ success: true, data: user });
+    const user = await User.findById(req.user.id).select('+password');
+    const userData = user.toObject();
+    userData.hasPassword = !!user.password;
+    delete userData.password;
+    return res.status(200).json({ success: true, data: userData });
   } catch (error) {
     return sendServerError(res, error, 'Unable to load your profile');
   }

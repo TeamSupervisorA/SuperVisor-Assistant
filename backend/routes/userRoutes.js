@@ -13,4 +13,6 @@ router
   .get(userController.getSettings)
   .put(userController.updateSettings);
 
+router.put('/password', userController.updatePassword);
+
 module.exports = router;
