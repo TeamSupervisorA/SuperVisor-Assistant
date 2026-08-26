@@ -6,6 +6,7 @@ const {
   googleAuthentication,
   completeGoogleProfile,
   getMe,
+  getPasswordRecoveryStatus,
   forgotPassword,
   resetPassword
 } = require('../controllers/authController');
@@ -20,6 +21,7 @@ router.post('/login', login);
 router.post('/admin-login', adminLogin);
 router.post('/google', googleAuthentication);
 router.post('/google/complete-profile', completeGoogleProfile);
+router.get('/password-recovery/status', getPasswordRecoveryStatus);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password/:token', resetPassword);
 router.get('/me', protect, getMe);

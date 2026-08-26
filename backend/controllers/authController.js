@@ -3,6 +3,7 @@ const Institution = require('../models/Institution');
 const Department = require('../models/Department');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
 const { sendServerError } = require('../utils/errorResponse');
 
@@ -100,12 +101,71 @@ const sendTokenResponse = (user, statusCode, res) => {
   res.status(statusCode).json({ success: true, token, user: publicUser(user) });
 };
 
-const hasEmailConfiguration = () => Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+const smtpConfiguration = () => {
+  const gmailUser = String(process.env.GMAIL_USER || '').trim();
+  const gmailPassword = String(process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
+  if (gmailUser && gmailPassword) {
+    return {
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      auth: { user: gmailUser, pass: gmailPassword }
+    };
+  }
+
+  const host = String(process.env.SMTP_HOST || '').trim();
+  const user = String(process.env.SMTP_USER || '').trim();
+  const password = String(process.env.SMTP_PASS || '');
+  if (!host || !user || !password) return null;
+  const port = parseBoundedInteger(process.env.SMTP_PORT, 587, 1, 65535);
+  return {
+    host,
+    port,
+    secure: String(process.env.SMTP_SECURE || '').toLowerCase() === 'true' || port === 465,
+    auth: { user, pass: password }
+  };
+};
+
+const configuredEmailProvider = () => {
+  if (isTestEnvironment()) return 'test';
+  if (process.env.RESEND_API_KEY && process.env.EMAIL_FROM) return 'resend';
+  if (smtpConfiguration() && (process.env.EMAIL_FROM || process.env.GMAIL_USER || process.env.SMTP_USER)) return 'smtp';
+  return null;
+};
+
+const hasEmailConfiguration = () => Boolean(configuredEmailProvider());
+
+const emailSender = () => String(
+  process.env.EMAIL_FROM || process.env.GMAIL_USER || process.env.SMTP_USER || ''
+).trim();
 
 const sendEmail = async ({ to, subject, text }) => {
   // Tests exercise password recovery without contacting a real mail provider.
   if (isTestEnvironment()) return;
-  if (!hasEmailConfiguration()) throw createHttpError('Email delivery is not configured. Contact the platform administrator.', 503);
+  const provider = configuredEmailProvider();
+  if (!provider) throw createHttpError('Email delivery is not configured. Contact the platform administrator.', 503);
+
+  if (provider === 'smtp') {
+    const transport = nodemailer.createTransport({
+      ...smtpConfiguration(),
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000
+    });
+    try {
+      await transport.sendMail({
+        from: emailSender(),
+        to,
+        subject,
+        text,
+        disableFileAccess: true,
+        disableUrlAccess: true
+      });
+    } finally {
+      transport.close();
+    }
+    return;
+  }
 
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -113,11 +173,27 @@ const sendEmail = async ({ to, subject, text }) => {
       Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ from: process.env.EMAIL_FROM, to: [to], subject, text }),
+    body: JSON.stringify({ from: emailSender(), to: [to], subject, text }),
     signal: AbortSignal.timeout(10000)
   });
 
   if (!response.ok) throw createHttpError('Email provider did not accept the message', 503);
+};
+
+const passwordResetOrigin = () => {
+  const configured = process.env.PASSWORD_RESET_URL
+    || (process.env.FRONTEND_URL || '').split(',').map((value) => value.trim()).find(Boolean);
+  if (!configured) throw createHttpError('The password reset website address is not configured', 503);
+  let url;
+  try {
+    url = new URL(configured);
+  } catch {
+    throw createHttpError('The password reset website address is invalid', 503);
+  }
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))) {
+    throw createHttpError('The password reset website address must use HTTPS', 503);
+  }
+  return url.origin;
 };
 
 const sendResetEmail = async ({ email, name, resetUrl }) => {
@@ -213,6 +289,12 @@ exports.getRegistrationOptions = async (req, res) => {
     res.json({ success: true, data: institutions.map((institution) => ({ ...institution, departments: departments.filter((department) => String(department.institution) === String(institution._id)) })) });
   } catch (error) { return sendServerError(res, error, 'Unable to load registration options'); }
 };
+
+// Public capability only; never reveals whether a particular account exists.
+exports.getPasswordRecoveryStatus = (req, res) => res.json({
+  success: true,
+  available: hasEmailConfiguration()
+});
 
 // @desc    Login user
 // @route   POST /api/auth/login
@@ -413,6 +495,13 @@ exports.getMe = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   try {
     const email = normaliseEmail(req.body?.email);
+    if (!hasEmailConfiguration()) {
+      return res.status(503).json({
+        success: false,
+        error: 'Password recovery email is not configured yet. Contact the platform administrator.'
+      });
+    }
+    const resetOrigin = passwordResetOrigin();
     const user = await User.findOne({ email }).select('+passwordResetToken +passwordResetExpires');
     // Keep the response identical for unknown, unverified, and configured
     // accounts to avoid account enumeration.
@@ -425,9 +514,7 @@ exports.forgotPassword = async (req, res) => {
     user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000);
     await user.save({ validateBeforeSave: false });
 
-    const frontendOrigin = (process.env.FRONTEND_URL || '').split(',').map((value) => value.trim()).find(Boolean);
-    if (!frontendOrigin) throw createHttpError('FRONTEND_URL is not configured', 503);
-    const resetUrl = `${frontendOrigin.replace(/\/$/, '')}/reset-password?token=${rawToken}`;
+    const resetUrl = `${resetOrigin}/reset-password?token=${rawToken}`;
     try {
       await sendResetEmail({ email: user.email, name: user.name, resetUrl });
     } catch (error) {
@@ -440,7 +527,7 @@ exports.forgotPassword = async (req, res) => {
   } catch (error) {
     // Keep this response generic even for malformed input: the endpoint is
     // deliberately resistant to account-discovery probes.
-    if (error?.statusCode === 422) return res.status(422).json({ success: false, error: error.message });
+    if ([422, 503].includes(error?.statusCode)) return res.status(error.statusCode).json({ success: false, error: error.message });
     return sendServerError(res, error, 'Password reset is temporarily unavailable. Please try again later.');
   }
 };

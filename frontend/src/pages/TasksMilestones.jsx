@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { apiFetch, openAsset, uploadFile } from "../lib/api";
+import { apiFetch, MAX_UPLOAD_SIZE_MB, openAsset, uploadFile } from "../lib/api";
 import { useAuth } from "../hooks/useAuth";
 
 const statusMeta = {
@@ -97,10 +97,13 @@ const TasksMilestones = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [draft, setDraft] = useState(emptyTask);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [saving, setSaving] = useState(false);
   const [updatingId, setUpdatingId] = useState("");
   const [taskFilter, setTaskFilter] = useState("all");
   const [reviewTask, setReviewTask] = useState(null);
+  const [reviewError, setReviewError] = useState("");
+  const [reviewProgress, setReviewProgress] = useState("");
   const [deliverable, setDeliverable] = useState(emptyDeliverable);
 
   const projectId = activeProject?._id;
@@ -256,6 +259,8 @@ const TasksMilestones = () => {
       title: `${task.title} — completion evidence`,
       submissionId: "",
     });
+    setReviewError("");
+    setReviewProgress("");
     setReviewTask(task);
   };
 
@@ -263,13 +268,18 @@ const TasksMilestones = () => {
     event.preventDefault();
     if (!reviewTask || saving) return;
     setSaving(true);
-    setError("");
+    setReviewError("");
+    setReviewProgress("Preparing submission…");
     try {
       let submissionId = deliverable.submissionId;
       if (!submissionId) {
         let fileUrl = deliverable.link.trim();
-        if (deliverable.file) fileUrl = (await uploadFile(deliverable.file)).fileUrl;
+        if (deliverable.file) {
+          setReviewProgress("Uploading supporting file…");
+          fileUrl = (await uploadFile(deliverable.file)).fileUrl;
+        }
         if (!fileUrl && !deliverable.note.trim()) throw new Error("Attach a file, add an HTTPS link, or explain the completed work.");
+        setReviewProgress("Saving deliverable…");
         const created = await apiFetch("/api/submissions", {
           method: "POST",
           body: JSON.stringify({
@@ -281,8 +291,12 @@ const TasksMilestones = () => {
           }),
         });
         submissionId = created.data._id;
+        // If the final review request fails, keep the saved draft selected so
+        // retrying does not create duplicate submissions.
+        setDeliverable((current) => ({ ...current, submissionId }));
         setSubmissions((current) => [created.data, ...current]);
       }
+      setReviewProgress("Sending to supervisor…");
       const response = await apiFetch(`/api/tasks/${reviewTask._id}/request-review`, {
         method: "POST",
         body: JSON.stringify({ submissionId, note: deliverable.note.trim() }),
@@ -290,10 +304,12 @@ const TasksMilestones = () => {
       setTasks((current) => current.map((item) => item._id === reviewTask._id ? response.data : item));
       setReviewTask(null);
       setDeliverable(emptyDeliverable);
+      setNotice(`“${reviewTask.title}” was submitted to the supervisor for review.`);
     } catch (requestError) {
-      setError(requestError.message || "Unable to submit this task for review.");
+      setReviewError(requestError.message || "Unable to submit this task for review.");
     } finally {
       setSaving(false);
+      setReviewProgress("");
     }
   };
 
@@ -664,6 +680,13 @@ const TasksMilestones = () => {
           </div>
         )}
 
+        {notice && (
+          <div role="status" className="mt-5 flex items-start justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-700 dark:text-emerald-300">
+            <span>{notice}</span>
+            <button type="button" onClick={() => setNotice("")} className="font-bold" aria-label="Dismiss notification">×</button>
+          </div>
+        )}
+
         <section className="mt-6 grid gap-4 lg:grid-cols-[1.5fr_repeat(3,minmax(0,.65fr))]">
           <article className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
             <p className="text-xs font-bold uppercase tracking-wider text-primary">
@@ -897,18 +920,24 @@ const TasksMilestones = () => {
                   <span className="rounded-lg bg-surface-container px-2 py-2 text-on-surface">2. Submit</span>
                   <span className="rounded-lg border border-outline-variant/40 px-2 py-2 text-secondary">3. Supervisor decision</span>
                 </div>
+                {reviewError && (
+                  <div role="alert" className="flex items-start gap-2 rounded-xl border border-error/30 bg-error/10 p-3 text-sm text-error">
+                    <span className="material-symbols-outlined text-[18px]">error</span>
+                    <span>{reviewError}</span>
+                  </div>
+                )}
                 {submissions.some((item) => String(item.task?._id || item.task || "") === String(reviewTask._id) && ["Draft", "Submitted"].includes(item.status)) && (
                   <label className="block"><span className={fieldLabelClass}>Use a saved draft</span><select value={deliverable.submissionId} onChange={(event) => setDeliverable({ ...deliverable, submissionId: event.target.value })} className={fieldInputClass}><option value="">Create a new submission below</option>{submissions.filter((item) => String(item.task?._id || item.task || "") === String(reviewTask._id) && ["Draft", "Submitted"].includes(item.status)).map((item) => <option key={item._id} value={item._id}>{item.title} · {item.status}</option>)}</select></label>
                 )}
                 {!deliverable.submissionId && <>
                   <label className="block"><span className={fieldLabelClass}>Submission title</span><input required value={deliverable.title} onChange={(event) => setDeliverable({ ...deliverable, title: event.target.value })} className={fieldInputClass} /></label>
                   <label className="block"><span className={fieldLabelClass}>Work summary</span><textarea rows="4" value={deliverable.note} onChange={(event) => setDeliverable({ ...deliverable, note: event.target.value })} placeholder="Explain what was completed, where the result is, and what the supervisor should verify." className={`${fieldInputClass} resize-y`} /></label>
-                  <label className="block"><span className={fieldLabelClass}>Supporting file (maximum 10 MB)</span><input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.gif" onChange={(event) => setDeliverable({ ...deliverable, file: event.target.files?.[0] || null })} className={fieldInputClass} /></label>
+                  <label className="block"><span className={fieldLabelClass}>Supporting file (maximum {MAX_UPLOAD_SIZE_MB} MB)</span><input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.gif" onChange={(event) => { setReviewError(""); setDeliverable({ ...deliverable, file: event.target.files?.[0] || null }); }} className={fieldInputClass} /></label>
                   <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-wide text-secondary"><span className="h-px flex-1 bg-outline-variant/40" />or link<span className="h-px flex-1 bg-outline-variant/40" /></div>
                   <label className="block"><span className={fieldLabelClass}>Supporting HTTPS link</span><input type="url" value={deliverable.link} onChange={(event) => setDeliverable({ ...deliverable, link: event.target.value })} placeholder="https://drive.google.com/..." className={fieldInputClass} /></label>
                 </>}
               </div>
-              <footer className="flex flex-col gap-3 border-t border-outline-variant/30 p-5 sm:flex-row sm:items-center sm:justify-between"><p className="max-w-xs text-xs leading-relaxed text-secondary">Submitting moves this task to supervisor review. It becomes completed only after the supervisor accepts it.</p><div className="flex justify-end gap-2"><button type="button" onClick={() => setReviewTask(null)} className={secondaryActionClass}>Cancel</button><button disabled={saving} className={primaryActionClass}>{saving ? "Submitting…" : "Submit completed work"}</button></div></footer>
+              <footer className="flex flex-col gap-3 border-t border-outline-variant/30 p-5 sm:flex-row sm:items-center sm:justify-between"><p className="max-w-xs text-xs leading-relaxed text-secondary">{reviewProgress || "Submitting moves this task to supervisor review. It becomes completed only after the supervisor accepts it."}</p><div className="flex justify-end gap-2"><button type="button" disabled={saving} onClick={() => setReviewTask(null)} className={secondaryActionClass}>Cancel</button><button disabled={saving} className={primaryActionClass}>{saving ? "Submitting…" : "Submit completed work"}</button></div></footer>
             </form>
           </div>
         )}

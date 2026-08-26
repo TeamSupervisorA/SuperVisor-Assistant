@@ -2,6 +2,7 @@
 process.env.NODE_ENV = 'test';
 process.env.PORT = '5099';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'smoke-secret';
+process.env.FRONTEND_URL = 'http://localhost:5173';
 process.env.ALLOW_PUBLIC_SUPERVISOR_REGISTRATION = 'true';
 // Exercise the exact Paper Editor failure path without allowing a developer's
 // local compiler configuration to make this smoke test reach a real service.
@@ -16,6 +17,7 @@ const ProposalVersion = require('./models/ProposalVersion');
 const Institution = require('./models/Institution');
 const Project = require('./models/Project');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const BASE = 'http://localhost:5099';
 const runId = `${process.pid}-${Date.now()}`;
@@ -94,6 +96,25 @@ const run = async () => {
   check('Google sign-in does not accept credentials when the client ID is not configured', googleNotConfigured.status === 503 && !googleNotConfigured.data.token);
   const unknownReset = await api('/api/auth/forgot-password', { method: 'POST', body: { email: 'unknown@test.com' } });
   check('password reset does not reveal unknown accounts', unknownReset.status === 200 && /If an account exists/i.test(unknownReset.data.message));
+  const recoveryStatus = await api('/api/auth/password-recovery/status');
+  check('password recovery reports email delivery availability', recoveryStatus.status === 200 && recoveryStatus.data.available === true);
+  const knownReset = await api('/api/auth/forgot-password', { method: 'POST', body: { email: emails.bob } });
+  const bobWithReset = await User.findById(bob.user.id).select('+passwordResetToken +passwordResetExpires');
+  check('password reset request stores an expiring hashed token', knownReset.status === 200 && /^[a-f0-9]{64}$/i.test(bobWithReset.passwordResetToken) && bobWithReset.passwordResetExpires > new Date());
+  const rawResetToken = crypto.randomBytes(32).toString('hex');
+  await User.findByIdAndUpdate(bob.user.id, {
+    passwordResetToken: crypto.createHash('sha256').update(rawResetToken).digest('hex'),
+    passwordResetExpires: new Date(Date.now() + 60_000)
+  });
+  const completedReset = await api(`/api/auth/reset-password/${rawResetToken}`, {
+    method: 'POST', body: { password: 'new-pass-1234', confirmPassword: 'new-pass-1234' }
+  });
+  const resetLogin = await api('/api/auth/login', { method: 'POST', body: { email: emails.bob, password: 'new-pass-1234' } });
+  const reusedReset = await api(`/api/auth/reset-password/${rawResetToken}`, {
+    method: 'POST', body: { password: 'another-pass-1234' }
+  });
+  check('valid reset token changes the password and signs the user in', completedReset.status === 200 && !!completedReset.data.token && resetLogin.status === 200);
+  check('password reset token is one-time use', reusedReset.status === 400);
   const invalidReset = await api('/api/auth/reset-password/not-a-valid-token', { method: 'POST', body: { password: 'pass1234' } });
   check('invalid reset token is rejected', invalidReset.status === 400);
   process.env.ALLOW_PUBLIC_SUPERVISOR_REGISTRATION = 'false';

@@ -15,11 +15,11 @@ Deploy `frontend` and `backend` as separate Vercel projects, with each project's
 - Use a `JWT_SECRET` of at least 32 random characters, keep `ALLOW_PUBLIC_SUPERVISOR_REGISTRATION=false`, and set `JWT_EXPIRES_IN=8h` (or your institution’s shorter policy). Supervisors are provisioned by an administrator through the user-management screen.
 - Vercel serverless storage is ephemeral and the app intentionally blocks local-file uploads in production. Configure a private object-storage provider with authenticated downloads before enabling production uploads.
 - `FRONTEND_URL` is an exact allow-list, not a wildcard. Add each permitted production or preview origin explicitly, comma-separated.
-- To enable password-reset email, set `RESEND_API_KEY` and `EMAIL_FROM` (a verified Resend sender) in the backend project, then redeploy. Reset links use the first origin in `FRONTEND_URL`.
+- To enable password-reset email, configure either Resend (`RESEND_API_KEY` and a verified `EMAIL_FROM`) or Gmail (`GMAIL_USER` and a Google App Password in `GMAIL_APP_PASSWORD`) in the backend project, then redeploy. Reset links use `PASSWORD_RESET_URL`, or the first origin in `FRONTEND_URL` when it is omitted.
 
 ## Account registration, recovery, and Google sign-in
 
-Password registration is immediate and does not send an activation code. Password-reset requests always return the same confirmation message, whether or not the address exists, so the endpoint cannot be used to enumerate accounts. To enable password recovery, configure `RESEND_API_KEY`, `EMAIL_FROM`, and `FRONTEND_URL` in the backend deployment.
+Password registration is immediate and does not send an activation code. Password-reset requests always return the same confirmation message, whether or not the address exists, so the endpoint cannot be used to enumerate accounts. To enable password recovery, configure one of the supported email providers and `FRONTEND_URL` (or `PASSWORD_RESET_URL`) in the backend deployment. For Gmail, enable two-step verification and create an App Password; never use the mailbox's normal password.
 
 ### Enable Continue with Google
 

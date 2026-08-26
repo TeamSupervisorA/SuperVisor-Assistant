@@ -25,7 +25,9 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024, files: 1, fields: 4 }, // 10MB, one file
+  // Vercel Functions have a 4.5 MB request limit. Four MB leaves room for
+  // multipart metadata and gives local and deployed users the same contract.
+  limits: { fileSize: 4 * 1024 * 1024, files: 1, fields: 4 },
   fileFilter: fileFilter
 }).single('file');
 

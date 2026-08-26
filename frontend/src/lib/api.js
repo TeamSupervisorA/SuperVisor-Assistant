@@ -1,6 +1,11 @@
 const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
 const API_BASE_URL = (configuredApiUrl || (import.meta.env.DEV ? `http://${window.location.hostname}:5000` : '')).replace(/\/$/, '');
 
+// Vercel Functions reject request bodies above 4.5 MB. Keeping uploads at
+// 4 MB leaves room for multipart headers while remaining portable locally.
+export const MAX_UPLOAD_SIZE_MB = 4;
+const MAX_UPLOAD_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
+
 const getApiBaseUrl = () => {
   if (API_BASE_URL) return API_BASE_URL;
   throw new Error('The API is not configured. Set VITE_API_URL in the frontend Vercel project and redeploy.');
@@ -57,6 +62,10 @@ export const apiFetch = async (path, options = {}) => {
 
 // Upload a File object from the user's device. Returns { fileUrl, originalName, mimeType, size }.
 export const uploadFile = async (file) => {
+  if (!(file instanceof File)) throw new Error('Choose a file to upload.');
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new Error(`The selected file is too large. Upload a file smaller than ${MAX_UPLOAD_SIZE_MB} MB or provide an HTTPS link.`);
+  }
   const token = localStorage.getItem('token');
   const formData = new FormData();
   formData.append('file', file);
@@ -77,7 +86,10 @@ export const uploadFile = async (file) => {
 
   if (!response.ok || data?.success === false) {
     handleUnauthorizedResponse(response);
-    throw new Error(data?.error || `Upload failed (${response.status})`);
+    const message = response.status === 413
+      ? `The upload exceeds the server limit. Use a file smaller than ${MAX_UPLOAD_SIZE_MB} MB or provide an HTTPS link.`
+      : data?.error || `Upload failed (${response.status})`;
+    throw new Error(message);
   }
 
   return data.data;
