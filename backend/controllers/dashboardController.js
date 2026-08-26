@@ -62,7 +62,7 @@ exports.getSupervisorMetrics = async (req, res) => {
     // Submissions awaiting review on supervised projects
     const pendingReviews = await Submission.countDocuments({
       project: { $in: projectIds },
-      status: { $in: ['Submitted', 'Under Review'] }
+      status: 'Under Review'
     });
 
     // Upcoming meetings for supervised projects
@@ -86,7 +86,7 @@ exports.getSupervisorMetrics = async (req, res) => {
     const projectHealth = await Promise.all(supervisedProjects.map(async (project) => {
       const [tasks, pendingSubmissions] = await Promise.all([
         Task.find({ project: project._id }).select('status dueDate').lean(),
-        Submission.countDocuments({ project: project._id, status: { $in: ['Submitted', 'Under Review', 'Needs Revision'] } })
+        Submission.countDocuments({ project: project._id, status: { $in: ['Under Review', 'Needs Revision'] } })
       ]);
       const metrics = taskMetrics(tasks);
       return {
@@ -148,7 +148,7 @@ exports.getStudentMetrics = async (req, res) => {
     // Pending feedback (submitted but not graded)
     const pendingFeedback = await Submission.countDocuments({
       student: studentId,
-      status: { $in: ['Submitted', 'Under Review'] }
+      status: 'Under Review'
     });
 
     // Next deadline — find nearest future task due date

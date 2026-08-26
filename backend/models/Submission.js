@@ -38,8 +38,8 @@ const submissionSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Submitted', 'Under Review', 'Graded', 'Needs Revision'],
-    default: 'Submitted'
+    enum: ['Draft', 'Submitted', 'Under Review', 'Graded', 'Needs Revision'],
+    default: 'Draft'
   },
   grade: {
     type: String

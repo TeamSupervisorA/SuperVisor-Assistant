@@ -20,7 +20,7 @@ const statusMeta = {
     tone: "bg-red-50 text-red-700 dark:bg-error/15 dark:text-error",
   },
   review: {
-    label: "Awaiting review",
+    label: "Awaiting supervisor review",
     icon: "rate_review",
     tone: "bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200",
   },
@@ -251,15 +251,10 @@ const TasksMilestones = () => {
       );
       return;
     }
-    const linked = submissions.filter(
-      (submission) =>
-        String(submission.task?._id || submission.task || "") ===
-          String(task._id) && !["Graded"].includes(submission.status),
-    );
     setDeliverable({
       ...emptyDeliverable,
       title: `${task.title} — completion evidence`,
-      submissionId: linked[0]?._id || "",
+      submissionId: "",
     });
     setReviewTask(task);
   };
@@ -416,9 +411,13 @@ const TasksMilestones = () => {
   const canProposeTask = activeProject?.status !== "archived" && (
     canCreateTask || members.some((member) => String(member?._id || member) === currentUserId)
   );
-  const canMoveTask = (task) =>
-    ["supervisor", "admin"].includes(user?.role) ||
-    String(task.assignedTo?._id || task.assignedTo || "") === currentUserId;
+  const canMoveTask = (task) => {
+    const status = normalizeStatus(task.status);
+    if (["supervisor", "admin"].includes(user?.role)) return status === "review";
+    return user?.role === "student" &&
+      status !== "review" &&
+      String(task.assignedTo?._id || task.assignedTo || "") === currentUserId;
+  };
   const filteredTasks = tasks.filter((task) => {
     if (taskFilter === "assigned") return String(task.assignedTo?._id || task.assignedTo || "") === currentUserId;
     if (taskFilter === "created") return String(task.createdBy?._id || task.createdBy || "") === currentUserId;
@@ -441,8 +440,8 @@ const TasksMilestones = () => {
     },
     {
       id: "review",
-      label: "Review & decisions",
-      helper: "Work awaiting feedback or resolution",
+      label: "Review & revisions",
+      helper: "Submitted work and requested changes",
       tasks: filteredTasks.filter((task) =>
         ["review", "revision", "blocked"].includes(normalizeStatus(task.status)),
       ),
@@ -506,6 +505,8 @@ const TasksMilestones = () => {
     const status = normalizeStatus(task.status);
     const waiting = waitingOnDependencies(task);
     const isSupervisor = ["supervisor", "admin"].includes(user?.role);
+    const isAssignedStudent = user?.role === "student" &&
+      String(task.assignedTo?._id || task.assignedTo || "") === currentUserId;
     if (task.kind === "suggestion" && task.suggestionState === "pending") {
       return canCreateTask ? (
         <div className="flex gap-2">
@@ -515,7 +516,7 @@ const TasksMilestones = () => {
       ) : <span className="text-xs font-semibold text-amber-700 dark:text-amber-200">Awaiting leader or supervisor decision</span>;
     }
     if (status === "todo")
-      return (
+      return isAssignedStudent ? (
         <button
           disabled={waiting || Boolean(updatingId)}
           onClick={() => transition(task, "in_progress")}
@@ -523,16 +524,20 @@ const TasksMilestones = () => {
         >
           {waiting ? "Waiting for prerequisite" : "Start task"}
         </button>
+      ) : (
+        <span className="text-xs font-semibold text-secondary">
+          {isSupervisor ? "Waiting for the assigned student to start" : "Assigned to another student"}
+        </span>
       );
     if (status === "in_progress")
-      return (
+      return isAssignedStudent ? (
         <div className="flex gap-2">
           <button
             disabled={Boolean(updatingId)}
             onClick={() => requestReview(task)}
             className={primaryActionClass}
           >
-            Request review
+            Submit completed work
           </button>
           <button
             disabled={Boolean(updatingId)}
@@ -542,9 +547,13 @@ const TasksMilestones = () => {
             Block
           </button>
         </div>
+      ) : (
+        <span className="text-xs font-semibold text-secondary">
+          {isSupervisor ? "Student work in progress — review opens after submission" : "In progress by the assignee"}
+        </span>
       );
     if (status === "blocked")
-      return (
+      return isAssignedStudent ? (
         <button
           disabled={Boolean(updatingId)}
           onClick={() => transition(task, "in_progress")}
@@ -552,12 +561,20 @@ const TasksMilestones = () => {
         >
           Resume task
         </button>
+      ) : (
+        <span className="text-xs font-semibold text-error">
+          {isSupervisor ? "Blocked — add an instruction or comment" : "Blocked by the assignee"}
+        </span>
       );
     if (status === "revision")
-      return (
+      return isAssignedStudent ? (
         <button disabled={Boolean(updatingId)} onClick={() => transition(task, "in_progress")} className={primaryActionClass}>
           Start revision
         </button>
+      ) : (
+        <span className="text-xs font-semibold text-secondary">
+          {isSupervisor ? "Revision returned to the student" : "Revision assigned to another student"}
+        </span>
       );
     if (status === "review")
       return isSupervisor ? (
@@ -687,7 +704,7 @@ const TasksMilestones = () => {
               `${overdueTasks.length + blockedTasks.length}`,
               "Needs attention",
             ],
-            ["rate_review", reviewTasks.length, "Awaiting review"],
+            ["rate_review", reviewTasks.length, "Awaiting supervisor review"],
           ].map(([icon, value, label]) => (
             <article
               key={label}
@@ -874,19 +891,24 @@ const TasksMilestones = () => {
                 <div><p className="text-xs font-bold uppercase tracking-wide text-primary">Submit completed work</p><h2 className="mt-1 text-xl font-extrabold text-on-surface">{reviewTask.title}</h2><p className="mt-1 text-sm text-secondary">Attach evidence now. The supervisor can review only after you submit this form.</p></div>
                 <button type="button" onClick={() => setReviewTask(null)} className="rounded-lg p-2 text-secondary hover:bg-surface-container"><span className="material-symbols-outlined">close</span></button>
               </header>
-              <div className="space-y-5 p-6">
-                {submissions.some((item) => String(item.task?._id || item.task || "") === String(reviewTask._id) && item.status !== "Graded") && (
-                  <label><span className={fieldLabelClass}>Use existing deliverable</span><select value={deliverable.submissionId} onChange={(event) => setDeliverable({ ...deliverable, submissionId: event.target.value })} className={fieldInputClass}><option value="">Create a new deliverable below</option>{submissions.filter((item) => String(item.task?._id || item.task || "") === String(reviewTask._id) && item.status !== "Graded").map((item) => <option key={item._id} value={item._id}>{item.title} · {item.status}</option>)}</select></label>
+              <div className="grid gap-5 p-6">
+                <div className="grid grid-cols-3 gap-2 text-center text-[11px] font-bold uppercase tracking-wide">
+                  <span className="rounded-lg bg-primary px-2 py-2 text-on-primary">1. Work ready</span>
+                  <span className="rounded-lg bg-surface-container px-2 py-2 text-on-surface">2. Submit</span>
+                  <span className="rounded-lg border border-outline-variant/40 px-2 py-2 text-secondary">3. Supervisor decision</span>
+                </div>
+                {submissions.some((item) => String(item.task?._id || item.task || "") === String(reviewTask._id) && ["Draft", "Submitted"].includes(item.status)) && (
+                  <label className="block"><span className={fieldLabelClass}>Use a saved draft</span><select value={deliverable.submissionId} onChange={(event) => setDeliverable({ ...deliverable, submissionId: event.target.value })} className={fieldInputClass}><option value="">Create a new submission below</option>{submissions.filter((item) => String(item.task?._id || item.task || "") === String(reviewTask._id) && ["Draft", "Submitted"].includes(item.status)).map((item) => <option key={item._id} value={item._id}>{item.title} · {item.status}</option>)}</select></label>
                 )}
                 {!deliverable.submissionId && <>
-                  <label><span className={fieldLabelClass}>Evidence title</span><input required value={deliverable.title} onChange={(event) => setDeliverable({ ...deliverable, title: event.target.value })} className={fieldInputClass} /></label>
-                  <label><span className={fieldLabelClass}>Completion notes</span><textarea rows="4" value={deliverable.note} onChange={(event) => setDeliverable({ ...deliverable, note: event.target.value })} placeholder="Explain what was completed, where the result is, and what the supervisor should verify." className={`${fieldInputClass} resize-y`} /></label>
-                  <label><span className={fieldLabelClass}>Upload file (maximum 10 MB)</span><input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.gif" onChange={(event) => setDeliverable({ ...deliverable, file: event.target.files?.[0] || null })} className={fieldInputClass} /></label>
+                  <label className="block"><span className={fieldLabelClass}>Submission title</span><input required value={deliverable.title} onChange={(event) => setDeliverable({ ...deliverable, title: event.target.value })} className={fieldInputClass} /></label>
+                  <label className="block"><span className={fieldLabelClass}>Work summary</span><textarea rows="4" value={deliverable.note} onChange={(event) => setDeliverable({ ...deliverable, note: event.target.value })} placeholder="Explain what was completed, where the result is, and what the supervisor should verify." className={`${fieldInputClass} resize-y`} /></label>
+                  <label className="block"><span className={fieldLabelClass}>Supporting file (maximum 10 MB)</span><input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.gif" onChange={(event) => setDeliverable({ ...deliverable, file: event.target.files?.[0] || null })} className={fieldInputClass} /></label>
                   <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-wide text-secondary"><span className="h-px flex-1 bg-outline-variant/40" />or link<span className="h-px flex-1 bg-outline-variant/40" /></div>
-                  <label><span className={fieldLabelClass}>HTTPS evidence link</span><input type="url" value={deliverable.link} onChange={(event) => setDeliverable({ ...deliverable, link: event.target.value })} placeholder="https://drive.google.com/..." className={fieldInputClass} /></label>
+                  <label className="block"><span className={fieldLabelClass}>Supporting HTTPS link</span><input type="url" value={deliverable.link} onChange={(event) => setDeliverable({ ...deliverable, link: event.target.value })} placeholder="https://drive.google.com/..." className={fieldInputClass} /></label>
                 </>}
               </div>
-              <footer className="flex flex-col gap-3 border-t border-outline-variant/30 p-5 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs text-secondary">Submission does not equal completion; supervisor acceptance is required.</p><div className="flex justify-end gap-2"><button type="button" onClick={() => setReviewTask(null)} className={secondaryActionClass}>Cancel</button><button disabled={saving} className={primaryActionClass}>{saving ? "Submitting…" : "Submit for review"}</button></div></footer>
+              <footer className="flex flex-col gap-3 border-t border-outline-variant/30 p-5 sm:flex-row sm:items-center sm:justify-between"><p className="max-w-xs text-xs leading-relaxed text-secondary">Submitting moves this task to supervisor review. It becomes completed only after the supervisor accepts it.</p><div className="flex justify-end gap-2"><button type="button" onClick={() => setReviewTask(null)} className={secondaryActionClass}>Cancel</button><button disabled={saving} className={primaryActionClass}>{saving ? "Submitting…" : "Submit completed work"}</button></div></footer>
             </form>
           </div>
         )}

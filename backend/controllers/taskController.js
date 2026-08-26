@@ -327,7 +327,7 @@ exports.requestTaskReview = async (req, res) => {
     const submissionQuery = { _id: req.body?.submissionId, task: task._id, project: task.project._id, student: req.user.id };
     const submission = await Submission.findOne(submissionQuery);
     if (!submission) return res.status(422).json({ success: false, error: 'Choose a submission linked to this task' });
-    if (submission.status === 'Graded') return res.status(409).json({ success: false, error: 'This submission has already been graded' });
+    if (!['Draft', 'Submitted'].includes(submission.status)) return res.status(409).json({ success: false, error: 'Choose a saved draft that is not already under review or decided' });
 
     const previousStatus = normalizedStatus(task.status);
     task.status = 'review';
@@ -350,7 +350,7 @@ exports.requestTaskReview = async (req, res) => {
     try {
       await task.save();
     } catch (error) {
-      submission.status = 'Submitted';
+      submission.status = 'Draft';
       await submission.save().catch(() => {});
       throw error;
     }
@@ -384,7 +384,7 @@ exports.withdrawTaskReview = async (req, res) => {
     task.reviewRequestedAt = undefined;
     task.history.push({ actor: req.user.id, action: 'review_withdrawn', fromStatus: 'review', toStatus: 'in_progress', submission: submissionId, note });
     task.revisionNumber += 1;
-    submission.status = 'Submitted';
+    submission.status = 'Draft';
     await submission.save();
     try {
       await task.save();

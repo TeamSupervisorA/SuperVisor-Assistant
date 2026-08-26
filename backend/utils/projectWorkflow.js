@@ -26,7 +26,7 @@ const projectHealth = ({ project, tasks = [], submissions = [], now = new Date()
   if (metrics.overdue) reasons.push(`${metrics.overdue} overdue task${metrics.overdue === 1 ? '' : 's'}`);
   const revisions = submissions.filter((submission) => submission.status === 'Needs Revision').length;
   if (revisions) reasons.push(`${revisions} deliverable revision${revisions === 1 ? '' : 's'} required`);
-  const pendingReviews = submissions.filter((submission) => ['Submitted', 'Under Review'].includes(submission.status)).length;
+  const pendingReviews = submissions.filter((submission) => submission.status === 'Under Review').length;
   if (pendingReviews) reasons.push(`${pendingReviews} deliverable${pendingReviews === 1 ? '' : 's'} awaiting review`);
 
   let label = 'On Track';

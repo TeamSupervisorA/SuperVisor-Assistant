@@ -327,7 +327,7 @@ const run = async () => {
   const outsiderWithdraw = await api(`/api/tasks/${dependent.data.data._id}/withdraw-review`, { method: 'POST', token: bob.token });
   const withdrawnReview = await api(`/api/tasks/${dependent.data.data._id}/withdraw-review`, { method: 'POST', token: alice.token, body: { note: 'Attaching an updated analysis.' } });
   const resubmittedReview = await api(`/api/tasks/${dependent.data.data._id}/request-review`, { method: 'POST', token: alice.token, body: { submissionId: dependentSubmission.data.data._id } });
-  check('assigned student can safely withdraw and resubmit an undecided review', outsiderWithdraw.status === 403 && withdrawnReview.status === 200 && withdrawnReview.data.data.status === 'in_progress' && withdrawnReview.data.submission.status === 'Submitted' && resubmittedReview.status === 200);
+  check('assigned student can safely withdraw and resubmit an undecided review', outsiderWithdraw.status === 403 && withdrawnReview.status === 200 && withdrawnReview.data.data.status === 'in_progress' && withdrawnReview.data.submission.status === 'Draft' && resubmittedReview.status === 200);
   const studentAccept = await api(`/api/tasks/${dependent.data.data._id}/review-decision`, { method: 'POST', token: alice.token, body: { decision: 'approve' } });
   const supervisorAccept = await api(`/api/tasks/${dependent.data.data._id}/review-decision`, { method: 'POST', token: sup.token, body: { decision: 'approve', feedback: 'Accepted.' } });
   check('review tasks reject missing evidence and require the assigned supervisor', dependentStart.status === 200 && missingSubmissionReview.status === 422 && dependentReview.status === 200 && studentAccept.status === 403 && supervisorAccept.status === 200);
@@ -416,10 +416,16 @@ const run = async () => {
   check('supervisor cannot impersonate a student submission', supervisorSubmission.status === 403);
   const sub = await api('/api/submissions', { method: 'POST', token: alice.token, body: { title: 'Draft 1', project: pid, task: uploadTask.data.data._id, fileUrl: upData.data.fileUrl, content: 'This is a sufficiently detailed research submission text used to preserve the original work for an integrity screen. It describes the study design, evaluation criteria, ethical safeguards, and limitations without asserting that any automated screen is a plagiarism verdict.', status: 'Graded', grade: 'A+', student: eve.user.id } });
   check('submission created with uploaded file and text', sub.status === 201 && sub.data.data.content.length >= 200);
-  check('student cannot pre-grade or impersonate a submission', sub.data.data.status === 'Submitted' && !sub.data.data.grade && sub.data.data.student === alice.user.id);
+  check('student cannot pre-grade or impersonate a submission', sub.data.data.status === 'Draft' && !sub.data.data.grade && sub.data.data.student === alice.user.id);
 
+  const draftDashboard = await api('/api/dashboard/supervisor', { token: sup.token });
+  const prematureDecision = await api(`/api/tasks/${uploadTask.data.data._id}/review-decision`, { method: 'POST', token: sup.token, body: { decision: 'approve' } });
+  check('a saved draft is not placed in the supervisor review queue', draftDashboard.status === 200 && draftDashboard.data.data.pendingReviews === 0);
+  check('supervisor cannot review work before the student submits it', prematureDecision.status === 409);
   const supervisorCannotSubmit = await api(`/api/tasks/${uploadTask.data.data._id}/request-review`, { method: 'POST', token: sup.token, body: { submissionId: sub.data.data._id } });
   const finalReview = await api(`/api/tasks/${uploadTask.data.data._id}/request-review`, { method: 'POST', token: alice.token, body: { submissionId: sub.data.data._id } });
+  const submittedDashboard = await api('/api/dashboard/supervisor', { token: sup.token });
+  check('student submission enters the supervisor review queue exactly once', submittedDashboard.status === 200 && submittedDashboard.data.data.pendingReviews === 1);
   const grade = await api(`/api/tasks/${uploadTask.data.data._id}/review-decision`, { method: 'POST', token: sup.token, body: { decision: 'approve', grade: 'A', feedback: 'Nice work' } });
   check('student submits work and only the supervisor can finish it', supervisorCannotSubmit.status === 403 && finalReview.status === 200 && grade.status === 200 && grade.data.submission.grade === 'A' && grade.data.data.status === 'done');
   const gradedEdit = await api(`/api/submissions/${sub.data.data._id}`, { method: 'PUT', token: alice.token, body: { content: 'Attempted post-grade replacement.' } });

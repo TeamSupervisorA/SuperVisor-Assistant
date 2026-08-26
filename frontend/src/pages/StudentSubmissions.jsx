@@ -14,6 +14,10 @@ const itemVariants = {
 };
 
 const statusMeta = {
+  Draft: {
+    icon: "draft",
+    tone: "bg-surface-container text-on-surface-variant",
+  },
   Submitted: {
     icon: "pending_actions",
     tone: "bg-secondary text-on-secondary",
@@ -30,20 +34,13 @@ const StudentSubmissions = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [reviewingSubmission, setReviewingSubmission] = useState(null);
   const [newSub, setNewSub] = useState({
     title: "",
     task: "",
     file: null,
     content: "",
   });
-  const [reviewDraft, setReviewDraft] = useState({
-    status: "Graded",
-    grade: "",
-    feedback: "",
-  });
   const [uploading, setUploading] = useState(false);
-  const [savingReview, setSavingReview] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -120,16 +117,20 @@ const StudentSubmissions = () => {
         method: "POST",
         body: JSON.stringify(payload),
       });
+      await apiFetch(`/api/tasks/${newSub.task}/request-review`, {
+        method: "POST",
+        body: JSON.stringify({ submissionId: response.data._id, note: content }),
+      });
       const linkedTask = tasks.find((task) => task._id === newSub.task);
       setSubmissions((current) => [
-        { ...response.data, task: linkedTask || response.data.task },
+        { ...response.data, status: "Under Review", task: linkedTask || response.data.task },
         ...current,
       ]);
       setShowSubmitModal(false);
       setNewSub({ title: "", task: "", file: null, content: "" });
-      setNotice("Deliverable submitted for supervisor review.");
+      setNotice("Completed work submitted. Your supervisor can now review it.");
     } catch (requestError) {
-      setError(requestError.message || "Submission failed. Please try again.");
+      setError(requestError.message || "Unable to submit the completed work. If its draft was saved, you can submit it from Tasks & milestones.");
     } finally {
       setUploading(false);
     }
@@ -142,61 +143,6 @@ const StudentSubmissions = () => {
       (!task.assignedTo ||
         String(task.assignedTo?._id || task.assignedTo) === currentUserId),
   );
-
-  const openReview = (submission) => {
-    setError("");
-    setNotice("");
-    setReviewingSubmission(submission);
-    setReviewDraft({
-      status:
-        submission.status === "Submitted"
-          ? "Under Review"
-          : submission.status || "Under Review",
-      grade: submission.grade || "",
-      feedback: submission.feedback || "",
-    });
-  };
-
-  const saveReview = async (event) => {
-    event.preventDefault();
-    if (!reviewingSubmission || savingReview) return;
-    const grade = reviewDraft.grade.trim();
-    const feedback = reviewDraft.feedback.trim();
-    if (reviewDraft.status === "Graded" && !grade) {
-      setError("A graded submission needs a recorded grade.");
-      return;
-    }
-    if (reviewDraft.status === "Needs Revision" && !feedback) {
-      setError("Explain the requested revision so the student can act on it.");
-      return;
-    }
-
-    setError("");
-    setNotice("");
-    setSavingReview(true);
-    try {
-      const response = await apiFetch(
-        `/api/submissions/${reviewingSubmission._id}`,
-        {
-          method: "PUT",
-          body: JSON.stringify({ status: reviewDraft.status, grade, feedback }),
-        },
-      );
-      setSubmissions((current) =>
-        current.map((submission) =>
-          submission._id === response.data._id ? response.data : submission,
-        ),
-      );
-      setReviewingSubmission(null);
-      setNotice(
-        "Submission review saved. The student can now see the outcome and feedback.",
-      );
-    } catch (requestError) {
-      setError(requestError.message || "Unable to save the review.");
-    } finally {
-      setSavingReview(false);
-    }
-  };
 
   const getAiFeedback = async (submissionId, content) => {
     if (!content) {
@@ -295,9 +241,8 @@ const StudentSubmissions = () => {
         )}
         {canReview && (
           <div className="rounded-2xl border border-primary/20 bg-primary/5 px-5 py-4 text-sm text-on-surface-variant">
-            Use <strong className="text-on-surface">Review submission</strong>{" "}
-            to set its outcome and leave actionable feedback. Students receive a
-            notification when you save.
+            A supervisor can review only work marked <strong className="text-on-surface">Under Review</strong>.
+            Accept or return it from <strong className="text-on-surface">Tasks & milestones</strong> so the task and submission remain synchronized.
           </div>
         )}
 
@@ -329,7 +274,7 @@ const StudentSubmissions = () => {
           >
             {submissions.map((submission) => {
               const meta =
-                statusMeta[submission.status] || statusMeta.Submitted;
+                statusMeta[submission.status] || statusMeta.Draft;
               return (
                 <motion.article
                   key={submission._id}
@@ -343,7 +288,7 @@ const StudentSubmissions = () => {
                       <span className="material-symbols-outlined text-[14px]">
                         {meta.icon}
                       </span>
-                      {submission.status || "Submitted"}
+                      {submission.status || "Draft"}
                     </span>
                     <span className="text-right text-[11px] font-semibold uppercase tracking-widest text-secondary">
                       {new Date(
@@ -406,7 +351,9 @@ const StudentSubmissions = () => {
                           ? `Grade: ${submission.grade}`
                           : submission.status === "Needs Revision"
                             ? "Revision requested"
-                            : "Awaiting review"}
+                            : submission.status === "Draft"
+                              ? "Not submitted yet"
+                              : "Awaiting supervisor review"}
                       </p>
                     </div>
                     <div className="flex flex-wrap justify-end gap-2">
@@ -431,12 +378,12 @@ const StudentSubmissions = () => {
                           Plagiarism check
                         </button>
                       )}
-                      {canReview && (
+                      {canReview && submission.status === "Under Review" && (
                         <button
-                          onClick={() => openReview(submission)}
+                          onClick={() => navigate("/tasks-milestones")}
                           className="rounded-xl border border-primary/30 px-3 py-2 text-xs font-bold text-primary transition hover:bg-primary/10"
                         >
-                          Review submission
+                          Open task review
                         </button>
                       )}
                       <button
@@ -578,7 +525,7 @@ const StudentSubmissions = () => {
                     disabled={uploading}
                     className="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary disabled:opacity-60"
                   >
-                    {uploading ? "Submitting…" : "Submit for review"}
+                    {uploading ? "Submitting…" : "Submit completed work"}
                   </button>
                 </div>
               </form>
@@ -587,115 +534,6 @@ const StudentSubmissions = () => {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {reviewingSubmission && (
-          <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 16 }}
-              className="w-full max-w-xl rounded-[30px] border border-outline-variant/30 bg-surface p-7 shadow-2xl"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-primary">
-                    Supervisor review
-                  </p>
-                  <h2 className="mt-1 text-2xl font-black text-on-surface">
-                    {reviewingSubmission.title}
-                  </h2>
-                  <p className="mt-1 text-sm text-secondary">
-                    {reviewingSubmission.student?.name || "Student"}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setReviewingSubmission(null)}
-                  className="rounded-lg p-2 text-secondary hover:bg-surface-container"
-                  aria-label="Close review form"
-                >
-                  <span className="material-symbols-outlined">close</span>
-                </button>
-              </div>
-              <form onSubmit={saveReview} className="mt-6 space-y-5">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="text-sm font-bold text-on-surface">
-                    Outcome
-                    <select
-                      value={reviewDraft.status}
-                      onChange={(event) =>
-                        setReviewDraft({
-                          ...reviewDraft,
-                          status: event.target.value,
-                        })
-                      }
-                      className="mt-2 w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest px-3 py-3 font-normal outline-none focus:border-primary"
-                    >
-                      <option>Under Review</option>
-                      <option>Needs Revision</option>
-                      <option>Graded</option>
-                    </select>
-                  </label>
-                  <label className="text-sm font-bold text-on-surface">
-                    Grade{" "}
-                    <span className="font-normal text-secondary">
-                      {reviewDraft.status === "Graded"
-                        ? "(required)"
-                        : "(optional)"}
-                    </span>
-                    <input
-                      value={reviewDraft.grade}
-                      onChange={(event) =>
-                        setReviewDraft({
-                          ...reviewDraft,
-                          grade: event.target.value,
-                        })
-                      }
-                      className="mt-2 w-full rounded-xl border border-outline-variant/50 bg-surface-container-lowest px-3 py-3 font-normal outline-none focus:border-primary"
-                      placeholder="e.g. 85/100 or A-"
-                    />
-                  </label>
-                </div>
-                <label className="block text-sm font-bold text-on-surface">
-                  Feedback{" "}
-                  <span className="font-normal text-secondary">
-                    {reviewDraft.status === "Needs Revision"
-                      ? "(required)"
-                      : "(recommended)"}
-                  </span>
-                  <textarea
-                    value={reviewDraft.feedback}
-                    onChange={(event) =>
-                      setReviewDraft({
-                        ...reviewDraft,
-                        feedback: event.target.value,
-                      })
-                    }
-                    rows="6"
-                    className="mt-2 w-full resize-y rounded-xl border border-outline-variant/50 bg-surface-container-lowest px-3 py-3 font-normal outline-none focus:border-primary"
-                    placeholder="State what is strong, what needs revision, and the next action."
-                  />
-                </label>
-                <div className="flex justify-end gap-3 border-t border-outline-variant/30 pt-5">
-                  <button
-                    type="button"
-                    onClick={() => setReviewingSubmission(null)}
-                    className="rounded-xl px-4 py-2.5 text-sm font-bold text-on-surface hover:bg-surface-container"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    disabled={savingReview}
-                    className="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-on-primary disabled:opacity-60"
-                  >
-                    {savingReview ? "Saving…" : "Save review"}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

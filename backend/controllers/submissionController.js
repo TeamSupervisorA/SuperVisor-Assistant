@@ -161,16 +161,8 @@ exports.createSubmission = async (req, res) => {
       student: req.user.id
     });
 
-    // Let the supervisor know a new deliverable is waiting for review
-    if (project.supervisor) {
-      await notify({
-        user: project.supervisor,
-        title: 'New task evidence added',
-        message: `${req.user.name} added “${submission.title}” to “${projectTask.title}”. It enters your review queue only after the student requests review.`,
-        type: 'info',
-        link: '/tasks-milestones'
-      });
-    }
+    // Creating evidence saves a student-owned draft. The supervisor is
+    // notified only when the task itself enters the review queue.
     await runAutomaticIntegrityScreen(submission, project);
 
     res.status(201).json({ success: true, data: submission });
@@ -225,9 +217,9 @@ exports.updateSubmission = async (req, res) => {
       if (!nextContent?.trim() && !nextFileUrl?.trim()) {
         return res.status(422).json({ success: false, error: 'Provide a file or paste the submission text' });
       }
-      // Changing a submission returned for revision puts it back in the
-      // supervisor's review queue without letting the client choose a status.
-      if (submission.status === 'Needs Revision') updates.status = 'Submitted';
+      // Editing returned work prepares a new draft. Only the task review
+      // endpoint can place it in the supervisor's queue.
+      if (submission.status === 'Needs Revision') updates.status = 'Draft';
     }
 
     const wasGraded = req.user.role !== 'student' && (
