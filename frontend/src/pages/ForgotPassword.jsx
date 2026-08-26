@@ -21,8 +21,9 @@ const ForgotPassword = () => {
         }
       })
       .catch(() => {
-        // Older API deployments may not expose this capability endpoint yet;
-        // the submit request remains the source of truth in that case.
+        if (!active) return;
+        setRecoveryAvailable(false);
+        setError('Password recovery availability could not be verified. Refresh the page or contact the platform administrator.');
       })
       .finally(() => { if (active) setChecking(false); });
     return () => { active = false; };

@@ -291,10 +291,13 @@ exports.getRegistrationOptions = async (req, res) => {
 };
 
 // Public capability only; never reveals whether a particular account exists.
-exports.getPasswordRecoveryStatus = (req, res) => res.json({
-  success: true,
-  available: hasEmailConfiguration()
-});
+exports.getPasswordRecoveryStatus = (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  return res.json({
+    success: true,
+    available: hasEmailConfiguration()
+  });
+};
 
 // @desc    Login user
 // @route   POST /api/auth/login
@@ -493,6 +496,7 @@ exports.getMe = async (req, res) => {
 // @route POST /api/auth/forgot-password
 // @access Public
 exports.forgotPassword = async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
   try {
     const email = normaliseEmail(req.body?.email);
     if (!hasEmailConfiguration()) {
