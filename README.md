@@ -1,5 +1,9 @@
 # SuperVisor-Assistant
 
+Project support: [suprevisorassistant@gmail.com](mailto:suprevisorassistant@gmail.com)
+
+For a concise architecture explanation and demonstration sequence, see [`docs/PROJECT_INTERVIEW_GUIDE.md`](./docs/PROJECT_INTERVIEW_GUIDE.md).
+
 ## Vercel deployment
 
 Deploy `frontend` and `backend` as separate Vercel projects, with each project's Root Directory set to its respective folder.
@@ -25,7 +29,8 @@ Email-code verification is temporarily disabled: new password registrations rece
    ```text
    EMAIL_VERIFICATION_ENABLED=true
    RESEND_API_KEY=re_...
-   EMAIL_FROM=SuperVisorAI <noreply@your-verified-domain.example>
+   EMAIL_FROM=Supervisor Assistant <noreply@your-verified-domain.example>
+   SUPPORT_EMAIL=suprevisorassistant@gmail.com
    FRONTEND_URL=https://your-frontend.vercel.app
    ```
 

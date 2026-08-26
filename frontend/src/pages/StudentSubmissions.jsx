@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { apiFetch, uploadFile, assetUrl } from "../lib/api";
+import { apiFetch, uploadFile, openAsset } from "../lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -365,17 +365,16 @@ const StudentSubmissions = () => {
                   )}
                   <div className="mt-5 rounded-xl border border-outline-variant/30 bg-surface-container-lowest/60 p-3 text-sm text-secondary">
                     {submission.fileUrl ? (
-                      <a
-                        href={assetUrl(submission.fileUrl)}
-                        target="_blank"
-                        rel="noreferrer"
+                      <button
+                        type="button"
+                        onClick={() => openAsset(submission.fileUrl).catch((requestError) => setError(requestError.message))}
                         className="inline-flex max-w-full items-center gap-2 truncate text-primary hover:underline"
                       >
                         <span className="material-symbols-outlined text-[18px]">
                           attach_file
                         </span>
                         <span className="truncate">Open attached file</span>
-                      </a>
+                      </button>
                     ) : (
                       <span className="inline-flex items-center gap-2">
                         <span className="material-symbols-outlined text-[18px]">

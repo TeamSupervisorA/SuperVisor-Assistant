@@ -3,7 +3,9 @@ const mongoose = require('mongoose');
 const submissionSchema = new mongoose.Schema({
   title: {
     type: String,
-    required: [true, 'Please add a submission title']
+    required: [true, 'Please add a submission title'],
+    trim: true,
+    maxlength: [240, 'Submission title cannot exceed 240 characters']
   },
   task: {
     type: mongoose.Schema.ObjectId,

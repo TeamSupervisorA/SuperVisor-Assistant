@@ -90,4 +90,27 @@ export const assetUrl = (path) => {
   return `${getApiBaseUrl()}${path.startsWith('/') ? '' : '/'}${path}`;
 };
 
+// Open a protected uploaded file without exposing the bearer token in a URL.
+// External HTTPS evidence links are opened directly.
+export const openAsset = async (path) => {
+  if (!path) return;
+  if (/^https:\/\//i.test(path)) {
+    window.open(path, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  const token = localStorage.getItem('token');
+  const response = await fetchWithTimeout(assetUrl(path), {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  });
+  if (!response.ok) {
+    handleUnauthorizedResponse(response);
+    let message = `Unable to open file (${response.status})`;
+    try { message = (await response.json())?.error || message; } catch { /* non-JSON response */ }
+    throw new Error(message);
+  }
+  const objectUrl = URL.createObjectURL(await response.blob());
+  window.open(objectUrl, '_blank', 'noopener,noreferrer');
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+};
+
 export default API_BASE_URL;

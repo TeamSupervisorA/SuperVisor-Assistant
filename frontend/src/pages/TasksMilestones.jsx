@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { apiFetch } from "../lib/api";
+import { apiFetch, openAsset, uploadFile } from "../lib/api";
 import { useAuth } from "../hooks/useAuth";
 
 const statusMeta = {
@@ -79,6 +79,7 @@ const emptyTask = {
   phase: "",
   requiredDeliverable: "",
 };
+const emptyDeliverable = { title: "", note: "", link: "", file: null, submissionId: "" };
 const primaryActionClass =
   "inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2 text-xs font-bold text-on-primary hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50";
 const secondaryActionClass =
@@ -99,6 +100,8 @@ const TasksMilestones = () => {
   const [saving, setSaving] = useState(false);
   const [updatingId, setUpdatingId] = useState("");
   const [taskFilter, setTaskFilter] = useState("all");
+  const [reviewTask, setReviewTask] = useState(null);
+  const [deliverable, setDeliverable] = useState(emptyDeliverable);
 
   const projectId = activeProject?._id;
   const loadTasks = useCallback(async () => {
@@ -253,26 +256,49 @@ const TasksMilestones = () => {
         String(submission.task?._id || submission.task || "") ===
           String(task._id) && !["Graded"].includes(submission.status),
     );
-    if (!linked.length) {
-      setError(
-        "Create a deliverable linked to this task first, then return here to request review.",
-      );
-      return;
-    }
-    setUpdatingId(task._id);
+    setDeliverable({
+      ...emptyDeliverable,
+      title: `${task.title} — completion evidence`,
+      submissionId: linked[0]?._id || "",
+    });
+    setReviewTask(task);
+  };
+
+  const submitForReview = async (event) => {
+    event.preventDefault();
+    if (!reviewTask || saving) return;
+    setSaving(true);
     setError("");
     try {
-      const response = await apiFetch(`/api/tasks/${task._id}/request-review`, {
+      let submissionId = deliverable.submissionId;
+      if (!submissionId) {
+        let fileUrl = deliverable.link.trim();
+        if (deliverable.file) fileUrl = (await uploadFile(deliverable.file)).fileUrl;
+        if (!fileUrl && !deliverable.note.trim()) throw new Error("Attach a file, add an HTTPS link, or explain the completed work.");
+        const created = await apiFetch("/api/submissions", {
+          method: "POST",
+          body: JSON.stringify({
+            title: deliverable.title.trim() || `${reviewTask.title} — completion evidence`,
+            project: activeProject._id,
+            task: reviewTask._id,
+            fileUrl,
+            content: deliverable.note.trim(),
+          }),
+        });
+        submissionId = created.data._id;
+        setSubmissions((current) => [created.data, ...current]);
+      }
+      const response = await apiFetch(`/api/tasks/${reviewTask._id}/request-review`, {
         method: "POST",
-        body: JSON.stringify({ submissionId: linked[0]._id }),
+        body: JSON.stringify({ submissionId, note: deliverable.note.trim() }),
       });
-      setTasks((current) =>
-        current.map((item) => (item._id === task._id ? response.data : item)),
-      );
+      setTasks((current) => current.map((item) => item._id === reviewTask._id ? response.data : item));
+      setReviewTask(null);
+      setDeliverable(emptyDeliverable);
     } catch (requestError) {
-      setError(requestError.message);
+      setError(requestError.message || "Unable to submit this task for review.");
     } finally {
-      setUpdatingId("");
+      setSaving(false);
     }
   };
 
@@ -390,6 +416,9 @@ const TasksMilestones = () => {
   const canProposeTask = activeProject?.status !== "archived" && (
     canCreateTask || members.some((member) => String(member?._id || member) === currentUserId)
   );
+  const canMoveTask = (task) =>
+    ["supervisor", "admin"].includes(user?.role) ||
+    String(task.assignedTo?._id || task.assignedTo || "") === currentUserId;
   const filteredTasks = tasks.filter((task) => {
     if (taskFilter === "assigned") return String(task.assignedTo?._id || task.assignedTo || "") === currentUserId;
     if (taskFilter === "created") return String(task.createdBy?._id || task.createdBy || "") === currentUserId;
@@ -675,6 +704,12 @@ const TasksMilestones = () => {
           ))}
         </section>
 
+        <section className="mt-4 grid gap-3 rounded-2xl border border-outline-variant/30 bg-surface p-4 text-sm md:grid-cols-3">
+          <div><p className="font-extrabold text-on-surface">Student workflow</p><p className="mt-1 text-secondary">Start assigned work, attach evidence, then submit it for review.</p></div>
+          <div><p className="font-extrabold text-on-surface">Supervisor workflow</p><p className="mt-1 text-secondary">Assign official tasks, review submitted evidence, accept it or request revisions.</p></div>
+          <div><p className="font-extrabold text-on-surface">Completion rule</p><p className="mt-1 text-secondary">A student cannot mark work finished. Only supervisor acceptance moves it to Completed.</p></div>
+        </section>
+
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-outline-variant/30 bg-surface px-4 py-3">
           <div className="flex flex-wrap gap-2" role="group" aria-label="Task filters">
             {[["all", "All project tasks"], ["assigned", "Assigned to me"], ["created", "Created by me"]].map(([value, label]) => (
@@ -697,17 +732,17 @@ const TasksMilestones = () => {
                     } p-3 transition-colors duration-200`}
                   >
                     <header className="mb-3 flex items-start justify-between gap-3 px-2 pt-2">
-                <div>
-                  <h2 className="font-bold text-on-surface">{column.label}</h2>
-                  <p className="mt-1 text-xs text-secondary">{column.helper}</p>
-                </div>
-                <span className="rounded-full bg-surface px-2 py-1 text-xs font-bold text-secondary">
-                  {column.tasks.length}
-                </span>
-              </header>
-              <div className="space-y-3">
-                {loading ? (
-                  <div className="rounded-xl bg-surface p-4 text-sm text-secondary">
+                      <div>
+                        <h2 className="font-bold text-on-surface">{column.label}</h2>
+                        <p className="mt-1 text-xs text-secondary">{column.helper}</p>
+                      </div>
+                      <span className="rounded-full bg-surface px-2 py-1 text-xs font-bold text-secondary">
+                        {column.tasks.length}
+                      </span>
+                    </header>
+                    <div className="space-y-3">
+                      {loading ? (
+                        <div className="rounded-xl bg-surface p-4 text-sm text-secondary">
                           Loading tasks…
                         </div>
                       ) : (
@@ -716,7 +751,7 @@ const TasksMilestones = () => {
                           const meta = statusMeta[status] || statusMeta.todo;
                           const waiting = waitingOnDependencies(task);
                           return (
-                            <Draggable draggableId={String(task._id)} index={index} key={task._id}>
+                            <Draggable draggableId={String(task._id)} index={index} key={task._id} isDragDisabled={!canMoveTask(task)}>
                               {(provided, snapshot) => (
                                 <article
                                   ref={provided.innerRef}
@@ -741,6 +776,7 @@ const TasksMilestones = () => {
                                   <h3 className="mt-3 text-sm font-extrabold leading-snug text-on-surface">
                                     {task.title}
                                   </h3>
+                                  <p className="mt-1 text-xs text-secondary">Owner: {task.assignedTo?.name || "Unassigned"}</p>
                                   {task.kind === "suggestion" && task.suggestionState === "pending" && <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-200">Task suggestion · not yet official</p>}
                                   {(task.phase || task.milestone) && <p className="mt-2 text-xs font-semibold text-primary">{task.phase || "Milestone-linked work"}</p>}
                                   {task.description && (
@@ -786,6 +822,18 @@ const TasksMilestones = () => {
                                       Blocker: {task.blockedReason}
                                     </p>
                                   )}
+                                  {(task.evidence || []).length > 0 && (
+                                    <div className="mt-3 rounded-lg border border-outline-variant/30 bg-surface-container-low p-3">
+                                      <p className="text-[10px] font-bold uppercase tracking-wide text-secondary">Evidence</p>
+                                      {(task.evidence || []).map((item, evidenceIndex) => (
+                                        <div key={item._id || evidenceIndex} className="mt-2 text-xs text-on-surface">
+                                          <span className="font-semibold">{item.name || "Task evidence"}</span>
+                                          {item.fileUrl && <button type="button" onClick={() => openAsset(item.fileUrl).catch((requestError) => setError(requestError.message))} className="ml-2 font-bold text-primary hover:underline">Open</button>}
+                                          {item.note && <p className="mt-1 line-clamp-3 text-secondary">{item.note}</p>}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                   <div className="mt-4">
                                     {updatingId === task._id ? (
                                       <span className="text-xs font-semibold text-secondary">
@@ -818,6 +866,30 @@ const TasksMilestones = () => {
             ))}
           </section>
         </DragDropContext>
+
+        {reviewTask && (
+          <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/55 p-4 backdrop-blur-sm">
+            <form onSubmit={submitForReview} className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-3xl border border-outline-variant/30 bg-surface shadow-2xl">
+              <header className="flex items-start justify-between gap-4 border-b border-outline-variant/30 p-6">
+                <div><p className="text-xs font-bold uppercase tracking-wide text-primary">Submit completed work</p><h2 className="mt-1 text-xl font-extrabold text-on-surface">{reviewTask.title}</h2><p className="mt-1 text-sm text-secondary">Attach evidence now. The supervisor can review only after you submit this form.</p></div>
+                <button type="button" onClick={() => setReviewTask(null)} className="rounded-lg p-2 text-secondary hover:bg-surface-container"><span className="material-symbols-outlined">close</span></button>
+              </header>
+              <div className="space-y-5 p-6">
+                {submissions.some((item) => String(item.task?._id || item.task || "") === String(reviewTask._id) && item.status !== "Graded") && (
+                  <label><span className={fieldLabelClass}>Use existing deliverable</span><select value={deliverable.submissionId} onChange={(event) => setDeliverable({ ...deliverable, submissionId: event.target.value })} className={fieldInputClass}><option value="">Create a new deliverable below</option>{submissions.filter((item) => String(item.task?._id || item.task || "") === String(reviewTask._id) && item.status !== "Graded").map((item) => <option key={item._id} value={item._id}>{item.title} · {item.status}</option>)}</select></label>
+                )}
+                {!deliverable.submissionId && <>
+                  <label><span className={fieldLabelClass}>Evidence title</span><input required value={deliverable.title} onChange={(event) => setDeliverable({ ...deliverable, title: event.target.value })} className={fieldInputClass} /></label>
+                  <label><span className={fieldLabelClass}>Completion notes</span><textarea rows="4" value={deliverable.note} onChange={(event) => setDeliverable({ ...deliverable, note: event.target.value })} placeholder="Explain what was completed, where the result is, and what the supervisor should verify." className={`${fieldInputClass} resize-y`} /></label>
+                  <label><span className={fieldLabelClass}>Upload file (maximum 10 MB)</span><input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.gif" onChange={(event) => setDeliverable({ ...deliverable, file: event.target.files?.[0] || null })} className={fieldInputClass} /></label>
+                  <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-wide text-secondary"><span className="h-px flex-1 bg-outline-variant/40" />or link<span className="h-px flex-1 bg-outline-variant/40" /></div>
+                  <label><span className={fieldLabelClass}>HTTPS evidence link</span><input type="url" value={deliverable.link} onChange={(event) => setDeliverable({ ...deliverable, link: event.target.value })} placeholder="https://drive.google.com/..." className={fieldInputClass} /></label>
+                </>}
+              </div>
+              <footer className="flex flex-col gap-3 border-t border-outline-variant/30 p-5 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs text-secondary">Submission does not equal completion; supervisor acceptance is required.</p><div className="flex justify-end gap-2"><button type="button" onClick={() => setReviewTask(null)} className={secondaryActionClass}>Cancel</button><button disabled={saving} className={primaryActionClass}>{saving ? "Submitting…" : "Submit for review"}</button></div></footer>
+            </form>
+          </div>
+        )}
 
         {showCreate && (
           <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 p-4 backdrop-blur-sm">

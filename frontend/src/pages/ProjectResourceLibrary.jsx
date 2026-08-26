@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { apiFetch, uploadFile, assetUrl } from '../lib/api';
+import { apiFetch, uploadFile, openAsset } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 
@@ -171,7 +171,7 @@ const ProjectResourceLibrary = () => {
                       </div>
                       <h4 className="font-title-md text-[18px] font-bold text-on-surface mb-2 leading-snug group-hover:text-primary transition-colors relative z-10">{res.title}</h4>
                       <p className="font-body-sm text-[13px] text-secondary line-clamp-1 mb-6 truncate relative z-10 group-hover:text-primary/70">
-                        {res.url ? <a href={assetUrl(res.url)} target="_blank" rel="noreferrer" className="hover:underline">{res.url}</a> : 'No file attached'}
+                        {res.url ? <button type="button" onClick={() => openAsset(res.url).catch((requestError) => setError(requestError.message))} className="break-all text-left hover:underline">{res.url}</button> : 'No file attached'}
                       </p>
                       
                       <div className="mt-auto pt-4 border-t border-outline-variant/30 flex items-center justify-between relative z-10">

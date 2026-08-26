@@ -146,15 +146,15 @@ const sendEmail = async ({ to, subject, text }) => {
 const sendVerificationEmail = async ({ email, name, code }) => {
   await sendEmail({
     to: email,
-    subject: 'Verify your SuperVisorAI email address',
-    text: `Hello ${name},\n\nYour SuperVisorAI verification code is: ${code}\n\nIt expires in ${verificationLifetimeMs() / 60000} minutes. Do not share this code with anyone.\n\nIf you did not start registration, you can ignore this email.`
+    subject: 'Verify your Supervisor Assistant email address',
+    text: `Hello ${name},\n\nYour Supervisor Assistant verification code is: ${code}\n\nIt expires in ${verificationLifetimeMs() / 60000} minutes. Do not share this code with anyone.\n\nIf you did not start registration, you can ignore this email.`
   });
 };
 
 const sendResetEmail = async ({ email, name, resetUrl }) => {
   await sendEmail({
     to: email,
-    subject: 'Reset your SuperVisorAI password',
+    subject: 'Reset your Supervisor Assistant password',
     text: `Hello ${name},\n\nUse this link within one hour to reset your password:\n${resetUrl}\n\nIf you did not request this, you can ignore this email.`
   });
 };

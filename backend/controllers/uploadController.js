@@ -61,7 +61,12 @@ exports.uploadFile = (req, res) => {
       
       const uploadStream = bucket.openUploadStream(filename, {
         contentType: req.file.mimetype,
-        metadata: { originalName: req.file.originalname }
+        metadata: {
+          originalName: req.file.originalname,
+          contentType: req.file.mimetype,
+          uploadedBy: req.user._id,
+          institution: req.user.institution || null
+        }
       });
       
       uploadStream.end(req.file.buffer);
@@ -100,9 +105,18 @@ exports.getFile = async (req, res) => {
       return res.status(404).json({ success: false, error: 'File not found' });
     }
     const file = files[0];
-    res.setHeader('Content-Type', file.contentType);
-    res.setHeader('Content-Disposition', `inline; filename="${file.metadata?.originalName || file.filename}"`);
-    res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+    const fileInstitution = file.metadata?.institution?.toString();
+    const userInstitution = req.user.institution?.toString();
+    const isOwner = file.metadata?.uploadedBy?.toString() === req.user.id;
+    const sameInstitution = Boolean(fileInstitution && userInstitution && fileInstitution === userInstitution);
+    if (!isOwner && req.user.role !== 'admin' && !sameInstitution) {
+      return res.status(403).json({ success: false, error: 'Not authorized to access this file' });
+    }
+    const downloadName = path.basename(file.metadata?.originalName || file.filename).replace(/[^\w .()-]/g, '_');
+    res.setHeader('Content-Type', file.contentType || file.metadata?.contentType || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `inline; filename="${downloadName}"`);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     
     bucket.openDownloadStreamByName(req.params.filename).pipe(res);
   } catch (err) {

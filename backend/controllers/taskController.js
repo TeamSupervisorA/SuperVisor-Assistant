@@ -10,6 +10,25 @@ const completedStatuses = new Set(['done', 'completed']);
 const notify = async (fields) => {
   try { await Notification.create(fields); } catch { /* review records remain authoritative if notification storage is unavailable */ }
 };
+const userId = (value) => String(value?._id || value || '');
+const safeEvidenceUrl = (value) => {
+  const url = String(value || '').trim();
+  if (!url || url.startsWith('/api/upload/file/')) return url;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === 'https:') return parsed.toString();
+  } catch { /* handled below */ }
+  const error = new Error('Evidence links must use HTTPS or an uploaded project file');
+  error.statusCode = 422;
+  throw error;
+};
+const notifyTaskPeople = async (task, actorId, fields) => {
+  const recipients = new Set();
+  if (task.assignedTo) recipients.add(userId(task.assignedTo));
+  if (task.project?.supervisor) recipients.add(userId(task.project.supervisor));
+  recipients.delete(userId(actorId));
+  await Promise.all([...recipients].filter(Boolean).map((recipient) => notify({ user: recipient, ...fields })));
+};
 const lifecycleStatuses = new Set(['todo', 'in_progress', 'blocked', 'review', 'revision', 'done', 'cancelled']);
 const transitions = {
   todo: new Set(['in_progress', 'blocked', 'cancelled']),
@@ -177,6 +196,12 @@ exports.createTask = async (req, res) => {
     if (input.assignedTo !== undefined) input.assignedTo = await validateAssignee(project, input.assignedTo);
     const kind = canCreateOfficial ? 'official' : 'suggestion';
     const task = await Task.create({ ...input, createdBy: req.user.id, kind, suggestionState: canCreateOfficial ? 'accepted' : 'pending', status: 'todo', history: [{ actor: req.user.id, action: kind === 'official' ? 'created' : 'suggested', toStatus: 'todo' }] });
+    await notifyTaskPeople({ ...task.toObject(), project }, req.user.id, {
+      title: kind === 'official' ? 'New task assigned' : 'New task suggestion',
+      message: kind === 'official' ? `You were assigned “${task.title}”.` : `“${task.title}” was proposed for the project.`,
+      type: 'info',
+      link: '/tasks-milestones'
+    });
     await recordAudit({ actor: req.user.id, action: kind === 'official' ? 'task.created' : 'task.suggested', entityType: 'task', entityId: task._id, metadata: { project: project._id, milestone: task.milestone } });
 
     res.status(201).json({ success: true, data: task });
@@ -208,9 +233,10 @@ exports.updateTask = async (req, res) => {
       return res.status(403).json({ success: false, error: 'Only the project leader can edit and allocate official tasks; students may edit their own pending suggestions' });
     }
 
-    const editableFields = ['title', 'description', 'priority', 'dueDate', 'dependencies', 'acceptanceCriteria', 'assignedTo', 'evidence', 'milestone', 'phase', 'requiredDeliverable'];
+    const editableFields = ['title', 'description', 'priority', 'dueDate', 'dependencies', 'acceptanceCriteria', 'assignedTo', 'milestone', 'phase', 'requiredDeliverable'];
     const updates = Object.fromEntries(Object.entries(req.body).filter(([key]) => editableFields.includes(key)));
     if (!Object.keys(updates).length) return res.status(422).json({ success: false, error: 'No editable task fields were provided' });
+    const previousAssignee = userId(task.assignedTo);
     if (Object.hasOwn(updates, 'assignedTo')) updates.assignedTo = await validateAssignee(task.project, updates.assignedTo);
     if (Object.hasOwn(updates, 'milestone')) updates.milestone = validateMilestone(task.project, updates.milestone);
     if (updates.dependencies) {
@@ -231,6 +257,10 @@ exports.updateTask = async (req, res) => {
       returnDocument: 'after',
       runValidators: true
     });
+
+    if (updates.assignedTo && userId(updates.assignedTo) !== previousAssignee && userId(updates.assignedTo) !== req.user.id) {
+      await notify({ user: updates.assignedTo, title: 'Task assigned to you', message: `You are now responsible for “${task.title}”.`, type: 'info', link: '/tasks-milestones' });
+    }
 
     await recordAudit({ actor: req.user.id, action: 'task.updated', entityType: 'task', entityId: task._id, metadata: { fields: Object.keys(updates).filter((field) => !['history', 'revisionNumber'].includes(field)) } });
     res.status(200).json({ success: true, data: task });
@@ -274,6 +304,9 @@ exports.transitionTask = async (req, res) => {
     task.history.push({ actor: req.user.id, action: 'transitioned', fromStatus, toStatus: targetStatus, note: note.trim() });
     task.revisionNumber += 1;
     await task.save();
+    if (targetStatus === 'blocked') {
+      await notifyTaskPeople(task, req.user.id, { title: 'Task blocked', message: `“${task.title}” is blocked: ${task.blockedReason}`, type: 'warning', link: '/tasks-milestones' });
+    }
     await recordAudit({ actor: req.user.id, action: 'task.status_changed', entityType: 'task', entityId: task._id, metadata: { fromStatus, toStatus: targetStatus, note: note.trim() } });
     res.json({ success: true, data: task });
   } catch (error) {
@@ -287,13 +320,11 @@ exports.requestTaskReview = async (req, res) => {
     const task = await Task.findById(req.params.id).populate('project');
     if (!task) return res.status(404).json({ success: false, error: 'Task not found' });
     if (!canAccessProject(task.project, req.user)) return res.status(403).json({ success: false, error: 'Not authorized to request review for this task' });
-    const supervisorSubmitting = req.user.role === 'admin' || (req.user.role === 'supervisor' && task.project.supervisor?.toString() === req.user.id);
-    if (!supervisorSubmitting && (req.user.role !== 'student' || task.assignedTo?.toString() !== req.user.id)) return res.status(403).json({ success: false, error: 'Only the assigned student or project supervisor can request review' });
+    if (req.user.role !== 'student' || task.assignedTo?.toString() !== req.user.id) return res.status(403).json({ success: false, error: 'Only the assigned student can submit completed work for review' });
     if (!task.project.supervisor) return res.status(409).json({ success: false, error: 'Assign an active supervisor before requesting task review' });
     if (normalizedStatus(task.status) !== 'in_progress') return res.status(422).json({ success: false, error: 'Only work in progress can be submitted for review' });
     if (await hasOpenDependencies(task.dependencies)) return res.status(422).json({ success: false, error: 'Complete all prerequisite tasks before requesting review' });
-    const submissionQuery = { _id: req.body?.submissionId, task: task._id, project: task.project._id };
-    if (!supervisorSubmitting) submissionQuery.student = req.user.id;
+    const submissionQuery = { _id: req.body?.submissionId, task: task._id, project: task.project._id, student: req.user.id };
     const submission = await Submission.findOne(submissionQuery);
     if (!submission) return res.status(422).json({ success: false, error: 'Choose a submission linked to this task' });
     if (submission.status === 'Graded') return res.status(409).json({ success: false, error: 'This submission has already been graded' });
@@ -304,6 +335,14 @@ exports.requestTaskReview = async (req, res) => {
     task.reviewRequestedAt = new Date();
     task.reviewedAt = undefined;
     task.reviewedBy = undefined;
+    task.evidence = [{
+      name: String(submission.title || 'Task evidence').slice(0, 240),
+      fileUrl: safeEvidenceUrl(submission.fileUrl),
+      note: String(submission.content || '').slice(0, 3000),
+      submission: submission._id,
+      addedBy: req.user.id,
+      addedAt: new Date()
+    }];
     task.history.push({ actor: req.user.id, action: 'review_requested', fromStatus: previousStatus, toStatus: 'review', submission: submission._id, note: String(req.body?.note || '').trim() });
     task.revisionNumber += 1;
     submission.status = 'Under Review';
@@ -316,6 +355,7 @@ exports.requestTaskReview = async (req, res) => {
       throw error;
     }
     await recordAudit({ actor: req.user.id, action: 'task.review_requested', entityType: 'task', entityId: task._id, metadata: { submissionId: submission._id } });
+    await notify({ user: task.project.supervisor, title: 'Task ready for review', message: `${req.user.name} submitted “${task.title}” with supporting evidence.`, type: 'info', link: '/tasks-milestones' });
     res.json({ success: true, data: task, submission });
   } catch (error) {
     res.status(error.statusCode || 400).json({ success: false, error: error.message });
@@ -354,6 +394,7 @@ exports.withdrawTaskReview = async (req, res) => {
       throw error;
     }
     await recordAudit({ actor: req.user.id, action: 'task.review_withdrawn', entityType: 'task', entityId: task._id, metadata: { submissionId, note } });
+    await notify({ user: task.project.supervisor, title: 'Task review withdrawn', message: `${req.user.name} withdrew “${task.title}” to update the evidence.`, type: 'info', link: '/tasks-milestones' });
     res.json({ success: true, data: task, submission });
   } catch (error) {
     res.status(error.statusCode || 400).json({ success: false, error: error.message });
@@ -430,6 +471,9 @@ exports.decideTaskSuggestion = async (req, res) => {
     task.history.push({ actor: req.user.id, action: `suggestion_${decision}ed`, fromStatus: 'todo', toStatus: task.status, note: String(req.body?.note || '').trim() });
     task.revisionNumber += 1;
     await task.save();
+    if (task.createdBy && userId(task.createdBy) !== req.user.id) {
+      await notify({ user: task.createdBy, title: decision === 'accept' ? 'Task suggestion accepted' : 'Task suggestion declined', message: `Your suggestion “${task.title}” was ${decision === 'accept' ? 'accepted and assigned' : 'declined'}.`, type: decision === 'accept' ? 'success' : 'info', link: '/tasks-milestones' });
+    }
     await recordAudit({ actor: req.user.id, action: `task.suggestion_${decision}ed`, entityType: 'task', entityId: task._id, metadata: { assignedTo: task.assignedTo || null } });
     res.json({ success: true, data: task });
   } catch (error) { res.status(error.statusCode || 400).json({ success: false, error: error.message }); }
@@ -447,10 +491,41 @@ exports.addTaskComment = async (req, res) => {
     task.comments.push({ author: req.user.id, body, kind: requestedKind });
     task.revisionNumber += 1;
     await task.save();
+    await notifyTaskPeople(task, req.user.id, {
+      title: requestedKind === 'supervisor_instruction' ? 'New supervisor instruction' : 'New task comment',
+      message: `${req.user.name} added ${requestedKind === 'supervisor_instruction' ? 'an instruction' : 'a comment'} on “${task.title}”.`,
+      type: requestedKind === 'supervisor_instruction' ? 'warning' : 'info',
+      link: '/tasks-milestones'
+    });
     await recordAudit({ actor: req.user.id, action: requestedKind === 'supervisor_instruction' ? 'task.instruction_added' : 'task.comment_added', entityType: 'task', entityId: task._id });
     await task.populate('comments.author', 'name role');
     res.status(201).json({ success: true, data: task });
   } catch (error) { res.status(error.statusCode || 400).json({ success: false, error: error.message }); }
+};
+
+// Evidence may be prepared without changing task status. The assigned student
+// still has to submit the final deliverable for supervisor review.
+exports.addTaskEvidence = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id).populate('project');
+    if (!task) return res.status(404).json({ success: false, error: 'Task not found' });
+    if (!canAccessProject(task.project, req.user)) return res.status(403).json({ success: false, error: 'Not authorized to add evidence to this task' });
+    const assignedStudent = req.user.role === 'student' && userId(task.assignedTo) === req.user.id;
+    if (!assignedStudent) return res.status(403).json({ success: false, error: 'Only the assigned student can add completion evidence' });
+    if (!['in_progress', 'revision'].includes(normalizedStatus(task.status))) return res.status(409).json({ success: false, error: 'Start the task before adding completion evidence' });
+    const fileUrl = safeEvidenceUrl(req.body?.fileUrl);
+    const note = String(req.body?.note || '').trim();
+    const name = String(req.body?.name || '').trim();
+    if (!fileUrl && !note) return res.status(422).json({ success: false, error: 'Add an HTTPS link, uploaded file, or evidence note' });
+    task.evidence.push({ name: name || 'Task evidence', fileUrl, note, addedBy: req.user.id });
+    task.history.push({ actor: req.user.id, action: 'evidence_added', fromStatus: task.status, toStatus: task.status, note: name || 'Task evidence added' });
+    task.revisionNumber += 1;
+    await task.save();
+    await recordAudit({ actor: req.user.id, action: 'task.evidence_added', entityType: 'task', entityId: task._id, metadata: { hasFile: Boolean(fileUrl) } });
+    res.status(201).json({ success: true, data: task });
+  } catch (error) {
+    res.status(error.statusCode || 400).json({ success: false, error: error.message });
+  }
 };
 
 // @desc    Delete task

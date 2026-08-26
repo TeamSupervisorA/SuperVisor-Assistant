@@ -14,6 +14,17 @@ const notify = async (fields) => {
     await Notification.create(fields);
   } catch (e) { /* non-fatal */ }
 };
+const normalizeSubmissionUrl = (value) => {
+  const url = typeof value === 'string' ? value.trim() : '';
+  if (!url || url.startsWith('/api/upload/file/')) return url;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === 'https:') return parsed.toString();
+  } catch { /* handled below */ }
+  const error = new Error('Deliverable links must use HTTPS or an uploaded project file');
+  error.statusCode = 422;
+  throw error;
+};
 
 // Automatic checks are opt-in per supervisor and only run when the student has
 // supplied enough text. A provider error never rejects the academic submission.
@@ -125,7 +136,7 @@ exports.createSubmission = async (req, res) => {
 
     const { title, task, fileUrl } = req.body;
     const content = typeof req.body.content === 'string' ? req.body.content.trim() : '';
-    const normalizedFileUrl = typeof fileUrl === 'string' ? fileUrl.trim() : '';
+    const normalizedFileUrl = normalizeSubmissionUrl(fileUrl);
     if (!normalizedFileUrl && !content) {
       return res.status(422).json({ success: false, error: 'Provide a file or paste the submission text' });
     }
@@ -154,17 +165,17 @@ exports.createSubmission = async (req, res) => {
     if (project.supervisor) {
       await notify({
         user: project.supervisor,
-        title: 'New submission to review',
-        message: `${req.user.name} submitted "${submission.title}" for "${project.title}".`,
+        title: 'New task evidence added',
+        message: `${req.user.name} added “${submission.title}” to “${projectTask.title}”. It enters your review queue only after the student requests review.`,
         type: 'info',
-        link: '/evaluations'
+        link: '/tasks-milestones'
       });
     }
     await runAutomaticIntegrityScreen(submission, project);
 
     res.status(201).json({ success: true, data: submission });
   } catch (error) {
-    res.status(400).json({ success: false, error: error.message });
+    res.status(error.statusCode || 400).json({ success: false, error: error.message });
   }
 };
 
@@ -208,7 +219,7 @@ exports.updateSubmission = async (req, res) => {
     }
     if (req.user.role === 'student') {
       if (updates.content !== undefined) updates.content = typeof updates.content === 'string' ? updates.content.trim() : '';
-      if (updates.fileUrl !== undefined) updates.fileUrl = typeof updates.fileUrl === 'string' ? updates.fileUrl.trim() : '';
+      if (updates.fileUrl !== undefined) updates.fileUrl = normalizeSubmissionUrl(updates.fileUrl);
       const nextContent = updates.content !== undefined ? updates.content : submission.content;
       const nextFileUrl = updates.fileUrl !== undefined ? updates.fileUrl : submission.fileUrl;
       if (!nextContent?.trim() && !nextFileUrl?.trim()) {

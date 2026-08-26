@@ -391,12 +391,13 @@ const run = async () => {
   const upData = await upRes.json();
   check('file upload normalizes the extension', upRes.status === 200 && upData.data.fileUrl.endsWith('.txt'), JSON.stringify(upData).slice(0, 120));
 
-  const fileFetch = await fetch(`${BASE}${upData.data.fileUrl}`);
-  check('uploaded file is served statically', fileFetch.status === 200 && (await fileFetch.text()) === 'hello smoke');
+  const anonymousFileFetch = await fetch(`${BASE}${upData.data.fileUrl}`);
+  const fileFetch = await fetch(`${BASE}${upData.data.fileUrl}`, { headers: { Authorization: `Bearer ${alice.token}` } });
+  check('uploaded files require authentication and remain downloadable by their institution', anonymousFileFetch.status === 401 && fileFetch.status === 200 && (await fileFetch.text()) === 'hello smoke');
 
   process.env.VERCEL = '1';
   const productionUpload = await fetch(`${BASE}/api/upload`, { method: 'POST', headers: { Authorization: `Bearer ${alice.token}` }, body: fd });
-  check('cloud-local upload is blocked until private object storage is configured', productionUpload.status === 503);
+  check('database-backed upload remains available in serverless mode', productionUpload.status === 200);
   delete process.env.VERCEL;
 
   // ---- submission + grading notifications
@@ -406,20 +407,28 @@ const run = async () => {
   check('deliverables cannot exist outside the project task workflow', unlinkedSubmission.status === 422);
   const textOnly = await api('/api/submissions', { method: 'POST', token: alice.token, body: { title: 'Text-only reflection', project: pid, task: uploadTask.data.data._id, content: 'This text-only submission remains usable when production object storage is not configured.' } });
   check('student can submit text without a local production upload', textOnly.status === 201 && !textOnly.data.data.fileUrl && textOnly.data.data.content.length > 0);
+  const unsafeLink = await api('/api/submissions', { method: 'POST', token: alice.token, body: { title: 'Unsafe link', project: pid, task: uploadTask.data.data._id, fileUrl: 'javascript:alert(1)' } });
+  check('deliverable links reject unsafe URL schemes', unsafeLink.status === 422);
+  const outsiderEvidence = await api(`/api/tasks/${uploadTask.data.data._id}/evidence`, { method: 'POST', token: bob.token, body: { note: 'Attempted evidence injection.' } });
+  const assignedEvidence = await api(`/api/tasks/${uploadTask.data.data._id}/evidence`, { method: 'POST', token: alice.token, body: { name: 'Reproducibility record', fileUrl: 'https://example.com/evidence', note: 'Results and reproduction steps.' } });
+  check('only the assigned student can add task evidence', outsiderEvidence.status === 403 && assignedEvidence.status === 201 && assignedEvidence.data.data.evidence.length === 1);
   const supervisorSubmission = await api('/api/submissions', { method: 'POST', token: sup.token, body: { title: 'Forged', project: pid, content: 'This must be rejected because only students submit deliverables.' } });
   check('supervisor cannot impersonate a student submission', supervisorSubmission.status === 403);
   const sub = await api('/api/submissions', { method: 'POST', token: alice.token, body: { title: 'Draft 1', project: pid, task: uploadTask.data.data._id, fileUrl: upData.data.fileUrl, content: 'This is a sufficiently detailed research submission text used to preserve the original work for an integrity screen. It describes the study design, evaluation criteria, ethical safeguards, and limitations without asserting that any automated screen is a plagiarism verdict.', status: 'Graded', grade: 'A+', student: eve.user.id } });
   check('submission created with uploaded file and text', sub.status === 201 && sub.data.data.content.length >= 200);
   check('student cannot pre-grade or impersonate a submission', sub.data.data.status === 'Submitted' && !sub.data.data.grade && sub.data.data.student === alice.user.id);
 
+  const supervisorCannotSubmit = await api(`/api/tasks/${uploadTask.data.data._id}/request-review`, { method: 'POST', token: sup.token, body: { submissionId: sub.data.data._id } });
   const finalReview = await api(`/api/tasks/${uploadTask.data.data._id}/request-review`, { method: 'POST', token: alice.token, body: { submissionId: sub.data.data._id } });
   const grade = await api(`/api/tasks/${uploadTask.data.data._id}/review-decision`, { method: 'POST', token: sup.token, body: { decision: 'approve', grade: 'A', feedback: 'Nice work' } });
-  check('supervisor grades the linked submission through the task review', finalReview.status === 200 && grade.status === 200 && grade.data.submission.grade === 'A' && grade.data.data.status === 'done');
+  check('student submits work and only the supervisor can finish it', supervisorCannotSubmit.status === 403 && finalReview.status === 200 && grade.status === 200 && grade.data.submission.grade === 'A' && grade.data.data.status === 'done');
   const gradedEdit = await api(`/api/submissions/${sub.data.data._id}`, { method: 'PUT', token: alice.token, body: { content: 'Attempted post-grade replacement.' } });
   check('student cannot edit a graded submission', gradedEdit.status === 409);
 
   const aliceNotifs = await api('/api/notifications', { token: alice.token });
+  const supervisorNotifs = await api('/api/notifications', { token: sup.token });
   check('student notified of feedback', (aliceNotifs.data.data || []).some(n => n.title === 'Feedback received'));
+  check('supervisor notified only after a student requests task review', (supervisorNotifs.data.data || []).some(n => n.title === 'Task ready for review'));
 
   const leaderSelfRemoval = await api(`/api/projects/${pid}/members/${alice.user.id}`, { method: 'DELETE', token: alice.token });
   const leadershipTransfer = await api(`/api/projects/${pid}/leader`, { method: 'PUT', token: alice.token, body: { userId: bob.user.id } });
@@ -433,12 +442,15 @@ const run = async () => {
   // ---- institution boundary regression
   const foreignInstitution = await Institution.create({ name: 'Boundary Test University', slug: `boundary-${runId}`, createdBy: adminUser._id });
   const foreignStudent = await User.create({ name: 'Foreign Student', email: `foreign-${runId}@test.com`, password: 'pass1234', role: 'student', institution: foreignInstitution._id, emailVerified: true, onboardingStatus: 'complete' });
+  const foreignToken = jwt.sign({ id: foreignStudent._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
   const foreignProject = await Project.create({ title: 'Foreign institution project', institution: foreignInstitution._id, students: [foreignStudent._id], leaderUserId: foreignStudent._id, status: 'active' });
   const crossTenantProject = await api(`/api/projects/${foreignProject._id}`, { token: admin.token });
   const tenantProjectList = await api('/api/projects', { token: admin.token });
   const tenantUserList = await api('/api/admin/users', { token: admin.token });
+  const crossTenantFile = await fetch(`${BASE}${upData.data.fileUrl}`, { headers: { Authorization: `Bearer ${foreignToken}` } });
   check('institution administrators cannot read another institution project', crossTenantProject.status === 403);
   check('institution project and account directories exclude other tenants', tenantProjectList.status === 200 && !tenantProjectList.data.data.some((item) => item._id === String(foreignProject._id)) && tenantUserList.status === 200 && !tenantUserList.data.data.some((item) => item._id === String(foreignStudent._id)));
+  check('institution file boundary rejects authenticated users from another tenant', crossTenantFile.status === 403);
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);

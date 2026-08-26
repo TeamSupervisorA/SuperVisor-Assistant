@@ -42,7 +42,14 @@ const taskSchema = new mongoose.Schema({
   reviewRequestedAt: Date,
   reviewedAt: Date,
   reviewedBy: { type: mongoose.Schema.ObjectId, ref: 'User', default: null },
-  evidence: [{ name: String, fileUrl: String }],
+  evidence: [{
+    name: { type: String, trim: true, maxlength: 240 },
+    fileUrl: { type: String, trim: true, maxlength: 2000 },
+    note: { type: String, trim: true, maxlength: 3000, default: '' },
+    submission: { type: mongoose.Schema.ObjectId, ref: 'Submission', default: null },
+    addedBy: { type: mongoose.Schema.ObjectId, ref: 'User', default: null },
+    addedAt: { type: Date, default: Date.now }
+  }],
   history: [{
     actor: { type: mongoose.Schema.ObjectId, ref: 'User' },
     action: String,

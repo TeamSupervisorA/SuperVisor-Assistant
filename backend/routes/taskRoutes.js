@@ -9,6 +9,7 @@ const {
   decideTaskReview,
   decideTaskSuggestion,
   addTaskComment,
+  addTaskEvidence,
   deleteTask
 } = require('../controllers/taskController');
 const { protect, authorize } = require('../middleware/auth');
@@ -31,5 +32,6 @@ router.post('/:id/withdraw-review', withdrawTaskReview);
 router.post('/:id/review-decision', authorize('supervisor', 'admin'), decideTaskReview);
 router.post('/:id/suggestion-decision', decideTaskSuggestion);
 router.post('/:id/comments', addTaskComment);
+router.post('/:id/evidence', addTaskEvidence);
 
 module.exports = router;
