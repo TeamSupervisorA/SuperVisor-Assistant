@@ -8,7 +8,6 @@ const { sendServerError } = require('../utils/errorResponse');
 
 const googleClient = new OAuth2Client();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MAX_VERIFICATION_ATTEMPTS = 5;
 
 const createHttpError = (message, statusCode = 400) => {
   const error = new Error(message);
@@ -57,12 +56,8 @@ const safeRole = (role) => (
     : 'student'
 );
 
-// Temporarily defaults to off. Set this exact backend value to "true" when
-// the institution is ready to require email ownership during registration.
-const emailVerificationEnabled = () => process.env.EMAIL_VERIFICATION_ENABLED === 'true';
-
 const isReadyForAuthentication = (user) => (
-  user.emailVerified !== false && (!user.onboardingStatus || user.onboardingStatus === 'complete')
+  !user.onboardingStatus || user.onboardingStatus === 'complete'
 );
 
 const isTestEnvironment = () => process.env.NODE_ENV === 'test';
@@ -78,24 +73,7 @@ const parseBoundedInteger = (value, fallback, minimum, maximum) => {
   return Number.isInteger(parsed) ? Math.max(minimum, Math.min(maximum, parsed)) : fallback;
 };
 
-const verificationLifetimeMs = () => parseBoundedInteger(process.env.EMAIL_VERIFICATION_EXPIRES_MINUTES, 10, 5, 30) * 60 * 1000;
-const verificationCooldownMs = () => parseBoundedInteger(process.env.EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS, 60, 30, 300) * 1000;
 const googleProfileLifetimeMs = () => parseBoundedInteger(process.env.GOOGLE_PROFILE_TOKEN_EXPIRES_MINUTES, 15, 5, 60) * 60 * 1000;
-
-const createVerificationCode = () => (
-  isTestEnvironment()
-    ? '000000'
-    : crypto.randomInt(0, 1000000).toString().padStart(6, '0')
-);
-
-const createVerificationDetails = () => {
-  const code = createVerificationCode();
-  return {
-    code,
-    codeHash: hashSecret(code),
-    expires: new Date(Date.now() + verificationLifetimeMs())
-  };
-};
 
 const configuredGoogleClientIds = () => [
   process.env.GOOGLE_CLIENT_ID,
@@ -125,8 +103,7 @@ const sendTokenResponse = (user, statusCode, res) => {
 const hasEmailConfiguration = () => Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
 
 const sendEmail = async ({ to, subject, text }) => {
-  // Tests exercise the complete account-state flow without contacting a real
-  // mail provider or exposing a verification code through HTTP.
+  // Tests exercise password recovery without contacting a real mail provider.
   if (isTestEnvironment()) return;
   if (!hasEmailConfiguration()) throw createHttpError('Email delivery is not configured. Contact the platform administrator.', 503);
 
@@ -143,14 +120,6 @@ const sendEmail = async ({ to, subject, text }) => {
   if (!response.ok) throw createHttpError('Email provider did not accept the message', 503);
 };
 
-const sendVerificationEmail = async ({ email, name, code }) => {
-  await sendEmail({
-    to: email,
-    subject: 'Verify your Supervisor Assistant email address',
-    text: `Hello ${name},\n\nYour Supervisor Assistant verification code is: ${code}\n\nIt expires in ${verificationLifetimeMs() / 60000} minutes. Do not share this code with anyone.\n\nIf you did not start registration, you can ignore this email.`
-  });
-};
-
 const sendResetEmail = async ({ email, name, resetUrl }) => {
   await sendEmail({
     to: email,
@@ -158,11 +127,6 @@ const sendResetEmail = async ({ email, name, resetUrl }) => {
     text: `Hello ${name},\n\nUse this link within one hour to reset your password:\n${resetUrl}\n\nIf you did not request this, you can ignore this email.`
   });
 };
-
-const pendingEmailResponse = () => ({
-  success: true,
-  message: 'If a pending registration exists for this email, a verification code has been sent.'
-});
 
 const buildLocalRegistration = (body = {}) => ({
   name: requiredName(body.name),
@@ -214,37 +178,10 @@ const resolveRegistrationTenant = async (registration) => {
   return tenantInput;
 };
 
-const setPendingVerification = (user, details) => {
-  user.emailVerified = false;
-  user.onboardingStatus = 'email_verification_pending';
-  user.emailVerificationCode = details.codeHash;
-  user.emailVerificationExpires = details.expires;
-  user.emailVerificationAttempts = 0;
-  user.emailVerificationLastSentAt = new Date();
-};
-
-const sendPendingRegistrationCode = async (user) => {
-  const details = createVerificationDetails();
-  setPendingVerification(user, details);
-  await user.save();
-  try {
-    await sendVerificationEmail({ email: user.email, name: user.name, code: details.code });
-  } catch (error) {
-    user.emailVerificationCode = undefined;
-    user.emailVerificationExpires = undefined;
-    user.emailVerificationAttempts = 0;
-    user.emailVerificationLastSentAt = undefined;
-    await user.save({ validateBeforeSave: false });
-    throw error;
-  }
-};
-
-const pendingEmailFields = '+password +emailVerificationCode +emailVerificationExpires +emailVerificationAttempts +emailVerificationLastSentAt';
-
 const registerDirectly = async (registration, res) => {
   registration = await resolveRegistrationTenant(registration);
-  let user = await User.findOne({ email: registration.email }).select(pendingEmailFields);
-  if (user && (user.onboardingStatus !== 'email_verification_pending' || user.emailVerified !== false)) {
+  let user = await User.findOne({ email: registration.email }).select('+password');
+  if (user && (!user.onboardingStatus || ['complete', 'google_profile_pending'].includes(user.onboardingStatus))) {
     throw createHttpError('An account already exists with this email. Sign in or reset your password instead.', 409);
   }
 
@@ -253,66 +190,12 @@ const registerDirectly = async (registration, res) => {
   } else {
     user = new User(registration);
   }
-  user.emailVerified = true;
   user.onboardingStatus = 'complete';
-  user.emailVerificationCode = undefined;
-  user.emailVerificationExpires = undefined;
-  user.emailVerificationAttempts = 0;
-  user.emailVerificationLastSentAt = undefined;
   await user.save();
   return sendTokenResponse(user, 201, res);
 };
 
-// @desc    Register directly or begin email verification when enabled
-// @route   POST /api/auth/register/request-verification
-// @access  Public
-exports.requestVerification = async (req, res) => {
-  let newlyCreatedUser = null;
-  try {
-    let registration = buildLocalRegistration(req.body);
-
-    if (!emailVerificationEnabled()) {
-      return registerDirectly(registration, res);
-    }
-
-    registration = await resolveRegistrationTenant(registration);
-
-    let user = await User.findOne({ email: registration.email }).select(pendingEmailFields);
-
-    if (user) {
-      if (user.onboardingStatus !== 'email_verification_pending' || user.emailVerified !== false) {
-        return res.status(409).json({ success: false, error: 'An account already exists with this email. Sign in or reset your password instead.' });
-      }
-      const lastSent = user.emailVerificationLastSentAt?.getTime() || 0;
-      if (Date.now() - lastSent < verificationCooldownMs()) {
-        return res.status(429).json({ success: false, error: 'Please wait before requesting another verification code.' });
-      }
-      Object.assign(user, registration);
-    } else {
-      user = new User({ ...registration, emailVerified: false, onboardingStatus: 'email_verification_pending' });
-      newlyCreatedUser = user;
-    }
-
-    await sendPendingRegistrationCode(user);
-    return res.status(202).json({
-      success: true,
-      message: 'We sent a verification code to your email address. Enter it to activate your account.'
-    });
-  } catch (error) {
-    if (newlyCreatedUser?._id) {
-      // Avoid reserving an address when creation succeeded but delivery did
-      // not. The delete is restricted to the freshly created pending record.
-      await User.deleteOne({ _id: newlyCreatedUser._id, onboardingStatus: 'email_verification_pending', emailVerified: false }).catch(() => {});
-    }
-    if (error?.statusCode) return res.status(error.statusCode).json({ success: false, error: error.message });
-    if (error?.code === 11000) return res.status(409).json({ success: false, error: 'An account already exists with this email. Sign in or reset your password instead.' });
-    return sendServerError(res, error, 'Unable to start email verification. Please try again later.');
-  }
-};
-
-// Direct sign-up path used while email-code registration is paused. Keeping
-// it separate prevents an outdated deployment variable from sending the
-// current sign-up form into the dormant verification flow.
+// Password registration creates and authenticates the account immediately.
 exports.register = async (req, res) => {
   try {
     return await registerDirectly(buildLocalRegistration(req.body), res);
@@ -331,72 +214,6 @@ exports.getRegistrationOptions = async (req, res) => {
   } catch (error) { return sendServerError(res, error, 'Unable to load registration options'); }
 };
 
-// @desc    Resend the current pending-registration code
-// @route   POST /api/auth/register/resend-verification
-// @access  Public
-exports.resendVerification = async (req, res) => {
-  try {
-    const email = normaliseEmail(req.body?.email);
-    const user = await User.findOne({ email }).select(pendingEmailFields);
-    // Never reveal whether an address has a pending registration.
-    if (!user || user.onboardingStatus !== 'email_verification_pending' || user.emailVerified !== false) {
-      return res.status(200).json(pendingEmailResponse());
-    }
-    const lastSent = user.emailVerificationLastSentAt?.getTime() || 0;
-    if (Date.now() - lastSent < verificationCooldownMs()) {
-      return res.status(429).json({ success: false, error: 'Please wait before requesting another verification code.' });
-    }
-    await sendPendingRegistrationCode(user);
-    return res.status(200).json(pendingEmailResponse());
-  } catch (error) {
-    // Invalid input and mail configuration are still useful feedback to the
-    // legitimate person using the form; no account state is disclosed.
-    if (error?.statusCode) return res.status(error.statusCode).json({ success: false, error: error.message });
-    return sendServerError(res, error, 'Unable to resend the verification code. Please try again later.');
-  }
-};
-
-// @desc    Verify a registration code and activate the account
-// @route   POST /api/auth/register/verify
-// @access  Public
-exports.verifyRegistration = async (req, res) => {
-  try {
-    const email = normaliseEmail(req.body?.email);
-    const code = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
-    if (!/^\d{6}$/.test(code)) return res.status(422).json({ success: false, error: 'Enter the six-digit verification code.' });
-
-    const user = await User.findOne({ email }).select(pendingEmailFields);
-    if (!user || user.onboardingStatus !== 'email_verification_pending' || user.emailVerified !== false) {
-      return res.status(400).json({ success: false, error: 'This verification code is invalid or has expired.' });
-    }
-    if (!user.emailVerificationExpires || user.emailVerificationExpires <= new Date()) {
-      return res.status(400).json({ success: false, error: 'This verification code is invalid or has expired. Request a new code.' });
-    }
-    if (user.emailVerificationAttempts >= MAX_VERIFICATION_ATTEMPTS) {
-      return res.status(429).json({ success: false, error: 'Too many incorrect codes. Request a new verification code.' });
-    }
-
-    const validCode = equalHashedSecret(user.emailVerificationCode, hashSecret(code));
-    if (!validCode) {
-      user.emailVerificationAttempts += 1;
-      await user.save({ validateBeforeSave: false });
-      return res.status(400).json({ success: false, error: 'This verification code is invalid or has expired.' });
-    }
-
-    user.emailVerified = true;
-    user.onboardingStatus = 'complete';
-    user.emailVerificationCode = undefined;
-    user.emailVerificationExpires = undefined;
-    user.emailVerificationAttempts = 0;
-    user.emailVerificationLastSentAt = undefined;
-    await user.save({ validateBeforeSave: false });
-    return sendTokenResponse(user, 201, res);
-  } catch (error) {
-    if (error?.statusCode) return res.status(error.statusCode).json({ success: false, error: error.message });
-    return sendServerError(res, error, 'Unable to verify this email address. Please try again later.');
-  }
-};
-
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
@@ -412,12 +229,11 @@ exports.login = async (req, res) => {
     const isMatch = user?.password ? await user.matchPassword(password) : false;
     if (!user || !isMatch) return res.status(401).json({ success: false, error: 'Invalid credentials' });
     if (user.status === 'inactive') return res.status(403).json({ success: false, error: 'This account has been deactivated' });
-    if (!emailVerificationEnabled() && user.emailVerified === false && user.onboardingStatus === 'email_verification_pending') {
-      user.emailVerified = true;
+    if (user.onboardingStatus && !['complete', 'google_profile_pending'].includes(user.onboardingStatus)) {
       user.onboardingStatus = 'complete';
       await user.save({ validateBeforeSave: false });
     }
-    if (!isReadyForAuthentication(user)) return res.status(403).json({ success: false, error: 'Verify your email address before signing in.' });
+    if (!isReadyForAuthentication(user)) return res.status(403).json({ success: false, error: 'Complete account setup before signing in.' });
 
     return sendTokenResponse(user, 200, res);
   } catch (error) {
@@ -442,7 +258,7 @@ exports.adminLogin = async (req, res) => {
     if (!user || user.role !== 'admin' || user.status === 'inactive' || !isMatch) {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
-    if (!isReadyForAuthentication(user)) return res.status(403).json({ success: false, error: 'Verify your email address before signing in.' });
+    if (!isReadyForAuthentication(user)) return res.status(403).json({ success: false, error: 'Complete account setup before signing in.' });
     return sendTokenResponse(user, 200, res);
   } catch (error) {
     if (error?.statusCode) return res.status(error.statusCode).json({ success: false, error: error.message });
@@ -497,14 +313,12 @@ exports.googleAuthentication = async (req, res) => {
         name: typeof payload.name === 'string' && payload.name.trim().length >= 2 ? payload.name.trim().slice(0, 120) : email.split('@')[0],
         email,
         googleId: payload.sub,
-        emailVerified: true,
         onboardingStatus: 'google_profile_pending',
         role: 'student'
       });
     } else {
       user.googleId = payload.sub;
-      user.emailVerified = true; // Google verified ownership of this address.
-      if (user.onboardingStatus === 'email_verification_pending') user.onboardingStatus = 'complete';
+      if (user.onboardingStatus && !['complete', 'google_profile_pending'].includes(user.onboardingStatus)) user.onboardingStatus = 'complete';
     }
 
     if (user.onboardingStatus === 'google_profile_pending') {
@@ -567,7 +381,6 @@ exports.completeGoogleProfile = async (req, res) => {
       user.password = password;
     }
 
-    user.emailVerified = true;
     user.onboardingStatus = 'complete';
     user.googleProfileToken = undefined;
     user.googleProfileTokenExpires = undefined;

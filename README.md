@@ -17,27 +17,11 @@ Deploy `frontend` and `backend` as separate Vercel projects, with each project's
 - `FRONTEND_URL` is an exact allow-list, not a wildcard. Add each permitted production or preview origin explicitly, comma-separated.
 - To enable password-reset email, set `RESEND_API_KEY` and `EMAIL_FROM` (a verified Resend sender) in the backend project, then redeploy. Reset links use the first origin in `FRONTEND_URL`.
 
-## Account verification, recovery, and Google sign-in
+## Account registration, recovery, and Google sign-in
 
-Email-code verification is temporarily disabled: new password registrations receive a session immediately. The verification code implementation and page remain available for later activation. Password-reset requests always return the same confirmation message, whether or not the address exists, so the endpoint cannot be used to enumerate accounts.
+Password registration is immediate and does not send an activation code. Password-reset requests always return the same confirmation message, whether or not the address exists, so the endpoint cannot be used to enumerate accounts. To enable password recovery, configure `RESEND_API_KEY`, `EMAIL_FROM`, and `FRONTEND_URL` in the backend deployment.
 
-### 1. Reactivate registration verification and transactional email
-
-1. In Resend, verify a domain that you own and create an API key.
-2. In the **backend Vercel project**, add these production variables:
-
-   ```text
-   EMAIL_VERIFICATION_ENABLED=true
-   RESEND_API_KEY=re_...
-   EMAIL_FROM=Supervisor Assistant <noreply@your-verified-domain.example>
-   SUPPORT_EMAIL=suprevisorassistant@gmail.com
-   FRONTEND_URL=https://your-frontend.vercel.app
-   ```
-
-3. Redeploy the backend. Use the production frontend URL as the first `FRONTEND_URL` origin because reset links are built from it.
-4. Test with a non-administrator account: register, enter the email code, use **Forgot password?**, and follow the one-time reset link. Check the spam folder while the sending domain is new.
-
-### 2. Enable Continue with Google
+### Enable Continue with Google
 
 1. In Google Cloud Console, create or select a project, configure its OAuth consent screen, and create an OAuth 2.0 **Web application** client.
 2. Under **Authorized JavaScript origins**, add the exact frontend origins, such as `https://your-frontend.vercel.app`. Add preview origins only if you deliberately test Google sign-in there.
@@ -60,7 +44,7 @@ For access from other devices and Google accounts, open **Google Auth Platform â
 
 ## Roles and access
 
-- **Students:** use `/register`; while verification is disabled, registration signs them in immediately.
+- **Students:** use `/register`; registration creates the account and signs them in immediately.
 - **Supervisors:** an active administrator promotes or provisions a verified account through **Admin dashboard â†’ Manage users**. The supervisor then uses the normal `/login` page and is directed to `/supervisor-dashboard` automatically.
 - **Administrators:** use `/admin-login` and are directed to `/admin-dashboard`. Administrator accounts are never created by public registration. Keep `ALLOW_PUBLIC_SUPERVISOR_REGISTRATION=false` in production.
 

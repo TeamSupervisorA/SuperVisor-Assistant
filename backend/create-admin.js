@@ -49,7 +49,6 @@ const run = async () => {
     password,
     role: 'admin',
     status: 'active',
-    emailVerified: true,
     onboardingStatus: 'complete'
   });
   console.log(`Administrator created for ${admin.email}. Sign in through the admin access page.`);

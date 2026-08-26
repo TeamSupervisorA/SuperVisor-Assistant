@@ -62,34 +62,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     select: false
   },
-  // Existing accounts predate verification. The default deliberately keeps
-  // them usable, while every new password registration explicitly starts as
-  // unverified in the controller.
-  emailVerified: {
-    type: Boolean,
-    default: true
-  },
   onboardingStatus: {
     type: String,
-    enum: ['complete', 'email_verification_pending', 'google_profile_pending'],
+    enum: ['complete', 'google_profile_pending'],
     default: 'complete'
-  },
-  emailVerificationCode: {
-    type: String,
-    select: false
-  },
-  emailVerificationExpires: {
-    type: Date,
-    select: false
-  },
-  emailVerificationAttempts: {
-    type: Number,
-    default: 0,
-    select: false
-  },
-  emailVerificationLastSentAt: {
-    type: Date,
-    select: false
   },
   googleProfileToken: {
     type: String,

@@ -3,7 +3,6 @@ process.env.NODE_ENV = 'test';
 process.env.PORT = '5100';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'e2e-secret';
 process.env.ALLOW_PUBLIC_SUPERVISOR_REGISTRATION = 'true';
-process.env.EMAIL_VERIFICATION_ENABLED = 'true';
 // The E2E suite verifies graceful provider fallback deterministically. Live
 // model quality is monitored separately and must not make core CI hang.
 process.env.GEMINI_API_KEY = '';
@@ -21,36 +20,27 @@ async function runTests() {
   const studentEmail = `student${randId}@test.com`;
   const supervisorEmail = `supervisor${randId}@test.com`;
 
-  const registerAndVerify = async ({ name, email, password, role }) => {
-    const request = await fetch(`${API_BASE}/auth/register/request-verification`, {
+  const register = async ({ name, email, password, role }) => {
+    const response = await fetch(`${API_BASE}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, password, role })
     });
-    const requestData = await request.json();
-    if (!request.ok) throw new Error(requestData.error || 'Could not request email verification');
-    const verify = await fetch(`${API_BASE}/auth/register/verify`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      // The test-only mail transport uses a deterministic code and never
-      // exposes it through the public production API.
-      body: JSON.stringify({ email, code: '000000' })
-    });
-    const verifyData = await verify.json();
-    if (!verify.ok) throw new Error(verifyData.error || 'Could not verify email');
-    return verifyData;
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Could not create account');
+    return data;
   };
 
   try {
     // 1. Register Student
     console.log(`\n[1] Registering student: ${studentEmail}`);
-    const regData = await registerAndVerify({ name: 'Test Student', email: studentEmail, password: 'password123', role: 'student' });
+    const regData = await register({ name: 'Test Student', email: studentEmail, password: 'password123', role: 'student' });
     studentToken = regData.token;
     console.log('✅ Student registered successfully');
 
     // 2. Register Supervisor
     console.log(`\n[2] Registering supervisor: ${supervisorEmail}`);
-    const supRegData = await registerAndVerify({ name: 'Test Supervisor', email: supervisorEmail, password: 'password123', role: 'supervisor' });
+    const supRegData = await register({ name: 'Test Supervisor', email: supervisorEmail, password: 'password123', role: 'supervisor' });
     supervisorToken = supRegData.token;
     console.log('✅ Supervisor registered successfully');
 

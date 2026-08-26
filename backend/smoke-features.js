@@ -3,8 +3,6 @@ process.env.NODE_ENV = 'test';
 process.env.PORT = '5099';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'smoke-secret';
 process.env.ALLOW_PUBLIC_SUPERVISOR_REGISTRATION = 'true';
-process.env.EMAIL_VERIFICATION_ENABLED = 'true';
-process.env.EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS = '30';
 // Exercise the exact Paper Editor failure path without allowing a developer's
 // local compiler configuration to make this smoke test reach a real service.
 process.env.LATEX_COMPILER_URL = '';
@@ -30,7 +28,6 @@ const emails = {
   admin: `admin-${runId}@test.com`,
   inactive: `inactive-${runId}@test.com`,
   modern: `modern-${runId}@research.technology`,
-  pending: `pending-${runId}@test.com`,
   unapproved: `unapproved-${runId}@test.com`
 };
 let passed = 0, failed = 0;
@@ -68,51 +65,31 @@ const run = async () => {
 
   // ---- users
   const reg = async (name, email, role) => {
-    const requested = await api('/api/auth/register/request-verification', {
+    const registered = await api('/api/auth/register', {
       method: 'POST', body: { name, email, password: 'pass1234', role }
     });
-    if (requested.status !== 202) {
-      console.error(`Registration request failed for smoke user ${name}:`, requested.status, requested.data?.error);
-      return requested.data;
-    }
-    const verified = await api('/api/auth/register/verify', {
-      method: 'POST', body: { email, code: '000000' }
-    });
-    if (verified.status !== 201) console.error(`Registration verification failed for smoke user ${name}:`, verified.status, verified.data?.error);
-    return verified.data;
+    if (registered.status !== 201) console.error(`Registration failed for smoke user ${name}:`, registered.status, registered.data?.error);
+    return registered.data;
   };
   const alice = await reg('Alice', emails.alice, 'student');
   const bob = await reg('Bob', emails.bob, 'student');
   const eve = await reg('Eve', emails.eve, 'student');
   const sup = await reg('Dr. Sup', emails.supervisor, 'supervisor');
   const supTwo = await reg('Dr. Guide', emails.supervisorTwo, 'supervisor');
-  const adminUser = await User.create({ name: 'Academic Admin', email: emails.admin, password: 'pass1234', role: 'admin', emailVerified: true, onboardingStatus: 'complete' });
+  const adminUser = await User.create({ name: 'Academic Admin', email: emails.admin, password: 'pass1234', role: 'admin', onboardingStatus: 'complete' });
   const admin = { token: jwt.sign({ id: adminUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' }), user: { id: String(adminUser._id) } };
-  const modernDomain = await api('/api/auth/register/request-verification', { method: 'POST', body: { name: 'Modern Domain', email: emails.modern, password: 'pass1234' } });
-  const modernDomainVerified = await api('/api/auth/register/verify', { method: 'POST', body: { email: emails.modern, code: '000000' } });
-  check('registration accepts a valid modern top-level domain after email verification', modernDomain.status === 202 && modernDomainVerified.status === 201 && !!modernDomainVerified.data.token);
+  const modernDomain = await api('/api/auth/register', { method: 'POST', body: { name: 'Modern Domain', email: emails.modern, password: 'pass1234' } });
+  check('direct registration accepts a valid modern top-level domain', modernDomain.status === 201 && !!modernDomain.data.token);
   const inactiveStudent = await reg('Inactive Student', emails.inactive, 'student');
   await User.findByIdAndUpdate(inactiveStudent.user.id, { status: 'inactive' });
-  const duplicateRegistration = await api('/api/auth/register/request-verification', { method: 'POST', body: { name: 'Alice Again', email: emails.alice, password: 'pass1234' } });
+  const duplicateRegistration = await api('/api/auth/register', { method: 'POST', body: { name: 'Alice Again', email: emails.alice, password: 'pass1234' } });
   check('duplicate registration returns a safe sign-in message', duplicateRegistration.status === 409 && /account already exists/i.test(duplicateRegistration.data.error));
-  const pendingSignup = await api('/api/auth/register/request-verification', { method: 'POST', body: { name: 'Pending User', email: emails.pending, password: 'pass1234' } });
-  const pendingLogin = await api('/api/auth/login', { method: 'POST', body: { email: emails.pending, password: 'pass1234' } });
-  const wrongVerification = await api('/api/auth/register/verify', { method: 'POST', body: { email: emails.pending, code: '111111' } });
-  const pending = await User.findOne({ email: emails.pending });
-  if (pending) await User.findByIdAndUpdate(pending._id, { emailVerificationLastSentAt: new Date(Date.now() - 31_000) });
-  const pendingResend = await api('/api/auth/register/resend-verification', { method: 'POST', body: { email: emails.pending } });
-  const verifiedPending = await api('/api/auth/register/verify', { method: 'POST', body: { email: emails.pending, code: '000000' } });
-  check('email verification blocks login, rejects wrong codes, allows safe resend, and activates only after the correct code', pendingSignup.status === 202 && pendingLogin.status === 403 && wrongVerification.status === 400 && pendingResend.status === 200 && verifiedPending.status === 201 && !!verifiedPending.data.token);
-  process.env.EMAIL_VERIFICATION_ENABLED = 'false';
-  const directRegistration = await api('/api/auth/register/request-verification', {
+  const removedCodeRoute = await api('/api/auth/register/verify', { method: 'POST', body: { email: emails.alice, code: '000000' } });
+  const directRegistration = await api('/api/auth/register', {
     method: 'POST', body: { name: 'Direct Registration', email: `direct-${runId}@test.com`, password: 'pass1234', role: 'student' }
   });
-  check('registration issues a session without an email code while verification is disabled', directRegistration.status === 201 && !!directRegistration.data?.token && directRegistration.data?.user?.role === 'student');
-  process.env.EMAIL_VERIFICATION_ENABLED = 'true';
-  const directSignupRoute = await api('/api/auth/register', {
-    method: 'POST', body: { name: 'Sign Up Route', email: `signup-${runId}@test.com`, password: 'pass1234', role: 'student' }
-  });
-  check('the current sign-up route never redirects into email-code verification', directSignupRoute.status === 201 && !!directSignupRoute.data?.token && directSignupRoute.data?.user?.role === 'student');
+  check('registration issues a session immediately without an email code', directRegistration.status === 201 && !!directRegistration.data?.token && directRegistration.data?.user?.role === 'student');
+  check('email-code registration endpoints are removed', removedCodeRoute.status === 404);
   const googleNotConfigured = await api('/api/auth/google', { method: 'POST', body: { credential: 'not-a-real-token' } });
   check('Google sign-in does not accept credentials when the client ID is not configured', googleNotConfigured.status === 503 && !googleNotConfigured.data.token);
   const unknownReset = await api('/api/auth/forgot-password', { method: 'POST', body: { email: 'unknown@test.com' } });
@@ -447,7 +424,7 @@ const run = async () => {
 
   // ---- institution boundary regression
   const foreignInstitution = await Institution.create({ name: 'Boundary Test University', slug: `boundary-${runId}`, createdBy: adminUser._id });
-  const foreignStudent = await User.create({ name: 'Foreign Student', email: `foreign-${runId}@test.com`, password: 'pass1234', role: 'student', institution: foreignInstitution._id, emailVerified: true, onboardingStatus: 'complete' });
+  const foreignStudent = await User.create({ name: 'Foreign Student', email: `foreign-${runId}@test.com`, password: 'pass1234', role: 'student', institution: foreignInstitution._id, onboardingStatus: 'complete' });
   const foreignToken = jwt.sign({ id: foreignStudent._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
   const foreignProject = await Project.create({ title: 'Foreign institution project', institution: foreignInstitution._id, students: [foreignStudent._id], leaderUserId: foreignStudent._id, status: 'active' });
   const crossTenantProject = await api(`/api/projects/${foreignProject._id}`, { token: admin.token });

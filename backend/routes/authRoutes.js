@@ -1,9 +1,6 @@
 const express = require('express');
 const {
   register,
-  requestVerification,
-  resendVerification,
-  verifyRegistration,
   login,
   adminLogin,
   googleAuthentication,
@@ -17,9 +14,6 @@ const { protect } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.post('/register/request-verification', requestVerification);
-router.post('/register/resend-verification', resendVerification);
-router.post('/register/verify', verifyRegistration);
 router.post('/register', register);
 router.get('/registration-options', getRegistrationOptions);
 router.post('/login', login);

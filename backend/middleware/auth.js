@@ -31,11 +31,9 @@ exports.protect = async (req, res, next) => {
     if (req.user.status === 'inactive') {
       return res.status(403).json({ success: false, error: 'This account has been deactivated' });
     }
-    // A token must never grant access to a registration that has not finished
-    // email verification or Google profile completion, even if a token was
-    // somehow issued by an older deployment.
-    if (req.user.emailVerified === false || (req.user.onboardingStatus && req.user.onboardingStatus !== 'complete')) {
-      return res.status(403).json({ success: false, error: 'Complete account verification before accessing the workspace' });
+    // A token must never bypass required Google profile completion.
+    if (req.user.onboardingStatus && req.user.onboardingStatus !== 'complete') {
+      return res.status(403).json({ success: false, error: 'Complete account setup before accessing the workspace' });
     }
     if (req.user.passwordChangedAt && decoded.iat && decoded.iat < Math.floor(req.user.passwordChangedAt.getTime() / 1000)) {
       return res.status(401).json({ success: false, error: 'Your password was changed. Please sign in again.' });

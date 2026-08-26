@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './components/AuthContext';
 import { ThemeProvider } from './components/ThemeContext';
 import LandingPage from './pages/LandingPage';
@@ -53,7 +53,6 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/verify-email" element={<Navigate to="/register" replace />} />
           <Route path="/complete-profile" element={<CompleteGoogleProfile />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/privacy" element={<LegalPage />} />

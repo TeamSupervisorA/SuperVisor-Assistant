@@ -102,7 +102,6 @@ const Register = () => {
         })
       });
       if (!data?.token || !data?.user) throw new Error('The server did not return a valid account session.');
-      sessionStorage.removeItem('pendingVerificationEmail');
       login(data.token, data.user);
       navigate(roleHome[data.user.role] || '/dashboard');
     } catch (err) {
