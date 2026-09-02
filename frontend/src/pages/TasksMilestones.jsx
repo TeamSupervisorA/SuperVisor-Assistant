@@ -110,6 +110,7 @@ const TasksMilestones = () => {
   const loadTasks = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
+    setTasks([]); // Clear stale tasks when switching projects
     try {
       const [response, submissionResponse] = await Promise.all([
         apiFetch(`/api/tasks?project=${projectId}`),
