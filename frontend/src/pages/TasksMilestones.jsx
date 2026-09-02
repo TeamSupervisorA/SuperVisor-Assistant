@@ -91,6 +91,7 @@ const fieldInputClass =
 
 const TasksMilestones = () => {
   const { activeProject, setActiveProject, user } = useAuth();
+  const isSupervisor = ["supervisor", "admin"].includes(user?.role);
   const [tasks, setTasks] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -499,7 +500,6 @@ const TasksMilestones = () => {
     const fromCol = source.droppableId;
     const toCol = destination.droppableId;
     const status = normalizeStatus(task.status);
-    const isSupervisor = ["supervisor", "admin"].includes(user?.role);
 
     if (fromCol === "todo" && toCol === "in_progress") {
       transition(task, "in_progress");
@@ -538,7 +538,6 @@ const TasksMilestones = () => {
   const taskActions = (task) => {
     const status = normalizeStatus(task.status);
     const waiting = waitingOnDependencies(task);
-    const isSupervisor = ["supervisor", "admin"].includes(user?.role);
     const isAssignedStudent = user?.role === "student" &&
       String(task.assignedTo?._id || task.assignedTo || "") === currentUserId;
     if (task.kind === "suggestion" && task.suggestionState === "pending") {
