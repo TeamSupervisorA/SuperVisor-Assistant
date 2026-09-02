@@ -191,10 +191,10 @@ exports.createTask = async (req, res) => {
     const allowed = ['title', 'description', 'project', 'assignedTo', 'priority', 'dueDate', 'dependencies', 'acceptanceCriteria', 'milestone', 'phase', 'requiredDeliverable'];
     const input = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowed.includes(key)));
     input.milestone = validateMilestone(project, input.milestone);
-    if (!canCreateOfficial) input.assignedTo = null;
-    else if (req.user.role === 'student' && input.assignedTo === undefined) input.assignedTo = req.user.id;
+    if (req.user.role === 'student' && input.assignedTo === undefined) input.assignedTo = req.user.id;
     if (input.assignedTo !== undefined) input.assignedTo = await validateAssignee(project, input.assignedTo);
     const kind = canCreateOfficial ? 'official' : 'suggestion';
+    if (kind === 'suggestion') input.assignedTo = null;
     const task = await Task.create({ ...input, createdBy: req.user.id, kind, suggestionState: canCreateOfficial ? 'accepted' : 'pending', status: 'todo', history: [{ actor: req.user.id, action: kind === 'official' ? 'created' : 'suggested', toStatus: 'todo' }] });
     await notifyTaskPeople({ ...task.toObject(), project }, req.user.id, {
       title: kind === 'official' ? 'New task assigned' : 'New task suggestion',

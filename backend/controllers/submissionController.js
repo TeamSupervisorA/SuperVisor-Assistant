@@ -143,7 +143,7 @@ exports.createSubmission = async (req, res) => {
     if (!task) return res.status(422).json({ success: false, error: 'Choose the project task this deliverable satisfies' });
     const projectTask = await Task.findOne({ _id: task, project: project._id });
     if (!projectTask) return res.status(422).json({ success: false, error: 'The selected task does not belong to this project' });
-    if (projectTask.assignedTo && projectTask.assignedTo.toString() !== req.user.id) {
+    if (projectTask.assignedTo?.toString() !== req.user.id) {
       return res.status(403).json({ success: false, error: 'You can submit only work assigned to you' });
     }
     if (!['in_progress', 'revision'].includes(projectTask.status)) {
@@ -205,7 +205,7 @@ exports.updateSubmission = async (req, res) => {
     if (updates.task) {
       const projectTask = await Task.findOne({ _id: updates.task, project: submission.project });
       if (!projectTask) return res.status(422).json({ success: false, error: 'The selected task does not belong to this project' });
-      if (req.user.role === 'student' && projectTask.assignedTo && projectTask.assignedTo.toString() !== req.user.id) {
+      if (req.user.role === 'student' && projectTask.assignedTo?.toString() !== req.user.id) {
         return res.status(403).json({ success: false, error: 'You can submit only work assigned to you' });
       }
     }

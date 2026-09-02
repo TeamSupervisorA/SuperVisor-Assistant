@@ -313,6 +313,23 @@ const TasksMilestones = () => {
     }
   };
 
+  const reassignTask = async (task, newAssigneeId) => {
+    setUpdatingId(task._id);
+    setError("");
+    try {
+      const response = await apiFetch(`/api/tasks/${task._id}`, {
+        method: "PUT",
+        body: JSON.stringify({ assignedTo: newAssigneeId || null }),
+      });
+      setTasks((current) => current.map((item) => item._id === task._id ? response.data : item));
+    } catch (requestError) {
+      setError(requestError.message || "Unable to reassign task");
+    } finally {
+      setUpdatingId("");
+    }
+  };
+
+
   const decideReview = async (task, decision) => {
     const feedback =
       window
@@ -370,7 +387,7 @@ const TasksMilestones = () => {
     try {
       const response = await apiFetch(`/api/tasks/${task._id}/suggestion-decision`, {
         method: "POST",
-        body: JSON.stringify({ decision, assignedTo: task.createdBy?._id || task.createdBy }),
+        body: JSON.stringify({ decision, assignedTo: task.assignedTo?._id || task.assignedTo || task.createdBy?._id || task.createdBy }),
       });
       setTasks((current) => current.map((item) => item._id === task._id ? response.data : item));
     } catch (requestError) {
@@ -816,7 +833,26 @@ const TasksMilestones = () => {
                                   <h3 className="mt-3 text-sm font-extrabold leading-snug text-on-surface">
                                     {task.title}
                                   </h3>
-                                  <p className="mt-1 text-xs text-secondary">Owner: {task.assignedTo?.name || "Unassigned"}</p>
+                                  {isSupervisor ? (
+                                    <label className="mt-1 flex items-center gap-2 text-xs text-secondary">
+                                      Owner:
+                                      <select
+                                        value={task.assignedTo?._id || task.assignedTo || ""}
+                                        onChange={(e) => reassignTask(task, e.target.value)}
+                                        disabled={Boolean(updatingId)}
+                                        className="rounded-md border border-outline-variant/30 bg-surface px-1 py-0.5 text-xs text-on-surface hover:border-primary focus:border-primary focus:outline-none"
+                                      >
+                                        <option value="">Unassigned</option>
+                                        {members.map((member) => (
+                                          <option key={member._id || member.id || member} value={member._id || member.id || member}>
+                                            {member.name || "Student"}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                  ) : (
+                                    <p className="mt-1 text-xs text-secondary">Owner: {task.assignedTo?.name || "Unassigned"}</p>
+                                  )}
                                   {task.kind === "suggestion" && task.suggestionState === "pending" && <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-200">Task suggestion · not yet official</p>}
                                   {(task.phase || task.milestone) && <p className="mt-2 text-xs font-semibold text-primary">{task.phase || "Milestone-linked work"}</p>}
                                   {task.description && (
